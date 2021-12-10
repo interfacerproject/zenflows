@@ -1,0 +1,57 @@
+# blacklist everything
+*
+
+# allow non-empty directories
+!**/
+
+# build files
+_build/
+
+# git(1) stuff
+!/.gitignore
+
+# license and readme
+!/LICENSE
+!/README
+
+# useful things
+!/.iex.exs
+!/.credo.exs
+!/.editorconfig
+
+# the mannager
+!/mann
+
+# mix(1) stuff
+!/mix.exs
+!/mix.lock
+
+# migrations
+!/priv/repo/migrations/*.exs
+
+# src code
+!/src/**/*.ex
+
+# confs
+!/conf/*.exs
+
+# tests
+!/test/**/*
+
+# docs
+!/docs/**/*
+
+# deps
+!/deps/**/*
+/deps/*/_build
+/deps/*/ebin
+
+# absinthe blacklist
+/deps/absinthe/src/*.erl
+
+# erlex blacklist
+/deps/erlex/src/parser.erl
+/deps/erlex/src/lexer.erl
+
+# github stuff
+!/.github/*

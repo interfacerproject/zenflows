@@ -1,0 +1,4 @@
+* Use tabs for indentation, spaces for aligment.
+* Don't indent the top-level code in modules.
+* Use trailing commas in multi-line lists, maps, functions, etc. where
+  possible.

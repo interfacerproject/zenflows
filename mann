@@ -1,0 +1,87 @@
+#!/bin/sh -e
+
+# Options:
+# -x    See sh(1) for what it does.
+# -t    Sets MIX_ENV=test.
+
+progname=$(basename "$0")
+
+die() {
+	printf '%s: %s\n' "$progname" "$*"
+	exit 1
+}
+
+usage() {
+	cat <<EOF >&1
+usage: $progname [-x] cmd [args...]
+EOF
+	exit 1
+}
+
+while getopts xt opt ; do
+	case $opt in
+	x)    set -x ;;
+	t)    export MIX_ENV=test ;;
+	\?)   usage ;;
+	esac
+done
+shift "$((OPTIND-1))"
+
+# commands
+cmd_mix() {
+	mix "$@"
+}
+
+cmd_run() {
+	iex -S mix "$@"
+}
+
+cmd_test() {
+	mix test "$@"
+}
+
+cmd_help() {
+	mix help "$@"
+}
+
+cmd_db_create() {
+	mix ecto.create "$@"
+}
+
+cmd_db_drop() {
+	mix ecto.drop "$@"
+}
+
+cmd_db_migrate() {
+	mix ecto.migrate "$@"
+}
+
+cmd_db_rollback() {
+	mix ecto.rollback "$@"
+}
+
+cmd_db_reset() {
+	mix ecto.drop && \
+	mix ecto.create && \
+	mix ecto.migrate
+}
+
+cmd_db_remigrate() {
+	mix ecto.rollback --all && \
+	mix ecto.migrate
+}
+
+# main entry point
+case $1 in
+	mix)           shift ; cmd_mix "$@" ;;
+	run)           shift ; cmd_run "$@" ;;
+	test)          shift ; cmd_test "$@" ;;
+	help)          shift ; cmd_help "$@" ;;
+	db.create)     shift ; cmd_db_create "$@" ;;
+	db.drop)       shift ; cmd_db_drop "$@" ;;
+	db.migrate)    shift ; cmd_db_migrate "$@" ;;
+	db.rollback)   shift ; cmd_db_rollback "$@" ;;
+	db.reset)      shift ; cmd_db_reset "$@" ;;
+	db.remigrate)  shift ; cmd_db_remigrate "$@" ;;
+	*)             die "command does not exist: $1" ;;
+esac

@@ -1,0 +1,16 @@
+Zenflows
+========
+
+
+How to get started
+------------------
+
+1. Edit `conf/dev.exs' and `conf/test.exs' to suit your needs.
+2. Run `./mann db.create && ./mann db.migrate && ./mann run'.
+3. Head over to `localhost:8000/play' for the playground.
+
+
+Licensing and copying
+---------------------
+
+See the LICENSE file for copyright and license details.

@@ -12,7 +12,7 @@
 <br><br>
 
 <h4 align="center">
-	<a href="#-quick-start">🎮 Quick start</a>
+  <a href="#-quick-start">🎮 Quick start</a>
   <span> • </span>
   <a href="#-install">💾 Install</a>
   <span> • </span>

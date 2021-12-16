@@ -1,18 +1,9 @@
-<p align="center">
-  <a href="https://www.dyne.org">
-    <img alt="Zenflows" src="https://via.placeholder.com/150.png?text=LOGO" width="150" />
-  </a>
-</p>
-
 <h1 align="center">
   Zenflows</br>
   <sub>Because it's a cool name</sub>
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/DECODEproject/Zenflows">
-    <img src="https://travis-ci.com/DECODEproject/Zenflows.svg?branch=master" alt="Build Status">
-  </a>
   <a href="https://dyne.org">
     <img src="https://img.shields.io/badge/%3C%2F%3E%20with%20%E2%9D%A4%20by-Dyne.org-blue.svg" alt="Dyne.org">
   </a>
@@ -179,7 +170,7 @@ Please first take a look at the
 
 
 For details on the dependency licenses take a look at
-[/docs/deps-licences](this file) including:
+[this file](/docs/deps-licences) including:
 
 - Apache-2.0
 - BSD-3

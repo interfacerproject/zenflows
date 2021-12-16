@@ -12,7 +12,8 @@ _build/
 
 # license and readme
 !/LICENSE
-!/README
+!/README.md
+!/CONTRIBUTING.md
 
 # useful things
 !/.iex.exs

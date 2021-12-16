@@ -12,9 +12,9 @@
 <br><br>
 
 <h4 align="center">
-  <a href="#-install">💾 Install</a>
+	<a href="#-quick-start">🎮 Quick start</a>
   <span> • </span>
-  <a href="#-quick-start">🎮 Quick start</a>
+  <a href="#-install">💾 Install</a>
   <span> • </span>
   <a href="#-configuration">🔧 Configuration</a>
   <span> • </span>
@@ -50,8 +50,8 @@ change.
 <details id="toc">
  <summary><strong>🚩 Table of Contents</strong> (click to expand)</summary>
 
-* [Install](#-install)
 * [Quick start](#-quick-start)
+* [Install](#-install)
 * [Configuration](#-configuration)
 * [Testing](#-testing)
 * [Styleguide](#-styleguide)
@@ -62,14 +62,6 @@ change.
 * [License](#-license)
 </details>
 
-***
-## 💾 Install
-
-🚧 TODO
-
-**[🔝 back to top](#toc)**
-
-***
 ## 🎮 Quick start
 
 To start using Zenflows
@@ -77,6 +69,13 @@ To start using Zenflows
 1. Edit `conf/dev.exs' and `conf/test.exs' to suit your needs.
 2. Run `./mann db.create && ./mann db.migrate && ./mann run'.
 3. Head over to `localhost:8000/play' for the playground.
+
+**[🔝 back to top](#toc)**
+
+***
+## 💾 Install
+
+🚧 TODO
 
 **[🔝 back to top](#toc)**
 

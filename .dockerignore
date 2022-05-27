@@ -1,0 +1,33 @@
+# blacklist everything
+*
+
+!/.iex.exs
+
+# the mannager
+!/mann
+
+# mix(1) stuff
+!/mix.exs
+!/mix.lock
+
+# migrations
+!/priv/repo/migrations/*.exs
+
+# src code
+!/src
+
+# confs
+!/conf/common.exs
+!/conf/runtime.exs
+
+# # deps
+# !/deps/**/*
+# /deps/*/_build
+# /deps/*/ebin
+#
+# # absinthe blacklist
+# /deps/absinthe/src/*.erl
+#
+# # erlex blacklist
+# /deps/erlex/src/parser.erl
+# /deps/erlex/src/lexer.erl

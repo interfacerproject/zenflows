@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  srv:
+    container_name: srv
+    build: .
+    ports:
+      - 4000:4000
+    environment:
+      - DB_NAME=zenflows
+      - DB_USER=zenflows_dbuser
+      - DB_PASS=foobar
+      - DB_HOST=db
+      # - DB_PORT=5432
+
+      # - PASS_ITER=160000
+      # - PASS_KLEN=64
+      # - PASS_SLEN=64
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+
+  db:
+    container_name: db
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_DB=zenflows
+      - POSTGRES_USER=zenflows_dbuser
+      - POSTGRES_PASSWORD=foobar
+    volumes:
+      - /var/lib/postgresql/data

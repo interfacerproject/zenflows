@@ -15,6 +15,10 @@ cover/
 !/LICENSE
 !/README
 
+# docker stuff
+!/Dockerfile
+!/docker-compose.yml
+
 # useful things
 !/.iex.exs
 !/.credo.exs

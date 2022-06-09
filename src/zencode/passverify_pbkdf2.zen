@@ -1,0 +1,7 @@
+Given I have a 'hex' named 'salt'
+and I have a 'base64' named 'hash'
+and I have a 'string' named 'password'
+When I create the key derivation of 'password' with password 'salt'
+and I verify 'key_derivation' is equal to 'hash'
+Then print the string '1'
+# when false zenroom returns error

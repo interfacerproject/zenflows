@@ -35,7 +35,8 @@ cover/
 !/priv/repo/migrations/*.exs
 
 # src code
-!/src/**/*.ex
+!/src/zencode/*.zen
+!/src/zenflows/*.ex
 
 # confs
 !/conf/common.exs

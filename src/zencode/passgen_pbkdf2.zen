@@ -1,0 +1,5 @@
+Given I have a 'hex' named 'salt'
+and I have a 'string' named 'password'
+When I create the key derivation of 'password' with password 'salt'
+Then print the 'key derivation' as 'base64'
+

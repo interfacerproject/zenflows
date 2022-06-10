@@ -1,11 +1,9 @@
 import Config
-
-if config_env() == :prod do
 import System, only: [fetch_env!: 1, fetch_env: 1, get_env: 2]
 
 # Just like `System.get_env/2`, but converts the variable to integer if it
 # exists or fallbacks to `int`.  It is just a shortcut.
-get_env_int = fn (varname, int) ->
+get_env_int = fn varname, int ->
 	case fetch_env(varname) do
 		{:ok, val} -> String.to_integer(val)
 		:error -> int
@@ -15,41 +13,59 @@ end
 #
 # database
 #
-db_name = get_env("DB_NAME", "zenflows")
-db_conf = case fetch_env("DB_SOCK") do
-	{:ok, db_sock} ->
-		[database: db_name, socket: db_sock]
+db_conf = case {fetch_env("DB_URI"), fetch_env("DB_SOCK")} do
+	{{:ok, db_uri}, _} ->
+		[url: db_uri]
 
-	:error ->
+	{_, {:ok, db_sock}} ->
+		db_name = case config_env() do
+			:prod -> get_env("DB_NAME", "zenflows")
+			:dev -> get_env("DB_NAME", "zenflows_dev")
+			:test -> get_env("DB_NAME", "zenflows_test")
+		end
+
+		[databese: db_name, socket: db_sock]
+
+	_ ->
+		db_name = case config_env() do
+			:prod -> get_env("DB_NAME", "zenflows")
+			:dev -> get_env("DB_NAME", "zenflows_dev")
+			:test -> get_env("DB_NAME", "zenflows_test")
+		end
+
+		db_port = get_env_int.("DB_PORT", 5432)
+		if db_port not in 0..65535,
+			do: raise "DB_PORT must be between 0 and 65535 inclusive"
+
 		[
 			database: db_name,
 			username: fetch_env!("DB_USER"),
 			password: fetch_env!("DB_PASS"),
 			hostname: get_env("DB_HOST", "localhost"),
-			port: get_env_int.("DB_PORT", 5432),
+			port: db_port,
 		]
 end
-
-if db_conf[:port] not in 0..65535,
-	do: raise "DB_PORT must be between 0 and 65535"
 
 config :zenflows, Zenflows.DB.Repo, db_conf
 
 #
-# passphrase
+# restroom
 #
-pass_conf = [
-	iter: get_env_int.("PASS_ITER", 160000),
-	klen: get_env_int.("PASS_KLEN", 64),
-	slen: get_env_int.("PASS_SLEN", 64),
-]
+room_endpoint =
+	case String.split(fetch_env!("ROOM_ENDPOINT"), ":", parts: 2, trim: true) do
+		[] ->
+			raise "ROOM_ENDPOINT must be of the form hostname:port, such as localhost:1234"
+		[host, port] ->
+			port = String.to_integer(port)
+			if port not in 0..65535,
+				do: raise "ROOM_ENDPOINT must have a port number between 0 and 65535"
+			"#{host}:#{port}"
+	end
 
-if pass_conf[:iter] not in 1024..1073741823,
-	do: raise "PASS_ITER must be between 1024 and 1073741823 inclusive."
-if pass_conf[:klen] not in 16..4294967295,
-	do: raise "PASS_KLEN must be between 16 and 4294967295 inclusive."
-if pass_conf[:slen] not in 16..255,
-	do: raise "PASS_SLEN must be between 16 and 255 inclusive."
+room_salt = fetch_env!("ROOM_SALT")
+if Base.decode16!(room_salt, case: :lower) |> byte_size() != 64,
+	do: raise "ROOM_SALT must be a 64-octect long, lowercase-base16-encoded string"
 
-config :zenflows, Zenflows.Crypto.Pass, pass_conf
-end
+config :zenflows, Zenflows.Restroom,
+	room_endpoint: room_endpoint,
+	room_salt: room_salt

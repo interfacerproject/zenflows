@@ -9,7 +9,8 @@ config :zenflows, Repo,
 	migration_foreign_key: [type: :binary_id],
 	migration_timestamps:  [type: :timestamptz]
 
-# use `runtime.exs` for :prod
-if (env = config_env()) in [:test, :dev] do
-	import_config "#{env}.exs"
+if config_env() == :test do
+	config :zenflows, Repo,
+		pool: Ecto.Adapters.SQL.Sandbox,
+		log: false
 end

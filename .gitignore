@@ -1,66 +1,104 @@
 # blacklist everything
-*
+/*
 
-# allow non-empty directories
-!**/
-
-# build files
-_build/
-cover/
-
-# git(1) stuff
+# git stuff
 !/.gitignore
 
 # license and readme
 !/LICENSE
-!/README
-
-# docker stuff
-!/Dockerfile
-!/docker-compose.yml
+!/README.md
 
 # useful things
 !/.iex.exs
 !/.credo.exs
 !/.editorconfig
 
-# the mannager
+# the man*n*ager
 !/mann
 
-# mix(1) stuff
+# mix stuff
 !/mix.exs
 !/mix.lock
 
-# migrations
-!/priv/repo/migrations/*.exs
+## About the following ignore-unignore patterns: well, I know they are not
+## perfect, but this is the best solution I could come up with since git
+## doesn't let me do:
+##
+## /*
+## !/src/**/*.ex
+##
+## It did support this, but the commits were reverted somewhen back in 2016.
+## What these basically do is to allow couple-levels deep directories only,
+## since git doesn't let me select all with **/*.ex (read gitignore(5))
+
+# configs
+!/conf/
+/conf/*
+!/conf/buildtime.exs
+!/conf/runtime.exs
+!/conf/.env.templ
 
 # src code
-!/src/zencode/*.zen
-!/src/zenflows/*.ex
-
-# confs
-!/conf/common.exs
-!/conf/runtime.exs
-!/conf/dev.exs
-!/conf/test.exs
+!/src/
+/src/*
+!/src/*/
+/src/*/*
+!/src/*/*/
+/src/*/*/*
+!/src/*/*/*/
+/src/*/*/*/*
+!/src/*/*/*/*/
+/src/*/*/*/*/*
+!/src/*/*/*/*/*/
+/src/*/*/*/*/*/*
+!/src/*/*/*/*/*/*/
+/src/*/*/*/*/*/*/*
+!/src/**/*.ex
 
 # tests
-!/test/**/*
+!/test/
+/test/*
+!/test/*/
+/test/*/*
+!/test/*/*/
+/test/*/*/*
+!/test/*/*/*/
+/test/*/*/*/*
+!/test/*/*/*/*/
+/test/*/*/*/*/*
+!/test/*/*/*/*/*/
+/test/*/*/*/*/*/*
+!/test/*/*/*/*/*/*/
+/test/*/*/*/*/*/*/*
+!/test/**/*.ex
+!/test/**/*.test.exs
 
-# docs
-!/docs/**/*
+# versioned migrations
+!/priv/
+/priv/*
+!/priv/repo/
+/priv/repo/*
+!/priv/repo/migrations
+/priv/repo/migrations/*
+!/priv/repo/migrations/*.exs
 
 # deps
-!/deps/**/*
-/deps/*/_build
-/deps/*/ebin
+!/.deps/
 
-# absinthe blacklist
-/deps/absinthe/src/*.erl
+# zencode
+!/zencode/
+/zencode/*
+!/zencode/*.zen
 
-# erlex blacklist
-/deps/erlex/src/parser.erl
-/deps/erlex/src/lexer.erl
+# docs
+!/docs/
+/docs/*
+!/docs/*.md
+
+# devops stuff
+!/.dockerignore
+!/devop/Dockerfile
+!/devop/docker-compose.yml
 
 # github stuff
-!/.github/*
+!/.github/

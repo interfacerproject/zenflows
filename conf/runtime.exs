@@ -51,21 +51,11 @@ config :zenflows, Zenflows.DB.Repo, db_conf
 #
 # restroom
 #
-room_endpoint =
-	case String.split(fetch_env!("ROOM_ENDPOINT"), ":", parts: 2, trim: true) do
-		[] ->
-			raise "ROOM_ENDPOINT must be of the form hostname:port, such as localhost:1234"
-		[host, port] ->
-			port = String.to_integer(port)
-			if port not in 0..65535,
-				do: raise "ROOM_ENDPOINT must have a port number between 0 and 65535"
-			"#{host}:#{port}"
-	end
-
 room_salt = fetch_env!("ROOM_SALT")
 if Base.decode16!(room_salt, case: :lower) |> byte_size() != 64,
 	do: raise "ROOM_SALT must be a 64-octect long, lowercase-base16-encoded string"
 
 config :zenflows, Zenflows.Restroom,
-	room_endpoint: room_endpoint,
+	room_host: fetch_env!("ROOM_HOST"),
+	room_port: fetch_env!("ROOM_PORT"),
 	room_salt: room_salt

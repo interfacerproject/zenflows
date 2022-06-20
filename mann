@@ -2,94 +2,256 @@
 
 set -e
 
-# Options:
-# -x    See sh(1) for what it does.
-# -t    Sets MIX_ENV=test.
-# -p    Sets MIX_ENV=prod.
-
 progname=$(basename "$0")
 
+export MIX_ENV="${MIX_ENV:-dev}"
+
 main() {
-	while getopts xtp opt ; do
+	while getopts xpdt opt 2>/dev/null; do
 		case $opt in
 		x)   set -x ;;
-		t)   export MIX_ENV=test ;;
 		p)   export MIX_ENV=prod ;;
+		d)   export MIX_ENV=dev ;;
+		t)   export MIX_ENV=test ;;
 		\?)  usage ;;
 		esac
 	done
 	shift "$((OPTIND-1))"
 
 	case $1 in
-		mix)           shift ; cmd_mix "$@" ;;
-		run)           shift ; cmd_run "$@" ;;
-		test)          shift ; cmd_test "$@" ;;
-		help)          shift ; cmd_help "$@" ;;
-		db.create)     shift ; cmd_db_create "$@" ;;
-		db.drop)       shift ; cmd_db_drop "$@" ;;
-		db.migrate)    shift ; cmd_db_migrate "$@" ;;
-		db.rollback)   shift ; cmd_db_rollback "$@" ;;
-		db.reset)      shift ; cmd_db_reset "$@" ;;
-		db.remigrate)  shift ; cmd_db_remigrate "$@" ;;
-		*)             die "command does not exist: $1" ;;
+	help)          shift ; help "$@" ;;
+	mix)           shift ; cmd_mix "$@" ;;
+	run)           shift ; cmd_run "$@" ;;
+	clean)         shift ; cmd_clean "$@" ;;
+	test)          shift ; cmd_test "$@" ;;
+	cover)         shift ; cmd_cover "$@" ;;
+	cover.clean)   shift ; cmd_cover_clean "$@" ;;
+	env.setup)     shift ; cmd_env_setup "$@" ;;
+	dep.setup)     shift ; cmd_dep_setup "$@" ;;
+	dep.clean)     shift ; cmd_dep_clean "$@" ;;
+	dep.copy)      shift ; cmd_dep_copy "$@" ;;
+	dep.update)    shift ; cmd_dep_update "$@" ;;
+	db.setup)      shift ; cmd_db_setup "$@" ;;
+	db.reset)      shift ; cmd_db_reset "$@" ;;
+	db.create)     shift ; cmd_db_create "$@" ;;
+	db.drop)       shift ; cmd_db_drop "$@" ;;
+	db.migrate)    shift ; cmd_db_migrate "$@" ;;
+	db.rollback)   shift ; cmd_db_rollback "$@" ;;
+	db.remigrate)  shift ; cmd_db_remigrate "$@" ;;
+	doc)           shift ; cmd_doc "$@" ;;
+	doc.serve)     shift ; cmd_doc_serve "$@" ;;
+	doc.clean)     shift ; cmd_doc_clean "$@" ;;
+	devop.build)   shift ; cmd_devop_build "$@" ;;
+	devop.setup)   shift ; cmd_devop_setup "$@" ;;
+	devop.run)     shift ; cmd_devop_run "$@" ;;
+	*)             usage ;;
 	esac
 }
 
 die() {
-	printf '%s: %s\n' "$progname" "$*"
+	printf '%s: %s\n' "$progname" "$*" >&2
 	exit 1
 }
 
+warn() {
+	printf '%s: %s\n' "$progname" "$*" >&2
+}
+
 usage() {
-	cat <<EOF >&1
-usage: $progname [-x] [-t | -p] cmd [args...]
+	cat <<EOF >&2
+usage: $progname [-x] [-p | -d | -t] cmd [args...]
+
+quick overview: $progname help
 EOF
 	exit 1
 }
 
+help() {
+	cat <<EOF
+options:
+    -x    Write a trace for each command.  See sh(1) for details.
+    -p    Set MIX_ENV=prod.
+    -d    Set MIX_ENV=dev.
+    -t    Set MIX_ENV=test.
+
+commands:
+    help           Print this text.
+    mix            Run 'mix'.
+    run            Run the application using 'iex'.
+    clean          Clean all unnecessary files.
+    test           Run the tests using 'mix test'.
+    cover          Run coverage on tests.
+    cover.clean    Clean generated coverage files.
+    env.setup      Setup configs.
+    dep.setup      Setup dependencies.
+    dep.clean      Clean dependencies.
+    dep.update     Update a dependency.
+    dep.copy       Copy deps to .deps.  Should be used only by devs.
+    db.setup       Create the database and run the migrations.
+    db.reset       Drop the database, recrate and remigrate it.
+    db.create      Create the database.
+    db.drop        Drop the database.
+    db.migrate     Run the migration scripts.
+    db.rollback    Roll back migrations.
+    db.remigrate   Unroll all the migrations and migrate them again.
+    doc            Generate static docs.
+    doc.serve      Serve the documantation with Erlang.
+    doc.clean      Clean the generated docs.
+    devop.build    Build a Docker image.
+    devop.setup    Generate the docker-compose file.
+    devop.run      Run Zenflows via the docker-compose file.
+EOF
+}
+
+setup() {
+	if ! test -e conf/env.sh ; then
+		warn "the file 'conf/env.sh' doesn't exist; running env.setup"
+		cmd_env_setup
+	fi
+}
+
+readenv() {
+	. conf/env.sh
+}
 
 # commands
 cmd_mix() {
+	setup
+	readenv
 	mix "$@"
 }
 
 cmd_run() {
+	setup
+	readenv
 	iex -S mix "$@"
 }
 
+cmd_clean() {
+	cmd_cover_clean
+	cmd_doc_clean
+	cmd_dep_clean
+	rm -rf _build
+}
+
 cmd_test() {
-	mix test "$@"
+	export MIX_ENV=test
+	cmd_mix test "$@"
 }
 
-cmd_help() {
-	mix help "$@"
+cmd_cover() {
+	export MIX_ENV=test
+	cmd_mix test --cover "$@"
 }
 
-cmd_db_create() {
-	mix ecto.create "$@"
+cmd_cover_clean() {
+	rm -rf cover
 }
 
-cmd_db_drop() {
-	mix ecto.drop "$@"
+cmd_env_setup() {
+	if test -e conf/env.sh ; then
+		warn "the file 'conf/env.sh' already exists; skipping"
+	else
+		salt=$(openssl rand -hex 64)
+		sed s,\$ROOM_SALT,"$salt", conf/.env.templ >conf/env.sh
+		warn "the 'conf/env.sh' file is generated, please edit it to suit your needs"
+	fi
 }
 
-cmd_db_migrate() {
-	mix ecto.migrate "$@"
+cmd_dep_setup() {
+	test -d deps || cp -rf .deps deps
 }
 
-cmd_db_rollback() {
-	mix ecto.rollback "$@"
+cmd_dep_clean() {
+	rm -rf deps
+}
+
+cmd_dep_copy() {
+	ext=$(date +%Y%m%d%H%M%S)
+	mv .deps .deps."$ext"
+	cp -rf deps .deps
+}
+
+cmd_db_setup() {
+	cmd_db_create
+	cmd_db_migrate
 }
 
 cmd_db_reset() {
-	mix ecto.drop && \
-	mix ecto.create && \
-	mix ecto.migrate
+	cmd_db_drop
+	cmd_db_setup
+}
+
+cmd_db_create() {
+	cmd_mix ecto.create "$@"
+}
+
+cmd_db_drop() {
+	cmd_mix ecto.drop "$@"
+}
+
+cmd_db_migrate() {
+	cmd_mix ecto.migrate "$@"
+}
+
+cmd_db_rollback() {
+	cmd_mix ecto.rollback "$@"
 }
 
 cmd_db_remigrate() {
-	mix ecto.rollback --all && \
-	mix ecto.migrate
+	cmd_db_rollback --all
+	cmd_db_migrate
+}
+
+cmd_doc() {
+	cmd_mix docs -f html
+}
+
+cmd_doc_serve() {
+	if ! test -e .docs/index.html ; then
+		warn "the docs hasn't been generated yet; running 'doc' to generate them"
+		cmd_doc
+	fi
+
+	erl -noshell -s inets -eval '
+		{ok, _Pid} = inets:start(httpd, [
+			{server_name, "zenflows document server"},
+			{server_root, ".docs/"},
+			{document_root, ".docs/"},
+			{port, 8192},
+			{directory_index, ["index.html"]},
+			{mime_types, [
+				{"html", "text/html"},
+				{"js", "text/javascript"},
+				{"css", "text/css"}
+			]}
+		]),
+		io:format("the docs are served at: http://localhost:8192/~nhit control-c twitce to exit~n").
+	'
+}
+
+cmd_doc_clean() {
+	rm -rf .docs
+}
+
+cmd_devop_build() {
+	docker build -f devop/Dockerfile -t zenflows:latest .
+}
+
+cmd_devop_setup() {
+	if test -e devop/docker-compose.yml ; then
+		warn "the file 'devop/docker-compose.yml' already exists; skipping"
+	else
+		salt=$(openssl rand -hex 64)
+		pass=$(openssl rand -hex 16)
+		sed 's,$ROOM_SALT,'"$salt"',;s,$DB_PASS,'"$pass"',' devop/.docker-compose.templ >devop/docker-compose.yml
+		warn "the 'devop/docker-compose.yml' file is generated, please edit it to suit your needs"
+	fi
+}
+
+cmd_devop_run() {
+	cmd_devop_setup
+	docker compose -p zenflows -f devop/docker-compose.yml run --service-ports --rm srv start_iex
 }
 
 main "$@"

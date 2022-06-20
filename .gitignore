@@ -89,6 +89,7 @@
 !/zencode/
 /zencode/*
 !/zencode/*.zen
+!/zencode/test.sh
 
 # docs
 !/docs/

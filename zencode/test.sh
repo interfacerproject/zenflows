@@ -7,8 +7,8 @@ if [ $? != 0 ]; then
 	echo "Error: zenroom interpreter not found in PATH"
 	exit 1
 fi
-if ! [ -r src/zencode ]; then
-	echo "Error: run from base dir: ./test/zencode/run.sh"
+if ! ls ./*.zen >/dev/null 2>&1 ; then
+	echo "Error: there is no zencode scripts in PWD to run"
 	exit 1
 fi
 
@@ -19,7 +19,7 @@ date >> $results
 echo >> $results
 
 function testzen() {
-    script="src/zencode/${1}.zen"
+    script="${1}.zen"
     expect="$2"
     input="$3"
     if [ "$input" != "" ]; then

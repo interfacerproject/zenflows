@@ -97,8 +97,11 @@
 
 # devops stuff
 !/.dockerignore
+!/devop/
+/devop/*
 !/devop/Dockerfile
-!/devop/docker-compose.yml
+!/devop/.docker-compose.templ
+!/devop/Dockerfile-zvmlet
 
 # github stuff
 !/.github/

@@ -1,0 +1,45 @@
+version: "3.8"
+services:
+  srv:
+    container_name: srv
+    image: zenflows:latest
+    build:
+      context: ../
+      dockerfile: devop/Dockerfile
+      args:
+        MIX_ENV: prod
+    ports:
+      - 8000:8000
+    environment:
+      DB_HOST: db
+      DB_NAME: &db_name zenflows
+      DB_USER: &db_user zenflows_dbuser
+      DB_PASS: &db_pass $DB_PASS
+      # DB_PORT: 5432
+
+      ROOM_ENDPOINT: zvmlet:3000
+      ROOM_SALT: $ROOM_SALT
+    depends_on:
+      - zvmlet
+      - db
+    stdin_open: true
+    tty: true
+  db:
+    container_name: db
+    image: postgres:12-alpine
+    environment:
+      POSTGRES_DB: *db_name
+      POSTGRES_USER: *db_user
+      POSTGRES_PASSWORD: *db_pass
+    volumes:
+      - /var/lib/postgresql/data
+  zvmlet:
+    container_name: zvmlet
+    image: zvmlet:latest
+    build:
+      context: ../
+      dockerfile: devop/zvmlet-dockerfile
+    environment:
+      HTTP_PORT: 3000
+    volumes:
+      - ../zencode:/restroom-mw/contracts:ro

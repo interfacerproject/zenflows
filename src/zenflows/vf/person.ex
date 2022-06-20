@@ -3,7 +3,7 @@ defmodule Zenflows.VF.Person do
 
 use Zenflows.DB.Schema
 
-alias Zenflows.Crypto.Pass
+alias Zenflows.Restroom
 alias Zenflows.VF.{SpatialThing, Validate}
 
 @type t() :: %__MODULE__{
@@ -80,7 +80,7 @@ end
 @spec hash_pass(Changeset.t()) :: Changeset.t()
 defp hash_pass(cset) do
 	if plain = Changeset.get_change(cset, :pass_plain) do
-		hash = Pass.hash(plain)
+		hash = Restroom.passgen(plain)
 		Changeset.put_change(cset, :pass, hash)
 	else
 		cset

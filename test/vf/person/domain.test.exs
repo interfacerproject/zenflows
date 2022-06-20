@@ -2,7 +2,7 @@ defmodule ZenflowsTest.VF.Person.Domain do
 use ZenflowsTest.Help.EctoCase, async: true
 
 alias Ecto.Changeset
-alias Zenflows.Crypto.Pass
+alias Zenflows.Restroom
 alias Zenflows.VF.{Person, Person.Domain}
 
 setup ctx do
@@ -59,7 +59,7 @@ describe "create/1" do
 		assert per.primary_location_id == params.primary_location_id
 		assert per.user == params.user
 		assert per.email == params.email
-		assert Pass.match?(Factory.pass_plain(), per.pass)
+		assert Restroom.passverify?(Factory.pass_plain(), per.pass)
 	end
 
 	test "doesn't create a Person with invalid params" do
@@ -77,7 +77,7 @@ describe "update/2" do
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == old.email
-		assert Pass.match?(Factory.pass_plain(), new.pass)
+		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
 	end
 
 	test "doesn't update a Person with invalid params", %{per: old} do
@@ -90,7 +90,7 @@ describe "update/2" do
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email
-		assert Pass.match?(Factory.pass_plain(), new.pass)
+		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
 	end
 end
 

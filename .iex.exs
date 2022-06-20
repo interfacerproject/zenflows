@@ -4,6 +4,7 @@ end
 
 alias Zenflows.DB
 alias Zenflows.DB.Repo
-alias Zenflows.VF
 alias Zenflows.GQL
 alias Zenflows.GQL.Schema
+alias Zenflows.Restroom
+alias Zenflows.VF

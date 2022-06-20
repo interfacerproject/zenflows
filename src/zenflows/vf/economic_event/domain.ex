@@ -90,14 +90,14 @@ defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produ
 				res = from(
 					r in EconomicResource,
 					where: [id: ^evt.resource_inventoried_as_id],
-					# cr = container resource
-					left_join: cr in EconomicResource, on: cr.contained_in_id == r.id,
 					select: merge(map(r, ^fields), %{
 						contained?: not is_nil(r.contained_in_id), # is it contained in something?
-						container?: not is_nil(cr) # is it a container, containing something?
 					})
 				)
 				|> repo.one!()
+				res = Map.put(res, :container?,
+					where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
+					|> repo.exists?())
 
 				cond do
 					evt.provider_id != res.primary_accountable_id or evt.provider_id != res.custodian_id ->
@@ -133,14 +133,14 @@ defp handle_multi(action_id, evt, _) when action_id in ["lower", "consume"] do
 		res = from(
 			r in EconomicResource,
 			where: [id: ^evt.resource_inventoried_as_id],
-			# cr = container resource
-			left_join: cr in EconomicResource, on: cr.contained_in_id == r.id,
 			select: merge(map(r, ^fields), %{
 				contained?: not is_nil(r.contained_in_id), # is it contained in something?
-				container?: not is_nil(cr) # is it a container, containing something?
 			})
 		)
 		|> repo.one!()
+		res = Map.put(res, :container?,
+			where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
+			|> repo.exists?())
 
 		cond do
 			evt.provider_id != res.primary_accountable_id or evt.provider_id != res.custodian_id ->
@@ -184,14 +184,14 @@ defp handle_multi("use", evt, _) do
 				res = from(
 					r in EconomicResource,
 					where: [id: ^evt.resource_inventoried_as_id],
-					# cr = container resource
-					left_join: cr in EconomicResource, on: cr.contained_in_id == r.id,
 					select: merge(map(r, ^fields), %{
 						contained?: not is_nil(r.contained_in_id), # is it contained in something?
-						container?: not is_nil(cr) # is it a container, containing something?
 					})
 				)
 				|> repo.one!()
+				res = Map.put(res, :container?,
+					where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
+					|> repo.exists?())
 
 				cond do
 					evt.resource_quantity && (evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id) ->
@@ -221,14 +221,13 @@ defp handle_multi("cite", evt, _) do
 				res = from(
 					r in EconomicResource,
 					where: [id: ^evt.resource_inventoried_as_id],
-					# cr = container resource
-					left_join: cr in EconomicResource, on: cr.contained_in_id == r.id,
 					select: merge(map(r, [:accounting_quantity_has_unit_id]), %{
 						contained?: not is_nil(r.contained_in_id), # is it contained in something?
-						container?: not is_nil(cr) # is it a container, containing something?
 					})
 				)
 				|> repo.one!()
+				res = Map.put(res, :container?,
+					where(EconomicResource, contained_in_id: ^res.id) |> repo.exists?())
 
 				cond do
 					evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
@@ -367,15 +366,15 @@ defp handle_multi("accept", evt, _) do
 		]a
 		res = from(
 			r in EconomicResource,
-			# cr = container resource
-			left_join: cr in EconomicResource, on: cr.contained_in_id == r.id,
 			where: [id: ^evt.resource_inventoried_as_id],
 			select: merge(map(r, ^fields), %{
 				contained?: not is_nil(r.contained_in_id), # is it contained in something?
-				container?: not is_nil(cr),
 			})
 		)
 		|> repo.one!()
+		res = Map.put(res, :container?,
+			where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
+			|> repo.exists?())
 
 		single_ref? = fn ->
 			where(EconomicEvent, [e],

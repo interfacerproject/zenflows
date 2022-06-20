@@ -3,9 +3,8 @@ defmodule ZenflowsTest.Help.Factory do
 Defines shortcuts for DB testing.
 """
 
-alias Zenflows.Crypto.Pass
 alias Zenflows.DB.Repo
-alias Zenflows.VF
+alias Zenflows.{Restroom, VF}
 
 defdelegate id(), to: Zenflows.DB.ID, as: :gen
 
@@ -220,7 +219,7 @@ def build(:person) do
 		primary_location: build(:spatial_thing),
 		user: uniq("some user"),
 		email: uniq("some email"),
-		pass: Pass.hash(pass_plain()),
+		pass: Restroom.passgen(pass_plain()),
 	}
 end
 

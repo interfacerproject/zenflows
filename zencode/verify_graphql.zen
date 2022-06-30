@@ -1,0 +1,9 @@
+Scenario schnorr: verify the signature of a graph query
+
+Given I have a 'base64' named 'graphql'
+and a 'schnorr signature'
+and a 'schnorr public key' in 'pubkeys'
+
+When I verify the 'graphql' has a schnorr signature in 'schnorr signature' by 'schnorr public key'
+
+Then print the string 'VALID SIGNATURE'

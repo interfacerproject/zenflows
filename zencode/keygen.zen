@@ -2,6 +2,7 @@ Scenario ecdh : 'keygen'
 Scenario ethereum: 'keygen'
 Scenario schnorr: 'keygen'
 Scenario reflow: 'keygen'
+Scenario eddsa: 'keygen'
 
 Given nothing
 When I create the ecdh key
@@ -9,6 +10,7 @@ When I create the reflow key
 When I create the schnorr key
 When I create the ethereum key
 When I create the bitcoin key
+When I create the eddsa key
 
 When I create the 'base64 dictionary' named 'pubkeys'
 When I create the ecdh public key
@@ -17,6 +19,8 @@ When I create the reflow public key
 and I move 'reflow public key' in 'pubkeys'
 When I create the schnorr public key
 and I move 'schnorr public key' in 'pubkeys'
+When I create the eddsa public key
+and I move 'eddsa public key' in 'pubkeys'
 
 When I create the ethereum address
 When I create the bitcoin address

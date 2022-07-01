@@ -4,6 +4,22 @@ Given I have a 'base64' named 'graphql'
 and a 'schnorr signature'
 and a 'schnorr public key' in 'pubkeys'
 
+# check that the graph query is reentrant
+# When I create the count of char '{' found in 'graphql'
+# and I rename 'count' to 'open'
+# and I create the count of char '}' found in 'graphql'
+# and I remove 'count'
+# and I remove 'open'
+# When I create the count of char '(' found in 'graphql'
+# and I rename 'count' to 'open'
+# and I create the count of char ')' found in 'graphql'
+# and I remove 'count'
+# and I remove 'open'
+# When I create the count of char '[' found in 'graphql'
+# and I rename 'count' to 'open'
+# and I create the count of char ']' found in 'graphql'
+# and I verify 'count' is equal to 'open'
+
 When I verify the 'graphql' has a schnorr signature in 'schnorr signature' by 'schnorr public key'
 
 Then print the string 'VALID SIGNATURE'

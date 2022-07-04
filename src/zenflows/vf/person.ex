@@ -16,6 +16,8 @@ alias Zenflows.VF.{SpatialThing, Validate}
 	email: String.t(),
 	pass: binary(),
 	pass_plain: String.t() | nil,
+	pubkeys: binary(),
+	pubkeys_encoded: String.t() | nil,
 }
 
 schema "vf_agent" do
@@ -28,9 +30,11 @@ schema "vf_agent" do
 	field :email, :string
 	field :pass, :binary, redact: true
 	field :pass_plain, :string, virtual: true, redact: true
+	field :pubkeys, :binary
+	field :pubkeys_encoded, :string, virtual: true
 end
 
-@insert_reqr ~w[name user email pass_plain]a
+@insert_reqr ~w[name user email pass_plain pubkeys_encoded]a
 @insert_cast @insert_reqr ++ ~w[image note primary_location_id]a
 # TODO: Maybe add email to @update_cast as well?
 @update_cast ~w[name image note primary_location_id user pass_plain]a
@@ -50,10 +54,12 @@ def chgset(params) do
 	|> Validate.note(:note)
 	|> check_email()
 	|> hash_pass()
+	|> decode_pubkeys()
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.unique_constraint(:email)
 	|> Changeset.assoc_constraint(:primary_location)
+	|> Changeset.check_constraint(:pubkeys, name: :type_mutex)
 end
 
 # update changeset
@@ -90,6 +96,17 @@ end
 # Validate that :email is a valid email address.
 @spec check_email(Changeset.t()) :: Changeset.t()
 defp check_email(cset) do
-	cset
+	# works good enough for now
+	Changeset.validate_format(cset, :email, ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/)
+end
+
+@spec decode_pubkeys(Changeset.t()) :: Changeset.t()
+defp decode_pubkeys(cset) do
+	with {:ok, val} <- Changeset.fetch_change(cset, :pubkeys_encoded),
+			{:ok, decoded} <- Base.url_decode64(val) do
+		Changeset.put_change(cset, :pubkeys, decoded)
+	else _ ->
+		Changeset.add_error(cset, :pubkeys, "not valid url-safe base64-encoded string")
+	end
 end
 end

@@ -7,6 +7,7 @@ use Ecto.Migration
 	AND "user" IS NOT NULL
 	AND email IS NOT NULL
 	AND pass IS NOT NULL
+	AND pubkeys IS NOT NULL
 	AND classified_as IS NULL
 )
 OR
@@ -15,6 +16,7 @@ OR
 	AND "user" IS NULL
 	AND email IS NULL
 	AND pass IS NULL
+	AND pubkeys IS NULL
 )
 """
 
@@ -32,6 +34,7 @@ def change() do
 		add :user, :text
 		add :email, :citext
 		add :pass, :binary
+		add :pubkeys, :binary
 
 		# organization
 		add :classified_as, {:array, :text}

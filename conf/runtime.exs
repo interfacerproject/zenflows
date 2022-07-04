@@ -59,3 +59,12 @@ config :zenflows, Zenflows.Restroom,
 	room_host: fetch_env!("ROOM_HOST"),
 	room_port: fetch_env!("ROOM_PORT"),
 	room_salt: room_salt
+
+#
+# admin
+#
+admin_key = fetch_env!("ADMIN_KEY") |> Base.decode16!(case: :lower)
+if byte_size(admin_key) != 64,
+	do: raise "ADMIN_KEY must be a 64-octect long, lowercase-base16-encoded string"
+config :zenflows, Zenflows.Admin,
+	admin_key: admin_key

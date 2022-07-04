@@ -19,6 +19,7 @@ alias Zenflows.VF.SpatialThing
 	user: String.t() | nil,
 	email: String.t() | nil,
 	pass: binary() | nil,
+	pubkeys: binary() | nil,
 
 	# organization
 	classified_as: [String.t()] | nil,
@@ -36,6 +37,7 @@ schema "vf_agent" do
 	field :user, :string
 	field :email, :string
 	field :pass, :binary, redact: true
+	field :pubkeys, :binary
 
 	# organization
 	field :classified_as, {:array, :string}

@@ -12,8 +12,9 @@ setup ctx do
 		note: Factory.uniq("note"),
 		primary_location_id: Factory.insert!(:spatial_thing).id,
 		user: Factory.uniq("user"),
-		email: Factory.uniq("email"),
+		email: "#{Factory.uniq("user")}@example.com",
 		pass_plain: Factory.pass_plain(),
+		pubkeys_encoded: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
 	}
 
 	if ctx[:no_insert] do
@@ -60,6 +61,7 @@ describe "create/1" do
 		assert per.user == params.user
 		assert per.email == params.email
 		assert Restroom.passverify?(Factory.pass_plain(), per.pass)
+		assert per.pubkeys == Base.url_decode64!(params.pubkeys_encoded)
 	end
 
 	test "doesn't create a Person with invalid params" do
@@ -78,6 +80,7 @@ describe "update/2" do
 		assert new.user == params.user
 		assert new.email == old.email
 		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
+		assert new.pubkeys == old.pubkeys
 	end
 
 	test "doesn't update a Person with invalid params", %{per: old} do
@@ -91,6 +94,7 @@ describe "update/2" do
 		assert new.user == old.user
 		assert new.email == old.email
 		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
+		assert new.pubkeys == old.pubkeys
 	end
 end
 

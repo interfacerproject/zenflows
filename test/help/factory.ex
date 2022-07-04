@@ -218,8 +218,9 @@ def build(:person) do
 		note: uniq("some note"),
 		primary_location: build(:spatial_thing),
 		user: uniq("some user"),
-		email: uniq("some email"),
+		email: "#{uniq("user")}@example.com",
 		pass: Restroom.passgen(pass_plain()),
+		pubkeys: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
 	}
 end
 
@@ -235,7 +236,7 @@ def build(:organization) do
 end
 
 def build(:agent) do
-	type = if(bool(), do: :person, else: :organization)
+	type = if(bool(), do: :person, else: :person)
 	struct(VF.Agent, build_map!(type))
 end
 

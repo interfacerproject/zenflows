@@ -25,7 +25,6 @@ describe "by_id/1" do
 		# person
 		assert agent.user == per.user
 		assert agent.email == per.email
-		assert agent.pass == per.pass
 
 		# organization
 		assert agent.classified_as == nil
@@ -45,7 +44,6 @@ describe "by_id/1" do
 		# person
 		assert agent.user == nil
 		assert agent.email == nil
-		assert agent.pass == nil
 
 		# organization
 		assert agent.classified_as == org.classified_as

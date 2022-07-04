@@ -3,7 +3,6 @@ defmodule Zenflows.VF.Person do
 
 use Zenflows.DB.Schema
 
-alias Zenflows.Restroom
 alias Zenflows.VF.{SpatialThing, Validate}
 
 @type t() :: %__MODULE__{
@@ -14,8 +13,6 @@ alias Zenflows.VF.{SpatialThing, Validate}
 	primary_location: SpatialThing.t() | nil,
 	user: String.t(),
 	email: String.t(),
-	pass: binary(),
-	pass_plain: String.t() | nil,
 	pubkeys: binary(),
 	pubkeys_encoded: String.t() | nil,
 }
@@ -28,16 +25,14 @@ schema "vf_agent" do
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
 	field :email, :string
-	field :pass, :binary, redact: true
-	field :pass_plain, :string, virtual: true, redact: true
 	field :pubkeys, :binary
 	field :pubkeys_encoded, :string, virtual: true
 end
 
-@insert_reqr ~w[name user email pass_plain pubkeys_encoded]a
+@insert_reqr ~w[name user email pubkeys_encoded]a
 @insert_cast @insert_reqr ++ ~w[image note primary_location_id]a
 # TODO: Maybe add email to @update_cast as well?
-@update_cast ~w[name image note primary_location_id user pass_plain]a
+@update_cast ~w[name image note primary_location_id user]a
 
 # insert changeset
 @doc false
@@ -49,11 +44,9 @@ def chgset(params) do
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.name(:email)
-	|> Validate.name(:pass_plain)
 	|> Validate.uri(:image)
 	|> Validate.note(:note)
 	|> check_email()
-	|> hash_pass()
 	|> decode_pubkeys()
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
@@ -70,27 +63,12 @@ def chgset(schema, params) do
 	|> Changeset.cast(params, @update_cast)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
-	|> Validate.name(:pass_plain)
 	|> Validate.uri(:image)
 	|> Validate.note(:note)
 	|> check_email()
-	|> hash_pass()
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.assoc_constraint(:primary_location)
-end
-
-# Hash the passphrase in the virtual field `:pass_plain` before saving
-# to the database.  The hashed passphrase will be available as `:pass`
-# thereafter.
-@spec hash_pass(Changeset.t()) :: Changeset.t()
-defp hash_pass(cset) do
-	if plain = Changeset.get_change(cset, :pass_plain) do
-		hash = Restroom.passgen(plain)
-		Changeset.put_change(cset, :pass, hash)
-	else
-		cset
-	end
 end
 
 # Validate that :email is a valid email address.

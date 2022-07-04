@@ -19,9 +19,6 @@ object :mutation_admin do
 		@desc "The username of the user.  Must be unique"
 		arg :user, non_null(:string)
 
-		@desc "The plain passphrase of the user."
-		arg :pass_plain, non_null(:string), name: "pass"
-
 		@desc "The full name/just a label of the user.  Isn't unique."
 		arg :name, non_null(:string)
 

@@ -2,7 +2,6 @@ defmodule ZenflowsTest.VF.Person.Domain do
 use ZenflowsTest.Help.EctoCase, async: true
 
 alias Ecto.Changeset
-alias Zenflows.Restroom
 alias Zenflows.VF.{Person, Person.Domain}
 
 setup ctx do
@@ -13,7 +12,6 @@ setup ctx do
 		primary_location_id: Factory.insert!(:spatial_thing).id,
 		user: Factory.uniq("user"),
 		email: "#{Factory.uniq("user")}@example.com",
-		pass_plain: Factory.pass_plain(),
 		pubkeys_encoded: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
 	}
 
@@ -60,7 +58,6 @@ describe "create/1" do
 		assert per.primary_location_id == params.primary_location_id
 		assert per.user == params.user
 		assert per.email == params.email
-		assert Restroom.passverify?(Factory.pass_plain(), per.pass)
 		assert per.pubkeys == Base.url_decode64!(params.pubkeys_encoded)
 	end
 
@@ -79,7 +76,6 @@ describe "update/2" do
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == old.email
-		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
 		assert new.pubkeys == old.pubkeys
 	end
 
@@ -93,7 +89,6 @@ describe "update/2" do
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email
-		assert Restroom.passverify?(Factory.pass_plain(), new.pass)
 		assert new.pubkeys == old.pubkeys
 	end
 end

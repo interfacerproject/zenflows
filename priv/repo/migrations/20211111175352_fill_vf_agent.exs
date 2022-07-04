@@ -6,7 +6,6 @@ use Ecto.Migration
 	type = 'per'
 	AND "user" IS NOT NULL
 	AND email IS NOT NULL
-	AND pass IS NOT NULL
 	AND pubkeys IS NOT NULL
 	AND classified_as IS NULL
 )
@@ -15,7 +14,6 @@ OR
 	type = 'org'
 	AND "user" IS NULL
 	AND email IS NULL
-	AND pass IS NULL
 	AND pubkeys IS NULL
 )
 """
@@ -33,7 +31,6 @@ def change() do
 		# person
 		add :user, :text
 		add :email, :citext
-		add :pass, :binary
 		add :pubkeys, :binary
 
 		# organization

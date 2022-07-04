@@ -19,10 +19,6 @@ who have no physical location.
 """
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
-@pass """
-Plain passphrase of the person.  It will be hashed then stored.
-The orginal, plaintext, will be discarded.
-"""
 @pubkeys """
 A URL-safe, Base64-encoded string of a JSON object.
 """
@@ -82,9 +78,6 @@ input_object :person_create_params do
 	@desc @email
 	field :email, non_null(:string)
 
-	@desc @pass
-	field :pass_plain, non_null(:string), name: "pass"
-
 	@desc @pubkeys
 	field :pubkeys_encoded, non_null(:string), name: "pubkeys"
 end
@@ -106,9 +99,6 @@ input_object :person_update_params do
 
 	@desc @user
 	field :user, :string
-
-	@desc @pass
-	field :pass_plain, :string, name: "pass"
 end
 
 object :query_person do

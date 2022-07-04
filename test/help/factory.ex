@@ -74,12 +74,6 @@ def uri() do
 	uniq("schema://user@host:port/path")
 end
 
-@doc "The plaintext passphrase used in passphrase related fields."
-@spec pass_plain :: String.t()
-def pass_plain() do
-	"so secret!"
-end
-
 @doc "Inserts a schema into the database with field overrides."
 @spec insert!(atom(), %{required(atom()) => term()}) :: struct()
 def insert!(name, attrs \\ %{}) do
@@ -219,7 +213,6 @@ def build(:person) do
 		primary_location: build(:spatial_thing),
 		user: uniq("some user"),
 		email: "#{uniq("user")}@example.com",
-		pass: Restroom.passgen(pass_plain()),
 		pubkeys: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
 	}
 end

@@ -10,7 +10,6 @@ setup do
 			primary_location_id: Factory.insert!(:spatial_thing).id,
 			user: Factory.uniq("user"),
 			email: "#{Factory.uniq("user")}@example.com",
-			pass_plain: Factory.pass_plain(),
 			pubkeys_encoded: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
 		},
 		per: Factory.insert!(:person),
@@ -51,7 +50,6 @@ describe "Mutation" do
 					primaryLocation: "#{params.primary_location_id}"
 					user: "#{params.user}"
 					email: "#{params.email}"
-					pass: "#{params.pass_plain}"
 					pubkeys: "#{params.pubkeys_encoded}"
 				}) {
 					agent {
@@ -82,7 +80,6 @@ describe "Mutation" do
 					note: "#{params.note}"
 					primaryLocation: "#{params.primary_location_id}"
 					user: "#{params.user}"
-					pass: "#{params.pass_plain}"
 				}) {
 					agent {
 						id

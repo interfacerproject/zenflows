@@ -4,7 +4,7 @@ Defines shortcuts for DB testing.
 """
 
 alias Zenflows.DB.Repo
-alias Zenflows.{Restroom, VF}
+alias Zenflows.VF
 
 defdelegate id(), to: Zenflows.DB.ID, as: :gen
 

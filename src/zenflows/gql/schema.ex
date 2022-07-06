@@ -7,6 +7,7 @@ alias Zenflows.VF
 
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
+import_types Zenflows.SWPass.Type
 
 import_types VF.TimeUnit.Type
 import_types VF.Action.Type
@@ -48,6 +49,8 @@ import_types VF.EconomicEvent.Type
 #import_types VF.ProposedTo.Type
 
 query do
+	import_fields :query_sw_pass
+
 	import_fields :query_unit
 	import_fields :query_spatial_thing
 	import_fields :query_process_specification
@@ -85,6 +88,8 @@ query do
 end
 
 mutation do
+	import_fields :mutation_sw_pass
+
 	import_fields :mutation_unit
 	import_fields :mutation_spatial_thing
 	import_fields :mutation_process_specification

@@ -55,10 +55,6 @@ keyring='{"bitcoin_address":"bc1qlsqa5rgnrma4agtjar4q5jv9pe4pxze7vsyvp7","ethere
 
 testzen keygen "${keyring}"
 
-testzen passgen_pbkdf2 '{"key_derivation":"hUWpLrhAYoeWA/0uNjn32a/YNwQc8S1mAI0IpWgPMLU="}' '{"salt":"c24463f5e352da20cb79a43f97436cce57344911e1d0ec0008cbedb5fabcca33","password":"my secret pass"}' > /dev/null
-
-testzen passverify_pbkdf2 '{"output":["1"]}' '{"hash":"hUWpLrhAYoeWA/0uNjn32a/YNwQc8S1mAI0IpWgPMLU=","salt":"c24463f5e352da20cb79a43f97436cce57344911e1d0ec0008cbedb5fabcca33","password": "my secret pass"}' > /dev/null
-
 gql64=`mktemp`
 
 # example graphql with most allowed characters used

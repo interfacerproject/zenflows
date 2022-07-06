@@ -29,8 +29,8 @@ schema "vf_agent" do
 	field :pubkeys_encoded, :string, virtual: true
 end
 
-@insert_reqr ~w[name user email pubkeys_encoded]a
-@insert_cast @insert_reqr ++ ~w[image note primary_location_id]a
+@insert_reqr ~w[name user email]a
+@insert_cast @insert_reqr ++ ~w[pubkeys_encoded image note primary_location_id]a
 # TODO: Maybe add email to @update_cast as well?
 @update_cast ~w[name image note primary_location_id user]a
 
@@ -52,7 +52,6 @@ def chgset(params) do
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.unique_constraint(:email)
 	|> Changeset.assoc_constraint(:primary_location)
-	|> Changeset.check_constraint(:pubkeys, name: :type_mutex)
 end
 
 # update changeset
@@ -80,11 +79,17 @@ end
 
 @spec decode_pubkeys(Changeset.t()) :: Changeset.t()
 defp decode_pubkeys(cset) do
-	with {:ok, val} <- Changeset.fetch_change(cset, :pubkeys_encoded),
-			{:ok, decoded} <- Base.url_decode64(val) do
-		Changeset.put_change(cset, :pubkeys, decoded)
-	else _ ->
-		Changeset.add_error(cset, :pubkeys, "not valid url-safe base64-encoded string")
+	case Changeset.fetch_change(cset, :pubkeys_encoded) do
+		{:ok, val} ->
+			case Base.url_decode64(val) do
+				{:ok, decoded} ->
+					Changeset.put_change(cset, :pubkeys, decoded)
+
+				:error ->
+					Changeset.add_error(cset, :pubkeys, "not valid url-safe base64-encoded string")
+			end
+		:error ->
+			cset
 	end
 end
 end

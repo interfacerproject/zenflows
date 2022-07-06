@@ -6,7 +6,6 @@ use Ecto.Migration
 	type = 'per'
 	AND "user" IS NOT NULL
 	AND email IS NOT NULL
-	AND pubkeys IS NOT NULL
 	AND classified_as IS NULL
 )
 OR

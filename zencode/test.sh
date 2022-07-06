@@ -55,6 +55,8 @@ keyring='{"bitcoin_address":"bc1qlsqa5rgnrma4agtjar4q5jv9pe4pxze7vsyvp7","ethere
 
 testzen keygen "${keyring}"
 
+testzen byte_equal '{"output":["1"]}' '{"left":"dGhpcyBpcyBhIGJhc2U2NCBzdHJpbmcK","right":"dGhpcyBpcyBhIGJhc2U2NCBzdHJpbmcK"}' > /dev/null
+
 gql64=`mktemp`
 
 # example graphql with most allowed characters used

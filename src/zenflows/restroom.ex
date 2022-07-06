@@ -4,9 +4,12 @@ A module to interact with Restroom instances over (for now) HTTP.
 """
 
 @doc """
+Returns `true` when `left` and `right` are equal, `false` otherwise.
+"""
 @spec byte_equal?(binary(), binary()) :: boolean()
 def byte_equal?(left, right) do
-	case exec("byte_equal", %{left: left, right: right}) do
+	data = %{left: Base.encode64(left), right: Base.encode64(right)}
+	case exec("byte_equal", data) do
 		{:ok, %{"output" => ["1"]}} -> true
 		_ -> false
 	end

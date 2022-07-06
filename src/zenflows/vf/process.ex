@@ -7,6 +7,7 @@ transport economic resource(s).
 use Zenflows.DB.Schema
 
 alias Zenflows.VF.{
+	EconomicEvent,
 	Plan,
 	ProcessSpecification,
 	Scenario,
@@ -38,6 +39,9 @@ schema "vf_process" do
 	# belongs_to :in_scope_of
 	belongs_to :planned_within, Plan
 	belongs_to :nested_in, Scenario
+
+	has_many :inputs, EconomicEvent, foreign_key: :input_of_id
+	has_many :outputs, EconomicEvent, foreign_key: :output_of_id
 end
 
 @reqr [:name]

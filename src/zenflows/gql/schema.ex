@@ -7,7 +7,6 @@ alias Zenflows.VF
 
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
-import_types Zenflows.Admin.Type
 
 import_types VF.TimeUnit.Type
 import_types VF.Action.Type
@@ -120,8 +119,6 @@ mutation do
 	#import_fields :mutation_proposal
 	#import_fields :mutation_proposed_intent
 	#import_fields :mutation_proposed_to
-
-	import_fields :mutation_admin
 end
 
 @impl true

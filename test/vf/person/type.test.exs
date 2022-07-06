@@ -3,6 +3,7 @@ use ZenflowsTest.Help.AbsinCase, async: true
 
 setup do
 	%{
+		admin_key: Application.fetch_env!(:zenflows, Zenflows.Admin)[:admin_key] |> Base.encode16(case: :lower),
 		params: %{
 			name: Factory.uniq("name"),
 			# image
@@ -41,17 +42,46 @@ describe "Query" do
 end
 
 describe "Mutation" do
-	test "createPerson()", %{params: params} do
+	test "createPerson() doesn't create a person without the admin key", %{params: params} do
+		assert %{data: nil, errors: [%{message: "you are not authorized", path: ["createPerson"]}]} =
+			mutation!("""
+				createPerson(
+					adminKey: "fake!!!"
+					person: {
+						name: "#{params.name}"
+						note: "#{params.note}"
+						primaryLocation: "#{params.primary_location_id}"
+						user: "#{params.user}"
+						email: "#{params.email}"
+						pubkeys: "#{params.pubkeys_encoded}"
+					}
+				) {
+					agent {
+						id
+						name
+						note
+						primaryLocation { id }
+						user
+						email
+					}
+				}
+			""")
+	end
+
+	test "createPerson() creates a person with the admin key", %{params: params, admin_key: key} do
 		assert %{data: %{"createPerson" => %{"agent" => data}}} =
 			mutation!("""
-				createPerson(person: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-					primaryLocation: "#{params.primary_location_id}"
-					user: "#{params.user}"
-					email: "#{params.email}"
-					pubkeys: "#{params.pubkeys_encoded}"
-				}) {
+				createPerson(
+					adminKey: "#{key}"
+					person: {
+						name: "#{params.name}"
+						note: "#{params.note}"
+						primaryLocation: "#{params.primary_location_id}"
+						user: "#{params.user}"
+						email: "#{params.email}"
+						pubkeys: "#{params.pubkeys_encoded}"
+					}
+				) {
 					agent {
 						id
 						name
@@ -100,10 +130,23 @@ describe "Mutation" do
 		assert data["email"] == per.email
 	end
 
-	test "deletePerson()", %{per: per} do
+	test "deletePerson() doesn't delete the person without the admin key", %{per: per} do
+		assert %{data: nil, errors: [%{message: "you are not authorized", path: ["deletePerson"]}]} =
+			mutation!("""
+				deletePerson(
+					adminKey: "fake!!!"
+					id: "#{per.id}"
+				)
+			""")
+	end
+
+	test "deletePerson() deletes the person with the admin key", %{per: per, admin_key: key} do
 		assert %{data: %{"deletePerson" => true}} =
 			mutation!("""
-				deletePerson(id: "#{per.id}")
+				deletePerson(
+					adminKey: "#{key}"
+					id: "#{per.id}"
+				)
 			""")
 	end
 end

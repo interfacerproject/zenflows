@@ -1,14 +1,16 @@
 defmodule Zenflows.VF.Person.Resolv do
 @moduledoc "Resolvers of Persons."
 
+alias Zenflows.Admin
 alias Zenflows.VF.{Agent, Person, Person.Domain}
 
 def person(%{id: id}, _info) do
 	{:ok, Domain.by_id(id)}
 end
 
-def create_person(%{person: params}, _info) do
-	with {:ok, per} <- Domain.create(params) do
+def create_person(%{admin_key: key, person: params}, _info) do
+	with :ok <- Admin.auth(key),
+			{:ok, per} <- Domain.create(params) do
 		{:ok, %{agent: per}}
 	end
 end
@@ -19,8 +21,9 @@ def update_person(%{person: %{id: id} = params}, _info) do
 	end
 end
 
-def delete_person(%{id: id}, _info) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_person(%{admin_key: key, id: id}, _info) do
+	with :ok <- Admin.auth(key),
+		{:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end

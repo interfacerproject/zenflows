@@ -20,7 +20,7 @@ who have no physical location.
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
 @pubkeys """
-A URL-safe, Base64-encoded string of a JSON object.
+A URL-safe, lowercase-Base64-encoded string of a JSON object.
 """
 
 @desc "A natural person."
@@ -49,7 +49,7 @@ object :person do
 	field :email, non_null(:string)
 
 	@desc @pubkeys
-	field :pubkeys, non_null(:string), resolve: &Resolv.pubkeys/3
+	field :pubkeys, :string, resolve: &Resolv.pubkeys/3
 end
 
 object :person_response do
@@ -79,7 +79,7 @@ input_object :person_create_params do
 	field :email, non_null(:string)
 
 	@desc @pubkeys
-	field :pubkeys_encoded, non_null(:string), name: "pubkeys"
+	field :pubkeys_encoded, :string, name: "pubkeys"
 end
 
 input_object :person_update_params do
@@ -116,6 +116,10 @@ object :mutation_person do
 	@desc "Registers a new (human) person with the collaboration space."
 	field :create_person, non_null(:person_response) do
 		arg :person, non_null(:person_create_params)
+
+		@desc "The configuration-defined key to authenticate admin calls."
+		arg :admin_key, non_null(:string)
+
 		resolve &Resolv.create_person/2
 	end
 
@@ -131,6 +135,10 @@ object :mutation_person do
 	"""
 	field :delete_person, non_null(:boolean) do
 		arg :id, non_null(:id)
+
+		@desc "The configuration-defined key to authenticate admin calls."
+		arg :admin_key, non_null(:string)
+
 		resolve &Resolv.delete_person/2
 	end
 end

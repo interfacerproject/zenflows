@@ -32,8 +32,8 @@ defp exec(name, data) do
 	url = to_charlist("http://#{host()}/api/#{name}")
 	hdrs = [{'user-agent', useragent()}]
 	http_opts = [
-		{:timeout, 3000}, # 30 seconds
-		{:connect_timeout, 500}, # 5 seconds
+		{:timeout, 30000}, # 30 seconds
+		{:connect_timeout, 5000}, # 5 seconds
 		{:autoredirect, false},
 	]
 	with {:ok, data} <- Jason.encode(%{data: data}),

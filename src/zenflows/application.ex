@@ -16,7 +16,7 @@ def start(_type, _args) do
 end
 
 defp print_header() do
-	if System.get_env("NOHEADER") do
+	unless System.get_env("NOHEADER") do
 		IO.puts("""
 		Zenflows is designed to implement the Valuflows vocabulary,
 		written, and maintained by srfsh <info@dyne.org>.

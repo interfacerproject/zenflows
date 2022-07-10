@@ -18,8 +18,8 @@ end
 defp print_header() do
 	unless System.get_env("NOHEADER") do
 		IO.puts("""
-		Zenflows is designed to implement the Valuflows vocabulary,
-		written, and maintained by srfsh <info@dyne.org>.
+		Zenflows is designed to implement the Valueflows vocabulary,
+		written and maintained by srfsh <info@dyne.org>.
 		Copyright (C) 2021-2022 Dyne.org foundation <foundation@dyne.org>.
 
 		This program is free software: you can redistribute it and/or modify

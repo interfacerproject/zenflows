@@ -51,14 +51,9 @@ config :zenflows, Zenflows.DB.Repo, db_conf
 #
 # restroom
 #
-room_salt = fetch_env!("ROOM_SALT")
-if Base.decode16!(room_salt, case: :lower) |> byte_size() != 64,
-	do: raise "ROOM_SALT must be a 64-octect long, lowercase-base16-encoded string"
-
 config :zenflows, Zenflows.Restroom,
 	room_host: fetch_env!("ROOM_HOST"),
-	room_port: fetch_env!("ROOM_PORT"),
-	room_salt: room_salt
+	room_port: fetch_env!("ROOM_PORT")
 
 #
 # admin

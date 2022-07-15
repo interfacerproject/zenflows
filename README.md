@@ -115,9 +115,9 @@ To start using Zenflows
 
 Copyleft (ɔ) 2021-2022 by [Dyne.org](https://www.dyne.org) foundation, Amsterdam
 
-Designed, written and maintained by [srfsh](/srfsh) with the help of [jaromil](/jaromil), [puria](/puria).
+Designed, written and maintained by [srfsh](https://github.com/srfsh) with the help of [jaromil](https://github.com/jaromil), [puria](https://github.com/puria).
 
-Reviews and suggestions contributed by [Lynn](/fosterlynn), [Bob](/bhaugen), and members of the Valueflows community.
+Reviews and suggestions contributed by [Lynn](https://github.com/fosterlynn), [Bob](https://github.com/bhaugen), and members of the Valueflows community.
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/8/84/European_Commission.svg"
      width="190" alt="Project funded by the European Commission">

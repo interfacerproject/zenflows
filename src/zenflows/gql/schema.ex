@@ -128,7 +128,7 @@ end
 
 @impl true
 def middleware(midware, _field, %{identifier: :mutation}) do
-	midware ++ [Zenflows.GQL.Midware]
+	midware ++ [Zenflows.GQL.Errors]
 end
 
 def middleware(midware, _field, _obj) do

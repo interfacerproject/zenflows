@@ -1,6 +1,6 @@
-defmodule Zenflows.GQL.Midware do
+defmodule Zenflows.GQL.Errors do
 @moduledoc """
-Absinthe middleware for Ecto.Changeset errors.
+Absinthe middleware for errors (Ecto.Changeset-only, for now).
 """
 
 alias Ecto.Changeset, as: Chgset

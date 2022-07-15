@@ -77,6 +77,7 @@ defp docs() do
 		"docs/dependency-management.md",
 		"docs/style-guide.md",
 		"LICENSE",
+		"CONTRIBUTING.md",
 	],
 	output: ".docs"
 ]

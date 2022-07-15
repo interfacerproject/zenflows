@@ -39,15 +39,17 @@ also see the [Required Options](#required-options).
 * `ROOM_HOST`: The hostname or IP address of the Restroom instance.
 * `ROOM_PORT`: The port number of the Restroom instance. It must be an integer
   between `0` and `65535`, inclusive.
-* `ROOM_SALT`: A 64-octect long, lowercase-base16-encoded string used for the
-  salt of the passphrase hashing function.  Can be generated with `openssl rand
-  -hex 64`.  It is automatically generated when you run `mann env.setup`
+
+* `ADMIN_KEY`: A 64-octect long, lowercase-base16-encoded string used for the
+  authenticating calls from the administrators.  Can be generated with
+  `openssl rand -hex 64`.  It is automatically generated when you run
+  `mann env.setup`.
 
 
 ## Required Options
 
 Some of the options on how to connect to the database and the Restroom intance
-are required, along with `ROOM_SALT` that is used for passhprase hashing.
+are required, along with `ADMIN_KEY` that is used authenticating admin calls.
 
 For the Restroom instance, you need the `ROOM_HOST` and `ROOM_PORT` options.
 

@@ -3,8 +3,8 @@ defmodule Zenflows.GQL.Schema do
 
 use Absinthe.Schema
 
-alias Zenflows.VF
 alias Zenflows.GQL.MW
+alias Zenflows.VF
 
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type

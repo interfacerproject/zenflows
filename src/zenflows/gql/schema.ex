@@ -4,6 +4,7 @@ defmodule Zenflows.GQL.Schema do
 use Absinthe.Schema
 
 alias Zenflows.VF
+alias Zenflows.GQL.MW
 
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
@@ -127,12 +128,13 @@ mutation do
 end
 
 @impl true
-def middleware(midware, _field, %{identifier: :mutation}) do
-	midware ++ [Zenflows.GQL.Errors]
+def middleware(mw, %{identifier: ident}, _)
+		when ident in ~w[create_person delete_person import_repos]a do
+	mw ++ [MW.Errors, MW.Admin]
 end
 
-def middleware(midware, _field, _obj) do
-	midware
+def middleware(mw, _, _) do
+	mw ++ [MW.Errors, MW.Sign]
 end
 
 @impl true

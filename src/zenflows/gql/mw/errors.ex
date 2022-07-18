@@ -1,4 +1,4 @@
-defmodule Zenflows.GQL.Errors do
+defmodule Zenflows.GQL.MW.Errors do
 @moduledoc """
 Absinthe middleware for errors (Ecto.Changeset-only, for now).
 """

@@ -30,7 +30,7 @@ def import_repos(url) do
 		{'accept', 'application/json'},
 	]
 	http_opts = [
-		{:timeout, 30000}, # 30 seconds
+		{:timeout, 30_000}, # 30 seconds
 		{:connect_timeout, 5000}, # 5 seconds
 		{:autoredirect, false},
 	]

@@ -116,10 +116,6 @@ object :mutation_person do
 	@desc "Registers a new (human) person with the collaboration space."
 	field :create_person, non_null(:person_response) do
 		arg :person, non_null(:person_create_params)
-
-		@desc "The configuration-defined key to authenticate admin calls."
-		arg :admin_key, non_null(:string)
-
 		resolve &Resolv.create_person/2
 	end
 
@@ -135,10 +131,6 @@ object :mutation_person do
 	"""
 	field :delete_person, non_null(:boolean) do
 		arg :id, non_null(:id)
-
-		@desc "The configuration-defined key to authenticate admin calls."
-		arg :admin_key, non_null(:string)
-
 		resolve &Resolv.delete_person/2
 	end
 end

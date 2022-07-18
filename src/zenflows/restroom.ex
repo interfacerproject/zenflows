@@ -15,13 +15,29 @@ def byte_equal?(left, right) do
 	end
 end
 
+@doc """
+Given the GraphQL `body`, its `signature`, and the `pubkeys`
+of the user who executes the query, verify that everything matches.
+"""
+@spec verify_graphql?(binary(), String.t(), binary()) :: boolean()
+def verify_graphql?(body, signature, pubkeys) do
+	data = %{
+		"graphql" => Base.encode64(body),
+		"eddsa signature" => signature,
+		"pubkeys" => Base.encode64(pubkeys),
+	}
+	case exec("verify_graphql", data) do
+		{:ok, %{"output" => ["VALID SIGNATURE"]}} -> true
+		_ -> false
+	end
+end
+
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, any()}
 defp exec(name, data) do
 	url = to_charlist("http://#{host()}/api/#{name}")
 	hdrs = [{'user-agent', useragent()}]
 	http_opts = [
-
 		{:timeout, 30000}, # 30 seconds
 		{:connect_timeout, 5000}, # 5 seconds
 		{:autoredirect, false},

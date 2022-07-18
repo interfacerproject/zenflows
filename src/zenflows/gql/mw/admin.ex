@@ -13,7 +13,7 @@ def call(res, _opts) do
 			{:ok, key_given} <- Base.decode16(key, case: :lower),
 			key_want = Application.fetch_env!(:zenflows, Zenflows.Admin)[:admin_key],
 			true <- Restroom.byte_equal?(key_given, key_want) do
-    	res
+		res
 	else _ ->
 		Absinthe.Resolution.put_result(res, {:error, "you are not an admin"})
 	end

@@ -5,6 +5,9 @@ Absinthe middleware to verify GraphQL calls.
 
 @behaviour Absinthe.Middleware
 
+alias Zenflows.VF.Person
+alias Zenflows.Restroom
+
 @impl true
 def call(res, _opts) do
 	# if this is admin-related call (such as createPerson and importRepos mutations),
@@ -13,9 +16,9 @@ def call(res, _opts) do
 	if match?(%{gql_admin: _}, res.context) do
 		res
 	else
-		with %{gql_user: user, gql_sign: sign} <- res.context do
-			# TODO: fetch raw query and provide `user`, `sign`, and the raw query to restroom.
-			IO.inspect(res.context, label: "should be authenticated here")
+		with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
+				per when not is_nil(per) <- Person.Domain.by_user(user),
+				true <- Restroom.verify_graphql?(body, sign, per.pubkeys) do
 			res
 		else _ ->
 			Absinthe.Resolution.put_result(res, {:error, "you are not authenticated"})

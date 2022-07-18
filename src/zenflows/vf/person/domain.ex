@@ -18,6 +18,11 @@ def by_id(repo \\ Repo, id) do
 	repo.get_by(Person, id: id, type: :per)
 end
 
+@spec by_user(repo(), String.t()) :: Person.t() | nil
+def by_user(repo \\ Repo, user) do
+	repo.get_by(Person, user: user, type: :per)
+end
+
 @spec all() :: [Person.t()]
 def all() do
 	Person

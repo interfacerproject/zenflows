@@ -10,6 +10,7 @@ plug Plug.Parsers,
 	parsers: [:json, Absinthe.Plug.Parser],
 	pass: ["*/*"],
 	json_decoder: Jason
+plug :gql_context
 plug :dispatch
 
 forward "/api",
@@ -28,5 +29,23 @@ match _ do
 		<a href="/play">go to the playground</a><br/>
 		<a href="/api">the api location</a>
 	""")
+end
+
+# Set the absinthe context with the data fetched from various headers.
+defp gql_context(conn, _opts) do
+	ctx =
+		case get_req_header(conn, "zenflows-admin") do
+			[key | _] ->
+				%{gql_admin: key}
+
+			_ ->
+				with [user | _] <- get_req_header(conn, "zenflows-user"),
+						[sign | _] <- get_req_header(conn, "zenflows-sign") do
+					%{gql_user: user, gql_sign: sign}
+				else
+					_ -> %{}
+				end
+		end
+	Absinthe.Plug.put_options(conn, context: ctx)
 end
 end

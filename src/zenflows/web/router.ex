@@ -3,6 +3,8 @@ defmodule Zenflows.Web.Router do
 
 use Plug.Router
 
+alias Zenflows.Web.MW
+
 plug :match
 plug Plug.RequestId
 plug Plug.Logger
@@ -10,7 +12,7 @@ plug Plug.Parsers,
 	parsers: [{:json, json_decoder: Jason}, Absinthe.Plug.Parser],
 	pass: ["*/*"],
 	body_reader: {__MODULE__, :read_body, []}
-plug :gql_context
+plug MW.GQLContext
 plug :dispatch
 
 forward "/api",
@@ -29,24 +31,6 @@ match _ do
 		<a href="/play">go to the playground</a><br/>
 		<a href="/api">the api location</a>
 	""")
-end
-
-# Set the absinthe context with the data fetched from various headers.
-defp gql_context(conn, _opts) do
-	ctx =
-		case get_req_header(conn, "zenflows-admin") do
-			[key | _] ->
-				%{gql_admin: key}
-			_ ->
-				with [user | _] <- get_req_header(conn, "zenflows-user"),
-						[sign | _] <- get_req_header(conn, "zenflows-sign") do
-					%{gql_user: user, gql_sign: sign}
-				else _ ->
-					%{}
-				end
-		end
-
-	Absinthe.Plug.put_options(conn, context: ctx)
 end
 
 @doc false

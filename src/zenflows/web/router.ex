@@ -7,9 +7,9 @@ plug :match
 plug Plug.RequestId
 plug Plug.Logger
 plug Plug.Parsers,
-	parsers: [:json, Absinthe.Plug.Parser],
+	parsers: [{:json, json_decoder: Jason}, Absinthe.Plug.Parser],
 	pass: ["*/*"],
-	json_decoder: Jason
+	body_reader: {__MODULE__, :read_body, []}
 plug :gql_context
 plug :dispatch
 
@@ -47,5 +47,22 @@ defp gql_context(conn, _opts) do
 		end
 
 	Absinthe.Plug.put_options(conn, context: ctx)
+end
+
+@doc false
+def read_body(conn, opts) do
+	alias Plug.Conn
+
+	case Conn.read_body(conn, opts) do
+		{:ok, data, conn} ->
+			conn = Conn.assign(conn, :raw_body, data)
+			{:ok, data, conn}
+		{:more, data, conn} ->
+			# Since it'll fail due to too large body, we don't
+			# need to assign.
+			{:more, data, conn}
+		{:error, reason} ->
+			{:error, reason}
+	end
 end
 end

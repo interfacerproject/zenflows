@@ -4,10 +4,9 @@ defmodule Zenflows.SWPass.Resolv do
 alias Zenflows.SWPass.Domain
 
 def import_repos(%{url: url}, _) do
-	with {:ok, _} <- Domain.import_repos(url) do
-		{:ok, "successfully imported"}
-	else _ ->
-		{:error, "something went wrong"}
+	case Domain.import_repos(url) do
+		{:ok, _} -> {:ok, "successfully imported"}
+		_ -> {:error, "something went wrong"}
 	end
 end
 

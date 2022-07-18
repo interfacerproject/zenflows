@@ -5,8 +5,8 @@ Absinthe middleware to verify GraphQL calls.
 
 @behaviour Absinthe.Middleware
 
-alias Zenflows.VF.Person
 alias Zenflows.Restroom
+alias Zenflows.VF.Person
 
 @impl true
 def call(res, _opts) do

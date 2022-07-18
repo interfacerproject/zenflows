@@ -3,7 +3,7 @@ defmodule Zenflows.SWPass.Resolv do
 
 alias Zenflows.SWPass.Domain
 
-def import_repos(%{url: url, admin_key: key}, _) do
+def import_repos(%{url: url}, _) do
 	with {:ok, _} <- Domain.import_repos(url) do
 		{:ok, "successfully imported"}
 	else _ ->

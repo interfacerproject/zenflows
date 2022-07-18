@@ -43,6 +43,8 @@ defp set_user_and_sign_and_body(ctx, conn) do
 		|> Map.put(:gql_user, user)
 		|> Map.put(:gql_sign, sign)
 		|> Map.put(:gql_body, raw_body)
+	else _ ->
+		ctx
 	end
 end
 end

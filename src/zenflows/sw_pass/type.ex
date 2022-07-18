@@ -18,12 +18,8 @@ end
 object :mutation_sw_pass do
 	@desc "Import repositories from a softwarepassport instance."
 	field :import_repos, :string do
-		@desc "The configuration-defined key to authenticate admin calls."
-		arg :admin_key, non_null(:string)
-
 		@desc "The URL where all the repository information is listed."
 		arg :url, non_null(:string)
-
 		resolve &Resolv.import_repos/2
 	end
 end

@@ -6,6 +6,7 @@ HTTP.
 
 alias Zenflows.DB.Repo
 alias Zenflows.VF.{
+	Agent,
 	EconomicEvent,
 	EconomicResource,
 	Person,

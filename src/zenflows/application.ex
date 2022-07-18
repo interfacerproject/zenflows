@@ -8,7 +8,7 @@ def start(_type, _args) do
 
 	children = [
 		Zenflows.DB.Repo,
-		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web, options: [port: 8000]},
+		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web.Router, options: [port: 8000]},
 	]
 
 	opts = [strategy: :one_for_one, name: Zenflows.Supervisor]

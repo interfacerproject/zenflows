@@ -1,5 +1,5 @@
-defmodule Zenflows.Web do
-@moduledoc "Plug entrypoint."
+defmodule Zenflows.Web.Router do
+@moduledoc "Plug entrypoint/router."
 
 use Plug.Router
 
@@ -37,15 +37,15 @@ defp gql_context(conn, _opts) do
 		case get_req_header(conn, "zenflows-admin") do
 			[key | _] ->
 				%{gql_admin: key}
-
 			_ ->
 				with [user | _] <- get_req_header(conn, "zenflows-user"),
 						[sign | _] <- get_req_header(conn, "zenflows-sign") do
 					%{gql_user: user, gql_sign: sign}
-				else
-					_ -> %{}
+				else _ ->
+					%{}
 				end
 		end
+
 	Absinthe.Plug.put_options(conn, context: ctx)
 end
 end

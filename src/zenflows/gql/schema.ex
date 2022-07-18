@@ -50,6 +50,14 @@ import_types VF.EconomicEvent.Type
 #import_types VF.ProposedTo.Type
 
 query do
+	@desc "For testing.  Temporary"
+	field :echo, non_null(:string) do
+		arg :arg, non_null(:string)
+		resolve fn %{arg: arg}, _ ->
+			{:ok, arg}
+		end
+	end
+
 	import_fields :query_sw_pass
 
 	import_fields :query_unit
@@ -89,6 +97,14 @@ query do
 end
 
 mutation do
+	@desc "For testing.  Temporary"
+	field :echo, non_null(:string) do
+		arg :arg, non_null(:string)
+		resolve fn %{arg: arg}, _ ->
+			{:ok, arg}
+		end
+	end
+
 	import_fields :mutation_sw_pass
 
 	import_fields :mutation_unit

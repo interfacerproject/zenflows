@@ -1,15 +1,26 @@
-<h1 align="center">
-  Zenflows - GraphQL implementation of the [Valueflows](https://www.valueflo.ws) vocabulary</br>
-  <sub></sub>
-</h1>
+# Zenflows - Valueflows REA GraphDB
 
-<p align="center">
-  <a href="https://dyne.org">
-    <img src="https://img.shields.io/badge/%3C%2F%3E%20with%20%E2%9D%A4%20by-Dyne.org-blue.svg" alt="Dyne.org">
-  </a>
-</p>
+![Zenflows logo](docs/zenflows_rea.png?raw=true)
 
-<br><br>
+Zenflows is a tool to leverage commons-based peer production by
+documenting and monitoring the life cycle of products. The goal is
+that of enabling a federated network of organizations to bundle,
+systematize and share data, information and knowledge about physical
+artifacts.
+
+[![software by Dyne.org](https://files.dyne.org/software_by_dyne.png)](http://www.dyne.org)
+
+## Features
+
+- Most validations are provable (and sealed by means of cryptography) using [Zenroom](https://zenroom.org) as core crypto component, including support for advanced Digital Product Passport schemes like 
+[REFLOW Portable Crypto Functions](https://medium.com/think-do-tank/reflow-crypto-material-passports-for-the-circular-economy-d75b3aa63678).
+
+- The [Valueflows](https://valueflo.ws) vocabulary is adopted to govern a [Resource Event Agent](https://en.wikipedia.org/wiki/Resources,_Events,_Agents) accounting model and facilitate the development and execution of business logics built on top of it.
+
+- The [PosgreSQL](https://postgresql.org) database backend is used as battle-tested data-storage solution well compatible with established enterprise standards in system administration, on top of it a GraphQL interface is developed based on the well performant [Elixir](https://elixir-lang.org) language framework.
+
+Zenflows is a software component of the [INTERFACER project](https://www.interfacerproject.eu).
+
 
 <h4 align="center">
   <a href="#-quick-start">🎮 Quick start</a>
@@ -34,18 +45,6 @@
 </h4>
 
 
-Abstract description like: 🚧 Zenflows is a software in **ALPHA
-stage** and is part of the [INTERFACER project](https://www.interfacerproject.eu).
-
-Zenflows is a tool to leverage commons-based peer production by
-documenting and monitoring the life cycle of products. The goal is
-that of enabling a federated network of organizations to bundle,
-systematize and share data, information and knowledge about physical
-artifacts.
-
-Zenflows features [Zenroom](https://zenroom.org) as core crypto
-component to implement advanced Digital Product Passport schemes using
-[REFLOW Portable Crypto Functions](https://medium.com/think-do-tank/reflow-crypto-material-passports-for-the-circular-economy-d75b3aa63678).
 
 
 <details id="toc">
@@ -85,11 +84,15 @@ To start using Zenflows
 ***
 ## 🔧 Configuration
 
+🚧 TODO
+
 **[🔝 back to top](#toc)**
 
 ***
 
 ## 📋 Testing
+
+🚧 TODO
 
 **[🔝 back to top](#toc)**
 
@@ -105,6 +108,8 @@ To start using Zenflows
 
 ***
 ## 🐛 Troubleshooting & debugging
+
+🚧 TODO
 
 **[🔝 back to top](#toc)**
 
@@ -128,6 +133,8 @@ This project is receiving funding from the European Regional Development Fund (E
 
 ***
 ## 🌐 Links
+
+https://interfacerproject.eu
 
 https://dyne.org/
 

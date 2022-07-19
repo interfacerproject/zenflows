@@ -7,5 +7,5 @@ Given I have a 'base64' named 'graphql'
 and I have a 'keyring'
 
 When I create the eddsa signature of 'graphql'
-Then print 'eddsa signature' as 'base64'
-and print 'graphql' as 'base64'
+Then print 'eddsa signature'
+and print 'graphql'

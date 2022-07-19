@@ -9,7 +9,6 @@ When I create the ecdh key
 When I create the reflow key
 When I create the schnorr key
 When I create the ethereum key
-When I create the bitcoin key
 When I create the eddsa key
 
 When I create the 'base64 dictionary' named 'pubkeys'
@@ -23,9 +22,7 @@ When I create the eddsa public key
 and I move 'eddsa public key' in 'pubkeys'
 
 When I create the ethereum address
-When I create the bitcoin address
 
 Then print the 'keyring'
 and print the 'pubkeys'
 and print the 'ethereum address'
-and print the 'bitcoin address'

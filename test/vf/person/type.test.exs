@@ -20,7 +20,6 @@ use ZenflowsTest.Help.AbsinCase, async: true
 
 setup do
 	%{
-		admin_key: Application.fetch_env!(:zenflows, Zenflows.Admin)[:admin_key] |> Base.encode16(case: :lower),
 		params: %{
 			name: Factory.uniq("name"),
 			# image
@@ -28,7 +27,12 @@ setup do
 			primary_location_id: Factory.insert!(:spatial_thing).id,
 			user: Factory.uniq("user"),
 			email: "#{Factory.uniq("user")}@example.com",
-			pubkeys_encoded: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
+			dilithium_public_key: Base.url_encode64("dilithium_public_key"),
+			ecdh_public_key: Base.url_encode64("ecdh_public_key"),
+			eddsa_public_key: Base.url_encode64("eddsa_public_key"),
+			ethereum_address: Base.url_encode64("ethereum_address"),
+			reflow_public_key: Base.url_encode64("reflow_public_key"),
+			schnorr_public_key: Base.url_encode64("schnorr_public_key"),
 		},
 		per: Factory.insert!(:person),
 	}
@@ -62,17 +66,19 @@ describe "Mutation" do
 	test "createPerson() doesn't create a person without the admin key", %{params: params} do
 		assert %{data: nil, errors: [%{message: "you are not authorized", path: ["createPerson"]}]} =
 			mutation!("""
-				createPerson(
-					adminKey: "fake!!!"
-					person: {
-						name: "#{params.name}"
-						note: "#{params.note}"
-						primaryLocation: "#{params.primary_location_id}"
-						user: "#{params.user}"
-						email: "#{params.email}"
-						pubkeys: "#{params.pubkeys_encoded}"
-					}
-				) {
+				createPerson(person: {
+					name: "#{params.name}"
+					note: "#{params.note}"
+					primaryLocation: "#{params.primary_location_id}"
+					user: "#{params.user}"
+					email: "#{params.email}"
+					dilithiumPublicKey: "#{params.dilithium_public_key}"
+					ecdhPublicKey: "#{params.ecdh_public_key}"
+					eddsaPublicKey: "#{params.eddsa_public_key}"
+					ethereumAddress: "#{params.ethereum_address}"
+					reflowPublicKey: "#{params.reflow_public_key}"
+					schnorrPublicKey: "#{params.schnorr_public_key}"
+				}) {
 					agent {
 						id
 						name
@@ -80,25 +86,32 @@ describe "Mutation" do
 						primaryLocation { id }
 						user
 						email
+						ecdhPublicKey
+						eddsaPublicKey
+						ethereumAddress
+						reflowPublicKey
+						schnorrPublicKey
 					}
 				}
 			""")
 	end
 
-	test "createPerson() creates a person with the admin key", %{params: params, admin_key: key} do
+	test "createPerson() creates a person with the admin key", %{params: params} do
 		assert %{data: %{"createPerson" => %{"agent" => data}}} =
 			mutation!("""
-				createPerson(
-					adminKey: "#{key}"
-					person: {
-						name: "#{params.name}"
-						note: "#{params.note}"
-						primaryLocation: "#{params.primary_location_id}"
-						user: "#{params.user}"
-						email: "#{params.email}"
-						pubkeys: "#{params.pubkeys_encoded}"
-					}
-				) {
+				createPerson(person: {
+					name: "#{params.name}"
+					note: "#{params.note}"
+					primaryLocation: "#{params.primary_location_id}"
+					user: "#{params.user}"
+					email: "#{params.email}"
+					dilithiumPublicKey: "#{params.dilithium_public_key}"
+					ecdhPublicKey: "#{params.ecdh_public_key}"
+					eddsaPublicKey: "#{params.eddsa_public_key}"
+					ethereumAddress: "#{params.ethereum_address}"
+					reflowPublicKey: "#{params.reflow_public_key}"
+					schnorrPublicKey: "#{params.schnorr_public_key}"
+				}) {
 					agent {
 						id
 						name
@@ -106,6 +119,11 @@ describe "Mutation" do
 						primaryLocation { id }
 						user
 						email
+						ecdhPublicKey
+						eddsaPublicKey
+						ethereumAddress
+						reflowPublicKey
+						schnorrPublicKey
 					}
 				}
 			""")
@@ -116,6 +134,11 @@ describe "Mutation" do
 		assert data["primaryLocation"]["id"] == params.primary_location_id
 		assert data["user"] == params.user
 		assert data["email"] == params.email
+		assert data["ecdhPublicKey"] == params.ecdh_public_key
+		assert data["eddsaPublicKey"] == params.eddsa_public_key
+		assert data["ethereumAddress"] == params.ethereum_address
+		assert data["reflowPublicKey"] == params.reflow_public_key
+		assert data["schnorrPublicKey"] == params.schnorr_public_key
 	end
 
 	test "updatePerson()", %{params: params, per: per} do
@@ -135,6 +158,11 @@ describe "Mutation" do
 						primaryLocation { id }
 						user
 						email
+						ecdhPublicKey
+						eddsaPublicKey
+						ethereumAddress
+						reflowPublicKey
+						schnorrPublicKey
 					}
 				}
 			""")
@@ -145,23 +173,26 @@ describe "Mutation" do
 		assert data["primaryLocation"]["id"] == params.primary_location_id
 		assert data["user"] == params.user
 		assert data["email"] == per.email
+		assert data["ecdhPublicKey"] == per.ecdh_public_key
+		assert data["eddsaPublicKey"] == per.eddsa_public_key
+		assert data["ethereumAddress"] == per.ethereum_address
+		assert data["reflowPublicKey"] == per.reflow_public_key
+		assert data["schnorrPublicKey"] == per.schnorr_public_key
 	end
 
 	test "deletePerson() doesn't delete the person without the admin key", %{per: per} do
 		assert %{data: nil, errors: [%{message: "you are not authorized", path: ["deletePerson"]}]} =
 			mutation!("""
 				deletePerson(
-					adminKey: "fake!!!"
 					id: "#{per.id}"
 				)
 			""")
 	end
 
-	test "deletePerson() deletes the person with the admin key", %{per: per, admin_key: key} do
+	test "deletePerson() deletes the person with the admin key", %{per: per} do
 		assert %{data: %{"deletePerson" => true}} =
 			mutation!("""
 				deletePerson(
-					adminKey: "#{key}"
 					id: "#{per.id}"
 				)
 			""")

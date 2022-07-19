@@ -29,7 +29,12 @@ setup ctx do
 		primary_location_id: Factory.insert!(:spatial_thing).id,
 		user: Factory.uniq("user"),
 		email: "#{Factory.uniq("user")}@example.com",
-		pubkeys_encoded: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
+		dilithium_public_key: Base.url_encode64("dilithium_public_key"),
+		ecdh_public_key: Base.url_encode64("ecdh_public_key"),
+		eddsa_public_key: Base.url_encode64("eddsa_public_key"),
+		ethereum_address: Base.url_encode64("ethereum_address"),
+		reflow_public_key: Base.url_encode64("reflow_public_key"),
+		schnorr_public_key: Base.url_encode64("schnorr_public_key"),
 	}
 
 	if ctx[:no_insert] do
@@ -75,7 +80,12 @@ describe "create/1" do
 		assert per.primary_location_id == params.primary_location_id
 		assert per.user == params.user
 		assert per.email == params.email
-		assert per.pubkeys == Base.url_decode64!(params.pubkeys_encoded)
+		assert per.dilithium_public_key == params.dilithium_public_key
+		assert per.ecdh_public_key == params.ecdh_public_key
+		assert per.eddsa_public_key == params.eddsa_public_key
+		assert per.ethereum_address == params.ethereum_address
+		assert per.reflow_public_key == params.reflow_public_key
+		assert per.schnorr_public_key == params.schnorr_public_key
 	end
 
 	test "doesn't create a Person with invalid params" do
@@ -93,7 +103,12 @@ describe "update/2" do
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == old.email
-		assert new.pubkeys == old.pubkeys
+		assert new.dilithium_public_key == old.dilithium_public_key
+		assert new.ecdh_public_key == old.ecdh_public_key
+		assert new.eddsa_public_key == old.eddsa_public_key
+		assert new.ethereum_address == old.ethereum_address
+		assert new.reflow_public_key == old.reflow_public_key
+		assert new.schnorr_public_key == old.schnorr_public_key
 	end
 
 	test "doesn't update a Person with invalid params", %{per: old} do
@@ -106,7 +121,12 @@ describe "update/2" do
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email
-		assert new.pubkeys == old.pubkeys
+		assert new.dilithium_public_key == old.dilithium_public_key
+		assert new.ecdh_public_key == old.ecdh_public_key
+		assert new.eddsa_public_key == old.eddsa_public_key
+		assert new.ethereum_address == old.ethereum_address
+		assert new.reflow_public_key == old.reflow_public_key
+		assert new.schnorr_public_key == old.schnorr_public_key
 	end
 end
 

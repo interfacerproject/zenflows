@@ -23,6 +23,19 @@ here are rough and can be changed in the future.
 
 alias Ecto.Changeset, as: Chset
 
+@doc "Checks if the given string field is [16, 2048] bytes long."
+@spec key(Chset.t(), atom()) :: Chset.t()
+def key(cset, field) do
+	Chset.validate_change(cset, field, :valflow, fn
+		_, str when byte_size(str) < 16 ->
+			[{field, "should be at least 16 bytes long"}]
+		_, str when byte_size(str) > 2048 ->
+			[{field, "should be at most 2048 bytes long"}]
+		_, _ ->
+			[]
+	end)
+end
+
 @doc "Checks if the given string field is [2, 256] bytes long."
 @spec name(Chset.t(), atom()) :: Chset.t()
 def name(cset, field) do

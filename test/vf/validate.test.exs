@@ -21,6 +21,11 @@ use ExUnit.Case, async: true
 alias Ecto.Changeset
 alias Zenflows.VF.Validate
 
+@spec key_chgset(map()) :: Changeset.t()
+defp key_chgset(changes) do
+	Changeset.change({%{}, %{key: :string}}, changes)
+end
+
 @spec name_chgset(map()) :: Changeset.t()
 defp name_chgset(changes) do
 	Changeset.change({%{}, %{name: :string}}, changes)
@@ -39,6 +44,35 @@ end
 @spec class_chgset(map()) :: Changeset.t()
 defp class_chgset(changes) do
 	Changeset.change({%{}, %{list: {:array, :string}}}, changes)
+end
+
+describe "key/2" do
+	test "with too short param" do
+		assert %Changeset{errors: errs} =
+			%{key: String.duplicate("a", 15)}
+			|> key_chgset()
+			|> Validate.key(:key)
+
+		assert {:ok, _} = Keyword.fetch(errs, :key)
+	end
+
+	test "with too long param" do
+		assert %Changeset{errors: errs} =
+			%{key: String.duplicate("a", 2048 + 1)}
+			|> key_chgset()
+			|> Validate.key(:key)
+
+		assert {:ok, _} = Keyword.fetch(errs, :key)
+	end
+
+	test "with the right size param" do
+		assert %Changeset{errors: errs} =
+			%{key: String.duplicate("a", 16)}
+			|> key_chgset()
+			|> Validate.key(:key)
+
+		assert :error = Keyword.fetch(errs, :key)
+	end
 end
 
 describe "name/2" do

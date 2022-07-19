@@ -259,9 +259,8 @@ cmd_devop_setup() {
 	if test -e devop/docker-compose.yml ; then
 		warn "the file 'devop/docker-compose.yml' already exists; skipping"
 	else
-		salt=$(openssl rand -hex 64)
-		pass=$(openssl rand -hex 16)
-		sed 's,$ROOM_SALT,'"$salt"',;s,$DB_PASS,'"$pass"',' devop/.docker-compose.templ >devop/docker-compose.yml
+		key=$(openssl rand -hex 16)
+		sed s,\$ADMIN_KEY,"$key", devop/.docker-compose.templ >devop/docker-compose.yml
 		warn "the 'devop/docker-compose.yml' file is generated, please edit it to suit your needs"
 	fi
 }

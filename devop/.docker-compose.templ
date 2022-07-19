@@ -28,14 +28,16 @@ services:
     ports:
       - 8000:8000
     environment:
+      ADMIN_KEY: $ADMIN_KEY
+
       DB_HOST: db
       DB_NAME: &db_name zenflows
       DB_USER: &db_user zenflows_dbuser
       DB_PASS: &db_pass $DB_PASS
       # DB_PORT: 5432
 
-      ROOM_ENDPOINT: zvmlet:3000
-      ROOM_SALT: $ROOM_SALT
+      ROOM_HOST: zvmlet
+      ROOM_PORT: &room_port 3000
     depends_on:
       - zvmlet
       - db
@@ -57,6 +59,6 @@ services:
       context: ../
       dockerfile: devop/zvmlet-dockerfile
     environment:
-      HTTP_PORT: 3000
+      HTTP_PORT: *room_port
     volumes:
       - ../zencode:/restroom-mw/contracts:ro

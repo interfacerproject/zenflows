@@ -230,7 +230,12 @@ def build(:person) do
 		primary_location: build(:spatial_thing),
 		user: uniq("some user"),
 		email: "#{uniq("user")}@example.com",
-		pubkeys: Base.url_encode64(Jason.encode!(%{a: 1, b: 2, c: 3})),
+		dilithium_public_key: Base.url_encode64("some dilithium_public_key"),
+		ecdh_public_key: Base.url_encode64("some ecdh_public_key"),
+		eddsa_public_key: Base.url_encode64("some eddsa_public_key"),
+		ethereum_address: Base.url_encode64("some ethereum_address"),
+		reflow_public_key: Base.url_encode64("some reflow_public_key"),
+		schnorr_public_key: Base.url_encode64("some schnorr_public_key"),
 	}
 end
 

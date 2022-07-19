@@ -57,8 +57,8 @@ services:
     image: zvmlet:latest
     build:
       context: ../
-      dockerfile: devop/zvmlet-dockerfile
+      dockerfile: zencode/Dockerfile
     environment:
       HTTP_PORT: *room_port
     volumes:
-      - ../zencode:/restroom-mw/contracts:ro
+      - ../zencode/src:/app/contracts:ro

@@ -91,6 +91,7 @@
 /zencode/*
 !/zencode/*/
 !/zencode/README.md
+!/zencode/Dockerfile
 !/zencode/src/*.zen
 !/zencode/test/*.sh
 
@@ -105,7 +106,6 @@
 /devop/*
 !/devop/Dockerfile
 !/devop/.docker-compose.templ
-!/devop/zvmlet-dockerfile
 
 # github stuff
 !/.github/

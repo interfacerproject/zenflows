@@ -30,7 +30,12 @@ OR
 	type = 'org'
 	AND "user" IS NULL
 	AND email IS NULL
-	AND pubkeys IS NULL
+	AND dilithium_public_key IS NULL
+	AND ecdh_public_key IS NULL
+	AND eddsa_public_key IS NULL
+	AND ethereum_address IS NULL
+	AND reflow_public_key IS NULL
+	AND schnorr_public_key IS NULL
 )
 """
 
@@ -47,7 +52,12 @@ def change() do
 		# person
 		add :user, :text
 		add :email, :citext
-		add :pubkeys, :binary
+		add :dilithium_public_key, :text
+		add :ecdh_public_key, :text
+		add :eddsa_public_key, :text
+		add :ethereum_address, :text
+		add :reflow_public_key, :text
+		add :schnorr_public_key, :text
 
 		# organization
 		add :classified_as, {:array, :text}

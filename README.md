@@ -1,6 +1,6 @@
 # Zenflows - Valueflows REA GraphDB
 
-![Zenflows logo](docs/zenflows_rea.png?raw=true)
+![Zenflows logo](docs/zenflows_rea_logo.png)
 
 Zenflows is a tool to leverage commons-based peer production by
 documenting and monitoring the life cycle of products. The goal is

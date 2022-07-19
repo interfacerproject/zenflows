@@ -99,6 +99,8 @@
 !/docs/
 /docs/*
 !/docs/*.md
+!/docs/*.png
+!/docs/*.jpg
 
 # devops stuff
 !/.dockerignore

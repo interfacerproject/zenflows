@@ -35,7 +35,12 @@ alias Zenflows.VF.SpatialThing
 	# person
 	user: String.t() | nil,
 	email: String.t() | nil,
-	pubkeys: binary() | nil,
+	dilithium_public_key: String.t() | nil,
+	ecdh_public_key: String.t() | nil,
+	eddsa_public_key: String.t() | nil,
+	ethereum_address: String.t() | nil,
+	reflow_public_key: String.t() | nil,
+	schnorr_public_key: String.t() | nil,
 
 	# organization
 	classified_as: [String.t()] | nil,
@@ -52,7 +57,12 @@ schema "vf_agent" do
 	# person
 	field :user, :string
 	field :email, :string
-	field :pubkeys, :binary
+	field :dilithium_public_key, :string
+	field :ecdh_public_key, :string
+	field :eddsa_public_key, :string
+	field :ethereum_address, :string
+	field :reflow_public_key, :string
+	field :schnorr_public_key, :string
 
 	# organization
 	field :classified_as, {:array, :string}

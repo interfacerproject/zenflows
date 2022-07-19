@@ -33,15 +33,15 @@ def byte_equal?(left, right) do
 end
 
 @doc """
-Given the GraphQL `body`, its `signature`, and the `pubkeys`
-of the user who executes the query, verify that everything matches.
+Given the GraphQL `body`, its `signature`, and `pubkey` of the user who
+executes the query, verify that everything matches.
 """
-@spec verify_graphql?(binary(), String.t(), binary()) :: boolean()
-def verify_graphql?(body, signature, pubkeys) do
+@spec verify_graphql?(binary(), String.t(), String.t()) :: boolean()
+def verify_graphql?(body, signature, pubkey) do
 	data = %{
 		"graphql" => Base.encode64(body),
-		"eddsa signature" => signature,
-		"pubkeys" => Base.encode64(pubkeys),
+		"eddsa_signature" => signature,
+		"eddsa_public_key" => pubkey,
 	}
 	case exec("verify_graphql", data) do
 		{:ok, %{"output" => ["VALID SIGNATURE"]}} -> true

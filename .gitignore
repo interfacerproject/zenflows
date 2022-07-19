@@ -89,6 +89,7 @@
 # zencode
 !/zencode/
 /zencode/*
+!/zencode/README.md
 !/zencode/*/
 !/zencode/src/*.zen
 !/zencode/test/*.sh

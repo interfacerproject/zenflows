@@ -35,7 +35,7 @@ def call(res, _opts) do
 	else
 		with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
 				per when not is_nil(per) <- Person.Domain.by_user(user),
-				true <- Restroom.verify_graphql?(body, sign, per.pubkeys) do
+				true <- Restroom.verify_graphql?(body, sign, per.eddsa_public_key) do
 			res
 		else _ ->
 			Absinthe.Resolution.put_result(res, {:error, "you are not authenticated"})

@@ -52,8 +52,4 @@ end
 def primary_location(%Agent{} = agent, args, info) do
 	Agent.Resolv.primary_location(agent, args, info)
 end
-
-def pubkeys(%Person{} = per, _args, _info) do
-	{:ok, Base.url_encode64(per.pubkeys)}
-end
 end

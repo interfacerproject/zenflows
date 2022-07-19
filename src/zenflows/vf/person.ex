@@ -30,8 +30,12 @@ alias Zenflows.VF.{SpatialThing, Validate}
 	primary_location: SpatialThing.t() | nil,
 	user: String.t(),
 	email: String.t(),
-	pubkeys: binary(),
-	pubkeys_encoded: String.t() | nil,
+	dilithium_public_key: String.t() | nil,
+	ecdh_public_key: String.t() | nil,
+	eddsa_public_key: String.t() | nil,
+	ethereum_address: String.t() | nil,
+	reflow_public_key: String.t() | nil,
+	schnorr_public_key: String.t() | nil,
 }
 
 schema "vf_agent" do
@@ -42,13 +46,26 @@ schema "vf_agent" do
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
 	field :email, :string
-	field :pubkeys, :binary
-	field :pubkeys_encoded, :string, virtual: true
+	field :dilithium_public_key, :string
+	field :ecdh_public_key, :string
+	field :eddsa_public_key, :string
+	field :ethereum_address, :string
+	field :reflow_public_key, :string
+	field :schnorr_public_key, :string
 end
 
 @insert_reqr ~w[name user email]a
-@insert_cast @insert_reqr ++ ~w[pubkeys_encoded image note primary_location_id]a
+@insert_cast @insert_reqr ++ ~w[
+	image note primary_location_id
+	dilithium_public_key
+	ecdh_public_key
+	eddsa_public_key
+	ethereum_address
+	reflow_public_key
+	schnorr_public_key
+]a
 # TODO: Maybe add email to @update_cast as well?
+# TODO: Maybe add the pubkeys to @update_cast as well?
 @update_cast ~w[name image note primary_location_id user]a
 
 # insert changeset
@@ -63,8 +80,13 @@ def chgset(params) do
 	|> Validate.name(:email)
 	|> Validate.uri(:image)
 	|> Validate.note(:note)
+	|> Validate.key(:dilithium_public_key)
+	|> Validate.key(:ecdh_public_key)
+	|> Validate.key(:eddsa_public_key)
+	|> Validate.key(:ethereum_address)
+	|> Validate.key(:reflow_public_key)
+	|> Validate.key(:schnorr_public_key)
 	|> check_email()
-	|> decode_pubkeys()
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.unique_constraint(:email)
@@ -92,21 +114,5 @@ end
 defp check_email(cset) do
 	# works good enough for now
 	Changeset.validate_format(cset, :email, ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/)
-end
-
-@spec decode_pubkeys(Changeset.t()) :: Changeset.t()
-defp decode_pubkeys(cset) do
-	case Changeset.fetch_change(cset, :pubkeys_encoded) do
-		{:ok, val} ->
-			case Base.url_decode64(val) do
-				{:ok, decoded} ->
-					Changeset.put_change(cset, :pubkeys, decoded)
-
-				:error ->
-					Changeset.add_error(cset, :pubkeys, "not valid url-safe base64-encoded string")
-			end
-		:error ->
-			cset
-	end
 end
 end

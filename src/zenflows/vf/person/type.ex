@@ -36,9 +36,12 @@ who have no physical location.
 """
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
-@pubkeys """
-A URL-safe, lowercase-Base64-encoded string of a JSON object.
-"""
+@dilithium_public_key "dilithium public key encoded as base64url string"
+@ecdh_public_key "ecdh public key encoded as base64url string"
+@eddsa_public_key "eddsa public key encoded as base64url string"
+@ethereum_address "ethereum address encoded as base64url string"
+@reflow_public_key "reflow public key encoded as base64url string"
+@schnorr_public_key "schnorr public key encoded as base64url string"
 
 @desc "A natural person."
 object :person do
@@ -65,8 +68,23 @@ object :person do
 	@desc @email
 	field :email, non_null(:string)
 
-	@desc @pubkeys
-	field :pubkeys, :string, resolve: &Resolv.pubkeys/3
+	@desc @dilithium_public_key
+	field :dilithium_public_key, :string
+
+	@desc @ecdh_public_key
+	field :ecdh_public_key, :string
+
+	@desc @eddsa_public_key
+	field :eddsa_public_key, :string
+
+	@desc @ethereum_address
+	field :ethereum_address, :string
+
+	@desc @reflow_public_key
+	field :reflow_public_key, :string
+
+	@desc @schnorr_public_key
+	field :schnorr_public_key, :string
 end
 
 object :person_response do
@@ -95,8 +113,23 @@ input_object :person_create_params do
 	@desc @email
 	field :email, non_null(:string)
 
-	@desc @pubkeys
-	field :pubkeys_encoded, :string, name: "pubkeys"
+	@desc @dilithium_public_key
+	field :dilithium_public_key, :string
+
+	@desc @ecdh_public_key
+	field :ecdh_public_key, :string
+
+	@desc @eddsa_public_key
+	field :eddsa_public_key, :string
+
+	@desc @ethereum_address
+	field :ethereum_address, :string
+
+	@desc @reflow_public_key
+	field :reflow_public_key, :string
+
+	@desc @schnorr_public_key
+	field :schnorr_public_key, :string
 end
 
 input_object :person_update_params do

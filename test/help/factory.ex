@@ -233,7 +233,6 @@ def build(:person) do
 		# Normally, these are encoded by zenroom (with whatever
 		# encodings it chooses to use), but for testing, this'll
 		# work alright.
-		dilithium_public_key: Base.encode64("some dilithium_public_key"),
 		ecdh_public_key: Base.encode64("some ecdh_public_key"),
 		eddsa_public_key: Base.encode64("some eddsa_public_key"),
 		ethereum_address: Base.encode64("some ethereum_address"),

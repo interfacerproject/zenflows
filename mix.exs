@@ -93,6 +93,7 @@ defp docs() do
 		"docs/software-licences.md",
 		"docs/dependency-management.md",
 		"docs/style-guide.md",
+		"docs/user-creation-flow.md",
 		"LICENSE",
 		"CONTRIBUTING.md",
 	],

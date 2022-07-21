@@ -22,7 +22,7 @@ When I create the eddsa public key
 and I move 'eddsa public key' in 'pubkeys'
 
 When I create the ethereum address
-
+and schema
 Then print the 'keyring'
 and print the 'pubkeys'
 and print the 'ethereum address'

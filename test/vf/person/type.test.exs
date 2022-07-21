@@ -27,7 +27,6 @@ setup do
 			primary_location_id: Factory.insert!(:spatial_thing).id,
 			user: Factory.uniq("user"),
 			email: "#{Factory.uniq("user")}@example.com",
-			dilithium_public_key: Base.encode64("dilithium_public_key"),
 			ecdh_public_key: Base.encode64("ecdh_public_key"),
 			eddsa_public_key: Base.encode64("eddsa_public_key"),
 			ethereum_address: Base.encode64("ethereum_address"),
@@ -72,7 +71,6 @@ describe "Mutation" do
 					primaryLocation: "#{params.primary_location_id}"
 					user: "#{params.user}"
 					email: "#{params.email}"
-					dilithiumPublicKey: "#{params.dilithium_public_key}"
 					ecdhPublicKey: "#{params.ecdh_public_key}"
 					eddsaPublicKey: "#{params.eddsa_public_key}"
 					ethereumAddress: "#{params.ethereum_address}"
@@ -105,7 +103,6 @@ describe "Mutation" do
 					primaryLocation: "#{params.primary_location_id}"
 					user: "#{params.user}"
 					email: "#{params.email}"
-					dilithiumPublicKey: "#{params.dilithium_public_key}"
 					ecdhPublicKey: "#{params.ecdh_public_key}"
 					eddsaPublicKey: "#{params.eddsa_public_key}"
 					ethereumAddress: "#{params.ethereum_address}"

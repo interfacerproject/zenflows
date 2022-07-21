@@ -1,8 +1,8 @@
 Scenario eddsa: verify the signature of a graph query
 
 Given I have a 'base64' named 'graphql'
-Given I have a 'eddsa signature'
-Given I have a 'base58' named 'eddsa public key'
+Given I have a 'base58' named 'eddsa signature'
+Given I have a 'base64' named 'eddsa public key'
 
 # check that the graph query is reentrant
 # When I create the count of char '{' found in 'graphql'
@@ -22,4 +22,4 @@ Given I have a 'base58' named 'eddsa public key'
 
 When I verify the 'graphql' has a eddsa signature in 'eddsa signature' by 'eddsa public key'
 
-Then print the string 'VALID SIGNATURE'
+Then print the string '1'

@@ -30,7 +30,6 @@ alias Zenflows.VF.{SpatialThing, Validate}
 	primary_location: SpatialThing.t() | nil,
 	user: String.t(),
 	email: String.t(),
-	dilithium_public_key: String.t() | nil,
 	ecdh_public_key: String.t() | nil,
 	eddsa_public_key: String.t() | nil,
 	ethereum_address: String.t() | nil,
@@ -46,7 +45,6 @@ schema "vf_agent" do
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
 	field :email, :string
-	field :dilithium_public_key, :string
 	field :ecdh_public_key, :string
 	field :eddsa_public_key, :string
 	field :ethereum_address, :string
@@ -57,7 +55,6 @@ end
 @insert_reqr ~w[name user email]a
 @insert_cast @insert_reqr ++ ~w[
 	image note primary_location_id
-	dilithium_public_key
 	ecdh_public_key
 	eddsa_public_key
 	ethereum_address
@@ -80,7 +77,6 @@ def chgset(params) do
 	|> Validate.name(:email)
 	|> Validate.uri(:image)
 	|> Validate.note(:note)
-	|> Validate.key(:dilithium_public_key)
 	|> Validate.key(:ecdh_public_key)
 	|> Validate.key(:eddsa_public_key)
 	|> Validate.key(:ethereum_address)

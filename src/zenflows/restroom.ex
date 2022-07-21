@@ -44,7 +44,7 @@ def verify_graphql?(body, signature, pubkey) do
 		"eddsa_public_key" => pubkey,
 	}
 	case exec("verify_graphql", data) do
-		{:ok, %{"output" => ["VALID SIGNATURE"]}} -> true
+		{:ok, %{"output" => ["1"]}} -> true
 		_ -> false
 	end
 end

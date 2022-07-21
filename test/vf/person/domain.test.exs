@@ -29,7 +29,6 @@ setup ctx do
 		primary_location_id: Factory.insert!(:spatial_thing).id,
 		user: Factory.uniq("user"),
 		email: "#{Factory.uniq("user")}@example.com",
-		dilithium_public_key: Base.encode64("dilithium_public_key"),
 		ecdh_public_key: Base.encode64("ecdh_public_key"),
 		eddsa_public_key: Base.encode64("eddsa_public_key"),
 		ethereum_address: Base.encode64("ethereum_address"),
@@ -80,7 +79,6 @@ describe "create/1" do
 		assert per.primary_location_id == params.primary_location_id
 		assert per.user == params.user
 		assert per.email == params.email
-		assert per.dilithium_public_key == params.dilithium_public_key
 		assert per.ecdh_public_key == params.ecdh_public_key
 		assert per.eddsa_public_key == params.eddsa_public_key
 		assert per.ethereum_address == params.ethereum_address
@@ -103,7 +101,6 @@ describe "update/2" do
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == old.email
-		assert new.dilithium_public_key == old.dilithium_public_key
 		assert new.ecdh_public_key == old.ecdh_public_key
 		assert new.eddsa_public_key == old.eddsa_public_key
 		assert new.ethereum_address == old.ethereum_address
@@ -121,7 +118,6 @@ describe "update/2" do
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email
-		assert new.dilithium_public_key == old.dilithium_public_key
 		assert new.ecdh_public_key == old.ecdh_public_key
 		assert new.eddsa_public_key == old.eddsa_public_key
 		assert new.ethereum_address == old.ethereum_address

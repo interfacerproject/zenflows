@@ -4,7 +4,7 @@ This document details user creation in Zenflows.
 
 The basic principle is end-to-end encryption: secret keys are not held by the server backend, but created on the frontend side.
 
-'''mermaid
+```mermaid
 sequenceDiagram
 participant B as Backend
 participant F as Frontend
@@ -20,4 +20,4 @@ participant E as Email
     F->>B: send public keys
     B->B: save user pub keys
     B->>F: OK, confirm creation
-'''
+```

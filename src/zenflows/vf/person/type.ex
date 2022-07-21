@@ -36,7 +36,6 @@ who have no physical location.
 """
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
-@dilithium_public_key "dilithium public key, encoded by zenroom"
 @ecdh_public_key "ecdh public key, encoded by zenroom"
 @eddsa_public_key "eddsa public key, encoded by zenroom"
 @ethereum_address "ethereum address, encoded by zenroom"
@@ -67,9 +66,6 @@ object :person do
 
 	@desc @email
 	field :email, non_null(:string)
-
-	@desc @dilithium_public_key
-	field :dilithium_public_key, :string
 
 	@desc @ecdh_public_key
 	field :ecdh_public_key, :string
@@ -112,9 +108,6 @@ input_object :person_create_params do
 
 	@desc @email
 	field :email, non_null(:string)
-
-	@desc @dilithium_public_key
-	field :dilithium_public_key, :string
 
 	@desc @ecdh_public_key
 	field :ecdh_public_key, :string

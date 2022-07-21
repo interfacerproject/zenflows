@@ -30,7 +30,6 @@ OR
 	type = 'org'
 	AND "user" IS NULL
 	AND email IS NULL
-	AND dilithium_public_key IS NULL
 	AND ecdh_public_key IS NULL
 	AND eddsa_public_key IS NULL
 	AND ethereum_address IS NULL
@@ -52,7 +51,6 @@ def change() do
 		# person
 		add :user, :text
 		add :email, :citext
-		add :dilithium_public_key, :text
 		add :ecdh_public_key, :text
 		add :eddsa_public_key, :text
 		add :ethereum_address, :text

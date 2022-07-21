@@ -36,12 +36,12 @@ who have no physical location.
 """
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
-@dilithium_public_key "dilithium public key encoded as base64url string"
-@ecdh_public_key "ecdh public key encoded as base64url string"
-@eddsa_public_key "eddsa public key encoded as base64url string"
-@ethereum_address "ethereum address encoded as base64url string"
-@reflow_public_key "reflow public key encoded as base64url string"
-@schnorr_public_key "schnorr public key encoded as base64url string"
+@dilithium_public_key "dilithium public key, encoded by zenroom"
+@ecdh_public_key "ecdh public key, encoded by zenroom"
+@eddsa_public_key "eddsa public key, encoded by zenroom"
+@ethereum_address "ethereum address, encoded by zenroom"
+@reflow_public_key "reflow public key, encoded by zenroom"
+@schnorr_public_key "schnorr public key, encoded by zenroom"
 
 @desc "A natural person."
 object :person do

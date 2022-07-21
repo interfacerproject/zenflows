@@ -160,15 +160,21 @@ mutation do
 	#import_fields :mutation_proposed_to
 end
 
-@impl true
-def middleware(mw, %{identifier: ident}, _)
-		when ident in ~w[create_person delete_person import_repos]a do
-	mw ++ [MW.Errors, MW.Admin]
-end
+require Logger
 
-def middleware(mw, _, _) do
-	mw ++ [MW.Errors, MW.Sign]
+# List of mutations/queries that require admin key.
+#@admin_calls ~w[create_person delete_person import_repos]a
+
+@impl true
+def middleware(mw, field, %{identifier: id})
+		when id in ~w[query mutation subscription]a do
+	if Absinthe.Type.meta(field, :auth_admin?) do
+		[MW.Admin | mw] ++ [MW.Errors]
+	else
+		[MW.Sign | mw] ++ [MW.Errors]
+	end
 end
+def middleware(mw, _, _), do: mw
 
 @impl true
 #def hydrate(%Absinthe.Blueprint.Schema.ScalarTypeDefinition{identifier: :id}, %{identifier: :action}) do

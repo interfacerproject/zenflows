@@ -12,7 +12,7 @@ artifacts.
 
 ## Features
 
-- Most validations are provable (and sealed by means of cryptography) using [Zenroom](https://zenroom.org) as core crypto component, including support for advanced Digital Product Passport schemes like 
+- Most validations are provable (and sealed by means of cryptography) using [Zenroom](https://zenroom.org) as core crypto component, including support for advanced Digital Product Passport schemes like
 [REFLOW Portable Crypto Functions](https://medium.com/think-do-tank/reflow-crypto-material-passports-for-the-circular-economy-d75b3aa63678).
 
 - The [Valueflows](https://valueflo.ws) vocabulary is adopted to govern a [Resource Event Agent](https://en.wikipedia.org/wiki/Resources,_Events,_Agents) accounting model and facilitate the development and execution of business logics built on top of it.
@@ -64,13 +64,21 @@ Zenflows is a software component of the [INTERFACER project](https://www.interfa
 
 ## 🎮 Quick start
 
-To start using Zenflows
+To start using Zenflows with native-to-host Elixir, PostgreSQL, and Restroom instances:
 
 1. Run `./mann env.setup` to generate the configuration file, `conf/env.sh`.
 2. Edit `conf/env.sh` to suit your needs.  Read the [Configuration Guide](docs/configuration-guide.md) for more info.
 3. Run `./mann db.setup` to setup the database and run the migrations.
-4. Run `./mann run` to start the application.
-5. Head over to [`http://localhost:4000/play`](http://localhost:4000/play) for the GraphQL playground.
+4. Run `./mann serve` to start the application.
+5. Head over to [`localhost:4000/play`](http://localhost:4000/play) for the GraphiQL playground.
+6. Use the URL `http://localhost:4000/api` in case if you'd like to use your own GraphQL client.
+
+To start using Zenflows with docker(-compose):
+
+1. Run `./mann devop.serve`.  This will create the necessary docker-compose file and fill in the secrets.
+2. When the iex (elixir shell) comes up, just type `Zenflows.Reltask.migrate()` and hit enter to migrate the database.
+
+Optionally, you can run `./mann devop.setup` before running `./mann devop.serve` to generate the docker-compose file, and edit it to suit your needs.
 
 **[🔝 back to top](#toc)**
 

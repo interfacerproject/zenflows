@@ -1,3 +1,0 @@
-Given nothing
-When I create the random object of '32' bytes
-then print the 'random object' as 'base58'

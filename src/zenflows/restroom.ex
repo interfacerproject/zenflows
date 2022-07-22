@@ -39,7 +39,7 @@ executes the query, verify that everything matches.
 @spec verify_graphql?(binary(), String.t(), String.t()) :: boolean()
 def verify_graphql?(body, signature, pubkey) do
 	data = %{
-		"graphql" => Base.encode64(body),
+		"gql" => Base.encode64(body),
 		"eddsa_signature" => signature,
 		"eddsa_public_key" => pubkey,
 	}

@@ -1,0 +1,3 @@
+[submodule "zencode"]
+	path = zencode
+	url = https://github.com/dyne/zenflows-crypto

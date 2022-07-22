@@ -3,6 +3,7 @@
 
 # git stuff
 !/.gitignore
+!/.gitmodules
 
 # license and readme
 !/LICENSE
@@ -85,15 +86,6 @@
 
 # deps
 !/.deps/
-
-# zencode
-!/zencode/
-/zencode/*
-!/zencode/*/
-!/zencode/README.md
-!/zencode/Dockerfile
-!/zencode/src/*.zen
-!/zencode/test/*.sh
 
 # docs
 !/docs/

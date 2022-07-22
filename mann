@@ -38,7 +38,7 @@ main() {
 	case $1 in
 	help)          shift ; help "$@" ;;
 	mix)           shift ; cmd_mix "$@" ;;
-	run)           shift ; cmd_run "$@" ;;
+	serve)         shift ; cmd_serve "$@" ;;
 	clean)         shift ; cmd_clean "$@" ;;
 	test)          shift ; cmd_test "$@" ;;
 	cover)         shift ; cmd_cover "$@" ;;
@@ -58,9 +58,15 @@ main() {
 	doc)           shift ; cmd_doc "$@" ;;
 	doc.serve)     shift ; cmd_doc_serve "$@" ;;
 	doc.clean)     shift ; cmd_doc_clean "$@" ;;
-	devop.build)   shift ; cmd_devop_build "$@" ;;
-	devop.setup)   shift ; cmd_devop_setup "$@" ;;
-	devop.run)     shift ; cmd_devop_run "$@" ;;
+	devop.setup)   shift ; cmd_devop_setup "$@";;
+	devop.serve)   shift ; cmd_devop_serve "$@";;
+	devop.comp)    shift ; cmd_devop_comp "$@";;
+	devop.build)   shift ; cmd_devop_build "$@";;
+	devop.run)     shift ; cmd_devop_run "$@";;
+	devop.exec)    shift ; cmd_devop_exec "$@";;
+	devop.up)      shift ; cmd_devop_up "$@";;
+	devop.down)    shift ; cmd_devop_down "$@";;
+	devop.logs)    shift ; cmd_devop_logs "$@";;
 	*)             usage ;;
 	esac
 }
@@ -94,7 +100,7 @@ options:
 commands:
     help           Print this text.
     mix            Run 'mix'.
-    run            Run the application using 'iex'.
+    serve          Run the application using 'iex'.
     clean          Clean all unnecessary files.
     test           Run the tests using 'mix test'.
     cover          Run coverage on tests.
@@ -114,9 +120,15 @@ commands:
     doc            Generate static docs.
     doc.serve      Serve the documantation with Erlang.
     doc.clean      Clean the generated docs.
-    devop.build    Build a Docker image.
-    devop.setup    Generate the docker-compose file.
-    devop.run      Run Zenflows via the docker-compose file.
+    devop.setup    Generate the pre-filled docker-compose file.
+    devop.serve    Build, setup, run everything, and attach to back-end shell.
+    devop.comp     Run 'docker-compose'.
+    devop.build    Run 'docker-compose build.
+    devop.run      Run 'docker-compose run'.
+    devop.exec     Run 'docker-compose exec.
+    devop.up       Run 'docker-compose up'.
+    devop.down     Run 'docker-compose down'.
+    devop.logs     Run 'docker-compose logs'.
 EOF
 }
 
@@ -138,7 +150,7 @@ cmd_mix() {
 	mix "$@"
 }
 
-cmd_run() {
+cmd_start() {
 	setup
 	readenv
 	iex -S mix "$@"
@@ -251,10 +263,6 @@ cmd_doc_clean() {
 	rm -rf .docs
 }
 
-cmd_devop_build() {
-	docker build -f devop/Dockerfile -t zenflows:latest .
-}
-
 cmd_devop_setup() {
 	if test -e devop/docker-compose.yml ; then
 		warn "the file 'devop/docker-compose.yml' already exists; skipping"
@@ -266,9 +274,37 @@ cmd_devop_setup() {
 	fi
 }
 
-cmd_devop_run() {
+cmd_devop_serve() {
+	cmd_devop_comp run --service-ports --rm srv start_iex
+}
+
+cmd_devop_comp() {
 	cmd_devop_setup
-	docker compose -p zenflows -f devop/docker-compose.yml run --service-ports --rm srv start_iex
+	docker-compose -p zenflows -f devop/docker-compose.yml "$@"
+}
+
+cmd_devop_build() {
+	cmd_devop_comp build
+}
+
+cmd_devop_run() {
+	cmd_devop_comp run "$@"
+}
+
+cmd_devop_exec() {
+	cmd_devop_comp exec "$@"
+}
+
+cmd_devop_up() {
+	cmd_devop_comp up "$@"
+}
+
+cmd_devop_down() {
+	cmd_devop_comp down "$@"
+}
+
+cmd_devop_logs() {
+	cmd_devop_comp logs "$@"
 }
 
 main "$@"

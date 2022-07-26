@@ -160,11 +160,6 @@ mutation do
 	#import_fields :mutation_proposed_to
 end
 
-require Logger
-
-# List of mutations/queries that require admin key.
-#@admin_calls ~w[create_person delete_person import_repos]a
-
 @impl true
 def middleware(mw, field, %{identifier: id})
 		when id in ~w[query mutation subscription]a do

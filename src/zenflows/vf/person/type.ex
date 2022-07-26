@@ -158,7 +158,7 @@ end
 object :mutation_person do
 	@desc "Registers a new (human) person with the collaboration space."
 	field :create_person, non_null(:person_response) do
-		meta auth_admin?: true
+		meta only_admin?: true
 		arg :person, non_null(:person_create_params)
 		resolve &Resolv.create_person/2
 	end
@@ -174,7 +174,7 @@ object :mutation_person do
 	collaboration space.
 	"""
 	field :delete_person, non_null(:boolean) do
-		meta auth_admin?: true
+		meta only_admin?: true
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_person/2
 	end

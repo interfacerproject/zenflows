@@ -49,6 +49,22 @@ def verify_graphql?(body, signature, pubkey) do
 	end
 end
 
+@doc """
+See https://github.com/dyne/keypairoom for details.
+"""
+@spec keypairoom_server(String.t()) :: String.t()
+def keypairoom_server(data) do
+	data = %{
+		"userData" => data,
+		"theBackendPassword" => pass(),
+	}
+	case exec("keypairoomServer", data) do
+		{:ok, %{"key_derivation" => derived}} -> {:ok, derived}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, any()}
 defp exec(name, data) do
@@ -83,6 +99,13 @@ end
 defp host() do
 	conf = conf()
 	"#{conf[:room_host]}:#{conf[:room_port]}"
+end
+
+# Return the passphrase from the configs.
+@spec pass() :: String.t()
+defp pass() do
+	conf = conf()
+	conf[:room_pass]
 end
 
 # Return the application configurations of this module.

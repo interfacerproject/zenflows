@@ -150,7 +150,7 @@ cmd_mix() {
 	mix "$@"
 }
 
-cmd_start() {
+cmd_serve() {
 	setup
 	readenv
 	iex -S mix "$@"

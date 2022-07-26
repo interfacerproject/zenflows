@@ -168,10 +168,20 @@ require Logger
 @impl true
 def middleware(mw, field, %{identifier: id})
 		when id in ~w[query mutation subscription]a do
-	if Absinthe.Type.meta(field, :only_admin?) do
-		[MW.Admin | mw] ++ [MW.Errors]
-	else
-		[MW.Sign | mw] ++ [MW.Errors]
+	alias Absinthe.Type
+
+	cond do
+		# require nothing to be provided
+		Type.meta(field, :only_guest?) ->
+			mw ++ [MW.Errors]
+
+		# require the admin key to be provided
+		Type.meta(field, :only_admin?) ->
+			[MW.Admin | mw] ++ [MW.Errors]
+
+		# require every call to be signed
+		true ->
+			[MW.Sign | mw] ++ [MW.Errors]
 	end
 end
 def middleware(mw, _, _), do: mw

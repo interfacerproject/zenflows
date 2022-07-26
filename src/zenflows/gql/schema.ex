@@ -168,7 +168,7 @@ require Logger
 @impl true
 def middleware(mw, field, %{identifier: id})
 		when id in ~w[query mutation subscription]a do
-	if Absinthe.Type.meta(field, :auth_admin?) do
+	if Absinthe.Type.meta(field, :only_admin?) do
 		[MW.Admin | mw] ++ [MW.Errors]
 	else
 		[MW.Sign | mw] ++ [MW.Errors]

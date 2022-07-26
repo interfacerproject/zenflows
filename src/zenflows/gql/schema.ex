@@ -26,6 +26,7 @@ alias Zenflows.VF
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
 import_types Zenflows.SWPass.Type
+import_types Zenflows.Keypairoom.Type
 
 import_types VF.TimeUnit.Type
 import_types VF.Action.Type
@@ -123,6 +124,7 @@ mutation do
 	end
 
 	import_fields :mutation_sw_pass
+	import_fields :mutation_keypairoom
 
 	import_fields :mutation_unit
 	import_fields :mutation_spatial_thing

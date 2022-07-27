@@ -58,8 +58,8 @@ def keypairoom_server(data) do
 		"userData" => data,
 		"theBackendPassword" => pass(),
 	}
-	case exec("keypairoomServer", data) do
-		{:ok, %{"key_derivation" => derived}} -> {:ok, derived}
+	case exec("keypairoomServer-6-7", data) do
+		{:ok, %{"seedServerSideShard.HMAC" => hmac}} -> {:ok, hmac}
 		{:error, reason} -> {:error, reason}
 	end
 end

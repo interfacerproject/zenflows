@@ -40,6 +40,11 @@ def by_user(repo \\ Repo, user) do
 	repo.get_by(Person, user: user, type: :per)
 end
 
+@spec exists_email(String.t()) :: boolean()
+def exists_email(email) do
+	where(Person, email: ^email) |> Repo.exists?()
+end
+
 @spec all() :: [Person.t()]
 def all() do
 	Person

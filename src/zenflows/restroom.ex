@@ -52,7 +52,7 @@ end
 @doc """
 See https://github.com/dyne/keypairoom for details.
 """
-@spec keypairoom_server(String.t()) :: String.t()
+@spec keypairoom_server(String.t()) :: {:ok, String.t()} | {:error, term()}
 def keypairoom_server(data) do
 	data = %{
 		"userData" => data,

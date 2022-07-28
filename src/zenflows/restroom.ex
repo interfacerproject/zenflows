@@ -64,7 +64,6 @@ def keypairoom_server(data) do
 	end
 end
 
-
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, any()}
 defp exec(name, data) do

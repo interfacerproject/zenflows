@@ -22,11 +22,18 @@ require Logger
 
 alias Zenflows.Keypairoom.Domain
 
-def keypairoom_server(%{first_registration: first?, email: email}, _) do
-	case Domain.keypairoom_server(first?, email) do
-		{:ok, value} ->
-			{:ok, value}
+def keypairoom_server(%{first_registration: first?, user_data: data}, _) do
+	case Jason.decode(data) do
+		{:ok, %{"email" => email} = data} when is_binary(email) ->
+			case Domain.keypairoom_server(first?, data) do
+				{:ok, value} ->
+					{:ok, value}
 
+				{:error, reason} ->
+					{:error, reason}
+			end
+		{:ok, _} ->
+			{:error, "invalid user-data must contain email that is a string"}
 		{:error, reason} ->
 			{:error, reason}
 	end

@@ -22,8 +22,17 @@ tasks.
 """
 
 alias Zenflows.Restroom
+alias Zenflows.VF.Person
 
-def keypairoom_server(data) do
-	Restroom.keypairoom_server(data)
+def keypairoom_server(false, email) do
+	if Person.Domain.exists_email(email),
+		do: Restroom.keypairoom_server(email),
+		else: {:error, "email doesn't exists"}
+end
+
+def keypairoom_server(true, email) do
+	if Person.Domain.exists_email(email),
+		do: {:error, "email exists"},
+		else: Restroom.keypairoom_server(email)
 end
 end

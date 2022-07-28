@@ -22,14 +22,13 @@ require Logger
 
 alias Zenflows.Keypairoom.Domain
 
-def keypairoom_server(%{user_data: data}, _) do
-	case Domain.keypairoom_server(data) do
+def keypairoom_server(%{first_registration: first?, email: email}, _) do
+	case Domain.keypairoom_server(first?, email) do
 		{:ok, value} ->
 			{:ok, value}
 
 		{:error, reason} ->
-			Logger.debug(reason)
-			{:error, "something went wrong"}
+			{:error, reason}
 	end
 end
 end

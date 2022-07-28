@@ -26,8 +26,8 @@ object :mutation_keypairoom do
 	field :keypairoom_server, non_null(:string) do
 		meta only_guest?: true
 
-		@desc "A JSON object encoded as Base64 string."
-		arg :user_data, non_null(:string)
+		arg :first_registration, non_null(:boolean)
+		arg :email, non_null(:string)
 		resolve &Resolv.keypairoom_server/2
 	end
 end

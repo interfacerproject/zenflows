@@ -151,6 +151,14 @@ object :query_person do
 		resolve &Resolv.person/2
 	end
 
+	@desc "Find if a person exists by email and eddsa-public-key."
+	field :person_exists, :person do
+		meta only_guest?: true
+		arg :email, non_null(:string)
+		arg :eddsa_public_key, non_null(:string)
+		resolve &Resolv.person_exists/2
+	end
+
 	#"Loads all people who have publicly registered with this collaboration space."
 	#people(start: ID, limit: Int): [Person!]
 end

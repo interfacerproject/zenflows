@@ -24,6 +24,10 @@ def person(%{id: id}, _info) do
 	{:ok, Domain.by_id(id)}
 end
 
+def person_exists(params, _info) do
+	{:ok, Domain.by(params)}
+end
+
 def create_person(%{person: params}, _info) do
 	with {:ok, per} <- Domain.create(params) do
 		{:ok, %{agent: per}}

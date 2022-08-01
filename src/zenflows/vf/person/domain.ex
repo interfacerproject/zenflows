@@ -30,14 +30,24 @@ alias Zenflows.VF.Person
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
+
+@spec by(repo(), Keyword.t() | map()) :: Person.t() | nil
+def by(repo \\ Repo, clauses)
+def by(repo, clauses) when is_map(clauses) do
+	repo.get_by(Person, Map.put(clauses, :type, :per))
+end
+def by(repo, clauses) when is_list(clauses) do
+	repo.get_by(Person, Keyword.put(clauses, :type, :per))
+end
+
 @spec by_id(repo(), id()) :: Person.t() | nil
 def by_id(repo \\ Repo, id) do
-	repo.get_by(Person, id: id, type: :per)
+	by(repo, id: id)
 end
 
 @spec by_user(repo(), String.t()) :: Person.t() | nil
 def by_user(repo \\ Repo, user) do
-	repo.get_by(Person, user: user, type: :per)
+	by(repo, user: user)
 end
 
 @spec exists_email(String.t()) :: boolean()

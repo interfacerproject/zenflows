@@ -29,12 +29,28 @@ scalar :uri, name: "URI" do
 	serialize & &1
 end
 
+@desc "A base64-encoded (requires padding and ignores whitespace) as String."
+scalar :base64, name: "Base64" do
+	parse &base64_parse/1
+	serialize & &1
+end
+
 # TODO: Decide whether we really want these to be valid URIs or just
 # Strings.
 @spec uri_parse(Input.t()) :: {:ok, String.t() | nil} | :error
 defp uri_parse(%Input.String{value: v}), do: {:ok, v}
 defp uri_parse(%Input.Null{}), do: {:ok, nil}
 defp uri_parse(_), do: :error
+
+@spec base64_parse(Input.t()) :: {:ok, String.t() | nil} | :error
+defp base64_parse(%Input.String{value: v}) do
+	case Base.decode64(v, ignore: :whitespace, padding: true) do
+		{:ok, _} -> {:ok, v}
+		:error -> :error
+	end
+end
+defp base64_parse(%Input.Null{}), do: {:ok, nil}
+defp base64_parse(_), do: :error
 
 @spec id_parse(Input.t()) :: {:ok, ID.t() | nil} | :error
 def id_parse(%Input.String{value: v}), do: ID.cast(v)

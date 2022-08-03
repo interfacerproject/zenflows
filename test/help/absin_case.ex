@@ -42,16 +42,24 @@ end
 
 @spec query!(String.t()) :: Absinthe.run_result()
 def query!(doc) do
-	run!("query { #{doc} }")
+	Absinthe.run!("query { #{doc} }", Zenflows.GQL.Schema, context: %{authenticate_calls?: false})
 end
 
 @spec mutation!(String.t()) :: Absinthe.run_result()
 def mutation!(doc) do
-	run!("mutation { #{doc} }")
+	Absinthe.run!("mutation { #{doc} }", Zenflows.GQL.Schema, context: %{authenticate_calls?: false})
 end
 
-@spec run!(String.t()) :: Absinthe.run_result()
-def run!(doc) do
-	Absinthe.run!(doc, Zenflows.GQL.Schema)
+@spec run!(String.t(), Keyword.t()) :: Absinthe.run_result()
+def run!(doc, opts \\ []) do
+	auth? = Keyword.get(opts, :auth?, false)
+	ctx = Keyword.get(opts, :ctx, Keyword.get(opts, :context, %{}))
+	ctx = Map.put(ctx, :authenticate_calls?, auth?)
+	vars = Keyword.get(opts, :vars, Keyword.get(opts, :variables, %{}))
+	opts =
+		opts
+		|> Keyword.put(:context, ctx)
+		|> Keyword.put(:variables, vars)
+	Absinthe.run!(doc, Zenflows.GQL.Schema, opts)
 end
 end

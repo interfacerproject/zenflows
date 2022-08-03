@@ -40,7 +40,7 @@ alias Zenflows.VF.{SpatialThing, Validate}
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:per], default: :per
 	field :name, :string
-	field :image, :string, virtual: true
+	field :image, :string
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
@@ -97,7 +97,7 @@ def chgset(schema, params) do
 	|> Changeset.cast(params, @update_cast)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.note(:note)
 	|> check_email()
 	|> Changeset.unique_constraint(:user)

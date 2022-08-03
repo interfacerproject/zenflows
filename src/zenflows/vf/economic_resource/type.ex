@@ -28,7 +28,7 @@ uniqueness.
 """
 @note "A textual description or comment."
 @image """
-The URI to an image relevant to the entity, such as a photo, diagram, etc.
+The base64-encoded image binary relevant to the entity, such as a photo, diagram, etc.
 """
 @tracking_identifier """
 Sometimes called serial number, used when each item must have a traceable
@@ -106,7 +106,7 @@ object :economic_resource do
 	field :note, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @tracking_identifier
 	field :tracking_identifier, :string
@@ -167,7 +167,7 @@ input_object :economic_resource_create_params do
 	field :note, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @tracking_identifier
 	field :tracking_identifier, :string
@@ -183,7 +183,7 @@ input_object :economic_resource_update_params do
 	field :note, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 end
 
 object :query_economic_resource do

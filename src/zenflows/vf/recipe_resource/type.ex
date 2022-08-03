@@ -27,7 +27,7 @@ An informal or formal textual identifier for a recipe resource.  Does not
 imply uniqueness.
 """
 @image """
-The URI to an image relevant to the entity, such as a photo, diagram, etc.
+The base64-encoded image binary relevant to the entity, such as a photo, diagram, etc.
 """
 @unit_of_resource """
 The unit of inventory used for this resource in the recipe.
@@ -70,7 +70,7 @@ object :recipe_resource do
 		resolve: &Resolv.unit_of_effort/3
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string
@@ -104,7 +104,7 @@ input_object :recipe_resource_create_params do
 	field :unit_of_effort_id, :id, name: "unit_of_effort"
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string
@@ -132,7 +132,7 @@ input_object :recipe_resource_update_params do
 	field :unit_of_effort_id, :id, name: "unit_of_effort"
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string

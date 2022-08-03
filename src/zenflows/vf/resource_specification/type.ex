@@ -27,7 +27,8 @@ An informal or formal textual identifier for a type of resource.
 Does not imply uniqueness.
 """
 @image """
-The URI to an image relevant to the entity, such as a photo, diagram, etc.
+The base64-encoded image binary relevant to the entity, such as a photo,
+diagram, etc.
 """
 @resource_classified_as """
 References a concept in a common taxonomy or other classification scheme
@@ -49,7 +50,7 @@ object :resource_specification do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))
@@ -75,7 +76,7 @@ input_object :resource_specification_create_params do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))
@@ -100,7 +101,7 @@ input_object :resource_specification_update_params do
 	field :name, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))

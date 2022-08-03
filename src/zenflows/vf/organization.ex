@@ -34,7 +34,7 @@ alias Zenflows.VF.{SpatialThing, Validate}
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:org], default: :org
 	field :name, :string
-	field :image, :string, virtual: true
+	field :image, :string
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :classified_as, {:array, :string}
@@ -51,7 +51,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.class(:classified_as)
 	|> Changeset.assoc_constraint(:primary_location)
 end

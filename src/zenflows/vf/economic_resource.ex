@@ -60,7 +60,7 @@ alias Zenflows.VF.{
 schema "vf_economic_resource" do
 	field :name, :string
 	field :note, :string
-	field :image, :string, virtual: true
+	field :image, :string
 	field :tracking_identifier, :string
 	field :classified_as, {:array, :string}
 	belongs_to :conforms_to, ResourceSpecification
@@ -103,7 +103,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.class(:classified_as)
 	|> require_quantity_units_same()
 	|> Changeset.assoc_constraint(:conforms_to)

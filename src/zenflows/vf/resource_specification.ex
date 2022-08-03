@@ -37,7 +37,7 @@ alias Zenflows.VF.{Unit, Validate}
 
 schema "vf_resource_specification" do
 	field :name, :string
-	field :image, :string, virtual: true
+	field :image, :string
 	field :resource_classified_as, {:array, :string}
 	field :note, :string
 	belongs_to :default_unit_of_resource, Unit
@@ -59,7 +59,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.class(:resource_classified_as)
 	|> Changeset.assoc_constraint(:default_unit_of_resource)
 	|> Changeset.assoc_constraint(:default_unit_of_effort)

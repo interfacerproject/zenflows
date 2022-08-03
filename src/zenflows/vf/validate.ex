@@ -23,6 +23,8 @@ here are rough and can be changed in the future.
 
 alias Ecto.Changeset, as: Chset
 
+require Logger
+
 @doc "Checks if the given string field is [16, 2048] bytes long."
 @spec key(Chset.t(), atom()) :: Chset.t()
 def key(cset, field) do
@@ -70,6 +72,27 @@ def uri(cset, field) do
 			[{field, "should be at least 3 bytes long"}]
 		_, str when byte_size(str) > 512 ->
 			[{field, "should be at most 512 bytes long"}]
+		_, _ ->
+			[]
+	end)
+end
+
+@mebibyte 1024**2
+
+@doc """
+Check if the given base64-encoded binary data is at least 1B, at most
+25MiB in size.  And, display a warning if it is longer than 4MiB.
+"""
+@spec img(Chset.t(), atom()) :: Chset.t()
+def img(cset, field) do
+	Chset.validate_change(cset, field, :valflow, fn
+		_, str when byte_size(str) < 1 ->
+			[{field, "should be at least 1B long"}]
+		_, str when byte_size(str) > 25 * @mebibyte ->
+			[{field, "should be at most 25MiB long"}]
+		_, str when byte_size(str) > 4 * @mebibyte ->
+			Logger.warning("file exceeds 4MiB")
+			[]
 		_, _ ->
 			[]
 	end)

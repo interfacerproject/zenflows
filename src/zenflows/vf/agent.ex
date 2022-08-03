@@ -50,7 +50,7 @@ schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:per, :org]
 	field :name, :string
 	field :note, :string
-	field :image, :string, virtual: true
+	field :image, :string
 	belongs_to :primary_location, SpatialThing
 
 	# person

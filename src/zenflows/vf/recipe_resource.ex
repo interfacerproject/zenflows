@@ -46,7 +46,7 @@ schema "vf_recipe_resource" do
 	field :resource_classified_as, {:array, :string}
 	belongs_to :resource_conforms_to, ResourceSpecification
 	field :substitutable, :boolean, default: false
-	field :image, :string, virtual: true
+	field :image, :string
 	field :note, :string
 end
 
@@ -65,7 +65,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.class(:resource_conforms_to)
 	|> Changeset.assoc_constraint(:unit_of_resource)
 	|> Changeset.assoc_constraint(:unit_of_effort)

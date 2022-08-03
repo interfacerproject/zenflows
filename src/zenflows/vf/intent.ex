@@ -85,7 +85,7 @@ schema "vf_intent" do
 	field :has_point_in_time, :utc_datetime_usec
 	field :due, :utc_datetime_usec
 	field :finished, :boolean, default: false
-	field :image, :string, virtual: true
+	field :image, :string
 	field :note, :string
 	# field :in_scope_of
 	field :agreed_in, :string
@@ -109,7 +109,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> mutex_check()
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.uri(:image)
+	|> Validate.img(:image)
 	|> Validate.class(:resource_classified_as)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)

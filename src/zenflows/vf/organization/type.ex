@@ -24,8 +24,8 @@ alias Zenflows.VF.Organization.Resolv
 
 @name "The name that this agent will be referred to by."
 @image """
-The URI to an image relevant to the agent, such as a logo, avatar,
-photo, etc.
+The base64-encoded image binary relevant to the agent, such as a logo,
+avatar, photo, etc.
 """
 @primary_location """
 The main place an agent is located, often an address where activities
@@ -49,7 +49,7 @@ object :organization do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @primary_location
 	field :primary_location, :spatial_thing,
@@ -71,7 +71,7 @@ input_object :organization_create_params do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string
@@ -93,7 +93,7 @@ input_object :organization_update_params do
 	field :name, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string

@@ -20,15 +20,8 @@ defmodule Zenflows.VF.Agent.Resolv do
 
 alias Zenflows.VF.{Agent, Agent.Domain}
 
-def my_agent(_args, _info) do
-	agent = %Agent{
-		type: :per,
-		id: Zenflows.DB.ID.gen(),
-		name: "hello",
-		image: "https://example.test/img.jpg",
-		note: "world",
-	}
-	{:ok, agent}
+def my_agent(_args, %{context: %{req_user: user}}) do
+	{:ok, user}
 end
 
 def agent(%{id: id}, _info) do

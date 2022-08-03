@@ -24,8 +24,8 @@ alias Zenflows.VF.Person.Resolv
 
 @name "The name that this agent will be referred to by."
 @image """
-The URI to an image relevant to the agent, such as a logo, avatar,
-photo, etc.
+The base64-encoded image binary relevant to the agent, such as a logo,
+avatar, photo, etc.
 """
 @note "A textual description or comment."
 @primary_location """
@@ -52,7 +52,7 @@ object :person do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string
@@ -92,7 +92,7 @@ input_object :person_create_params do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string
@@ -132,7 +132,7 @@ input_object :person_update_params do
 	field :name, :string
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string

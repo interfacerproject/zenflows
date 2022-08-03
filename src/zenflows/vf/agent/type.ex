@@ -26,8 +26,8 @@ An informal or formal textual identifier for an agent.  Does not imply
 uniqueness.
 """
 @image """
-The URI to an image relevant to the agent, such as a logo, avatar,
-photo, etc.
+The base64-encoded image binary relevant to the agent, such as a logo,
+avatar, photo, etc.
 """
 @note "A textual description or comment."
 @primary_location """
@@ -45,7 +45,7 @@ interface :agent do
 	field :name, non_null(:string)
 
 	@desc @image
-	field :image, :uri
+	field :image, :base64
 
 	@desc @note
 	field :note, :string

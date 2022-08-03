@@ -32,14 +32,18 @@ plug Plug.Parsers,
 plug MW.GQLContext
 plug :dispatch
 
+@init_opts [
+	schema: Zenflows.GQL.Schema,
+	context: %{authenticate_calls?: true},
+]
+
 forward "/api",
 	to: Absinthe.Plug,
-	schema: Zenflows.GQL.Schema
+	init_opts: @init_opts
 
 forward "/play",
 	to: Absinthe.Plug.GraphiQL,
-	schema: Zenflows.GQL.Schema,
-	interface: :advanced
+	init_opts: [{:interface, :advanced} | @init_opts]
 
 match _ do
 	conn

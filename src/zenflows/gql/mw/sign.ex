@@ -27,12 +27,16 @@ alias Zenflows.VF.Person
 
 @impl true
 def call(res, _opts) do
-	with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
-			per when not is_nil(per) <- Person.Domain.by_user(user),
-			true <- Restroom.verify_graphql?(body, sign, per.eddsa_public_key) do
+	if res.context.authenticate_calls? do
+		with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
+				per when not is_nil(per) <- Person.Domain.by_user(user),
+				true <- Restroom.verify_graphql?(body, sign, per.eddsa_public_key) do
+			put_in(res.context[:req_user], per)
+		else _ ->
+			Absinthe.Resolution.put_result(res, {:error, "you are not authenticated"})
+		end
+	else
 		res
-	else _ ->
-		Absinthe.Resolution.put_result(res, {:error, "you are not authenticated"})
 	end
 end
 end

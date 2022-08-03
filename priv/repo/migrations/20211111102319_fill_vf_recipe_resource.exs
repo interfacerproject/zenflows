@@ -23,7 +23,7 @@ def change() do
 		add :name, :text, null: false
 		add :note, :text
 		add :substitutable, :boolean, default: false, null: false
-		# add :image
+		add :image, :text
 		add :resource_classified_as, {:array, :text}
 		add :resource_conforms_to_id, references("vf_resource_specification")
 		add :unit_of_resource_id, references("vf_unit")

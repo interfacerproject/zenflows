@@ -27,7 +27,7 @@ setup ctx do
 	else
 		params = %{
 			name: Factory.uniq("name"),
-			image: Factory.uri(),
+			image: Factory.img(),
 			classified_as: Factory.uniq_list("uri"),
 			note: Factory.uniq("note"),
 			primary_location_id: Factory.insert!(:spatial_thing).id,
@@ -96,7 +96,7 @@ describe "update/2" do
 		assert new.name == old.name
 		assert new.classified_as == old.classified_as
 		assert new.note == old.note
-		assert new.image == nil # old.image
+		assert new.image == old.image
 		assert new.primary_location_id == old.primary_location_id
 	end
 end

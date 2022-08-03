@@ -91,6 +91,11 @@ def uri() do
 	uniq("schema://user@host:port/path")
 end
 
+@doc "Returns a unique base64 encoded string (mock-up of image data)"
+def img() do
+	:rand.bytes(200) |> Base.encode64(padding: true)
+end
+
 @doc "Inserts a schema into the database with field overrides."
 @spec insert!(atom(), %{required(atom()) => term()}) :: struct()
 def insert!(name, attrs \\ %{}) do
@@ -166,7 +171,7 @@ def build(:resource_specification) do
 		name: uniq("some name"),
 		resource_classified_as: uniq_list("some uri"),
 		note: uniq("some note"),
-		image: uri(),
+		image: img(),
 		default_unit_of_effort: build(:unit),
 		default_unit_of_resource: build(:unit),
 	}
@@ -181,7 +186,7 @@ def build(:recipe_resource) do
 		resource_conforms_to: build(:resource_specification),
 		substitutable: bool(),
 		note: uniq("some note"),
-		image: uri(),
+		image: img(),
 	}
 end
 
@@ -225,7 +230,7 @@ def build(:person) do
 	%VF.Person{
 		type: :per,
 		name: uniq("some name"),
-		image: uri(),
+		image: img(),
 		note: uniq("some note"),
 		primary_location: build(:spatial_thing),
 		user: uniq("some user"),
@@ -245,7 +250,7 @@ def build(:organization) do
 	%VF.Organization{
 		type: :org,
 		name: uniq("some name"),
-		image: uri(),
+		image: img(),
 		classified_as: uniq_list("some uri"),
 		note: uniq("some note"),
 		primary_location: build(:spatial_thing),
@@ -354,7 +359,7 @@ def build(:economic_resource) do
 	%VF.EconomicResource{
 		name: uniq("some name"),
 		note: uniq("some note"),
-		image: uri(),
+		image: img(),
 		tracking_identifier: uniq("some tracking identifier"),
 		classified_as: uniq_list("some uri"),
 		conforms_to: build(:resource_specification),
@@ -413,7 +418,7 @@ def build(:intent) do
 		has_point_in_time: DateTime.utc_now(),
 		due: DateTime.utc_now(),
 		finished: bool(),
-		image: uri(),
+		image: img(),
 		note: uniq("some note"),
 		# in_scope_of:
 		agreed_in: uniq("some uri"),

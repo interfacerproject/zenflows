@@ -37,7 +37,7 @@ setup ctx do
 	params = %{
 		name: Factory.uniq("name"),
 		note: Factory.uniq("note"),
-		image: Factory.uri(),
+		image: Factory.img(),
 		tracking_identifier: Factory.uniq("tracking identifier"),
 		classified_as: Factory.uniq_list("uri"),
 		conforms_to_id: Factory.insert!(:resource_specification).id,
@@ -87,8 +87,7 @@ describe "update/2" do
 		assert new.onhand_quantity_has_numerical_value == old.onhand_quantity_has_numerical_value
 		assert new.current_location_id == old.current_location_id
 		assert new.note == old.note
-		# virtual fields atm
-		# assert new.image == old.image
+		assert new.image == old.image
 		assert new.unit_of_effort_id == old.unit_of_effort_id
 		assert new.stage_id == old.stage_id
 		assert new.state_id == old.state_id

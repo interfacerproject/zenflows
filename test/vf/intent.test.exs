@@ -48,7 +48,7 @@ setup do
 		has_point_in_time: DateTime.utc_now(),
 		due: DateTime.utc_now(),
 		finished: Factory.bool(),
-		image: Factory.uri(),
+		image: Factory.img(),
 		note: Factory.uniq("note"),
 		# in_scope_of_id:
 		agreed_in: Factory.uniq("uri"),

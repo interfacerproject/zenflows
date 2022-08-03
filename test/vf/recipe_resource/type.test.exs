@@ -21,13 +21,14 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			resource_classified_as: Factory.uniq_list("uri"),
-			unit_of_effort_id: Factory.insert!(:unit).id,
-			unit_of_resource_id: Factory.insert!(:unit).id,
-			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
-			substitutable: Factory.bool(),
-			note: Factory.uniq("note"),
+			"name" => Factory.uniq("name"),
+			"resourceClassifiedAs" => Factory.uniq_list("uri"),
+			"unitOfEffort" => Factory.insert!(:unit).id,
+			"unitOfResource" => Factory.insert!(:unit).id,
+			"resourceConformsTo" => Factory.insert!(:resource_specification).id,
+			"substitutable" => Factory.bool(),
+			"note" => Factory.uniq("note"),
+			"image" => Factory.img(),
 		},
 		recipe_resource: Factory.insert!(:recipe_resource),
 	}
@@ -36,18 +37,21 @@ end
 describe "Query" do
 	test "recipeResource()", %{recipe_resource: rec_res} do
 		assert %{data: %{"recipeResource" => data}} =
-			query!("""
-				recipeResource(id: "#{rec_res.id}") {
-					id
-					name
-					resourceClassifiedAs
-					unitOfResource { id }
-					unitOfEffort { id }
-					resourceConformsTo { id }
-					substitutable
-					note
+			run!("""
+				query ($id: ID!) {
+					recipeResource(id: $id) {
+						id
+						name
+						resourceClassifiedAs
+						unitOfResource { id }
+						unitOfEffort { id }
+						resourceConformsTo { id }
+						substitutable
+						image
+						note
+					}
 				}
-			""")
+			""", vars: %{"id" => rec_res.id})
 
 		assert data["id"] == rec_res.id
 		assert data["name"] == rec_res.name
@@ -56,84 +60,75 @@ describe "Query" do
 		assert data["unitOfEffort"]["id"] == rec_res.unit_of_effort_id
 		assert data["resourceConformsTo"]["id"] == rec_res.resource_conforms_to_id
 		assert data["note"] == rec_res.note
+		assert data["substitutable"] == rec_res.substitutable
+		assert data["image"] == rec_res.image
 	end
 end
 
 describe "Mutation" do
 	test "createRecipeResource()", %{params: params} do
 		assert %{data: %{"createRecipeResource" => %{"recipeResource" => data}}} =
-			mutation!("""
-				createRecipeResource(recipeResource: {
-					name: "#{params.name}"
-					resourceClassifiedAs: #{inspect(params.resource_classified_as)}
-					unitOfResource: "#{params.unit_of_resource_id}"
-					unitOfEffort: "#{params.unit_of_effort_id}"
-					resourceConformsTo: "#{params.resource_conforms_to_id}"
-					substitutable: #{params.substitutable}
-					note: "#{params.note}"
-				}) {
-					recipeResource {
-						id
-						name
-						resourceClassifiedAs
-						unitOfResource { id }
-						unitOfEffort { id }
-						resourceConformsTo { id }
-						substitutable
-						note
+			run!("""
+				mutation ($recipeResource: RecipeResourceCreateParams!) {
+					createRecipeResource(recipeResource: $recipeResource) {
+						recipeResource {
+							id
+							name
+							image
+							resourceClassifiedAs
+							unitOfResource { id }
+							unitOfEffort { id }
+							resourceConformsTo { id }
+							substitutable
+							note
+						}
 					}
 				}
-			""")
+			""", vars: %{"recipeResource" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["resourceClassifiedAs"] == params.resource_classified_as
-		assert data["unitOfResource"]["id"] == params.unit_of_resource_id
-		assert data["unitOfEffort"]["id"] == params.unit_of_effort_id
-		assert data["resourceConformsTo"]["id"] == params.resource_conforms_to_id
-		assert data["note"] == params.note
+		keys = ~w[name note image resourceClassifiedAs substitutable]
+		assert Map.take(data, keys) == Map.take(params, keys)
+		assert data["unitOfResource"]["id"] == params["unitOfResource"]
+		assert data["unitOfEffort"]["id"] == params["unitOfEffort"]
+		assert data["resourceConformsTo"]["id"] == params["resourceConformsTo"]
 	end
 
 	test "updateRecipeResource()", %{params: params, recipe_resource: rec_res} do
 		assert %{data: %{"updateRecipeResource" => %{"recipeResource" => data}}} =
-			mutation!("""
-				updateRecipeResource(recipeResource: {
-					id: "#{rec_res.id}"
-					name: "#{params.name}"
-					resourceClassifiedAs: #{inspect(params.resource_classified_as)}
-					unitOfResource: "#{params.unit_of_resource_id}"
-					unitOfEffort: "#{params.unit_of_effort_id}"
-					resourceConformsTo: "#{params.resource_conforms_to_id}"
-					substitutable: #{params.substitutable}
-					note: "#{params.note}"
-				}) {
-					recipeResource {
-						id
-						name
-						resourceClassifiedAs
-						unitOfResource { id }
-						unitOfEffort { id }
-						resourceConformsTo { id }
-						substitutable
-						note
+			run!("""
+				mutation ($recipeResource: RecipeResourceUpdateParams!) {
+					updateRecipeResource(recipeResource: $recipeResource) {
+						recipeResource {
+							id
+							name
+							resourceClassifiedAs
+							unitOfResource { id }
+							unitOfEffort { id }
+							resourceConformsTo { id }
+							substitutable
+							note
+							image
+						}
 					}
 				}
-			""")
+			""", vars: %{"recipeResource" => Map.put(params, "id", rec_res.id)})
 
 		assert data["id"] == rec_res.id
-		assert data["name"] == params.name
-		assert data["resourceClassifiedAs"] == params.resource_classified_as
-		assert data["unitOfResource"]["id"] == params.unit_of_resource_id
-		assert data["unitOfEffort"]["id"] == params.unit_of_effort_id
-		assert data["resourceConformsTo"]["id"] == params.resource_conforms_to_id
-		assert data["note"] == params.note
+		keys = ~w[name note image resourceClassifiedAs substitutable]
+		assert Map.take(data, keys) == Map.take(params, keys)
+		assert data["unitOfResource"]["id"] == params["unitOfResource"]
+		assert data["unitOfEffort"]["id"] == params["unitOfEffort"]
+		assert data["resourceConformsTo"]["id"] == params["resourceConformsTo"]
 	end
 
 	test "deleteRecipeResource()", %{recipe_resource: %{id: id}} do
 		assert %{data: %{"deleteRecipeResource" => true}} =
-			mutation!("""
-				deleteRecipeResource(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteRecipeResource(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

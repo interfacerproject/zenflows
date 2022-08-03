@@ -21,12 +21,12 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			resource_classified_as: Factory.uniq_list("uri"),
-			note: Factory.uniq("note"),
-			image: Factory.uri(),
-			default_unit_of_effort_id: Factory.insert!(:unit).id,
-			default_unit_of_resource_id: Factory.insert!(:unit).id,
+			"name" => Factory.uniq("name"),
+			"resourceClassifiedAs" => Factory.uniq_list("uri"),
+			"note" => Factory.uniq("note"),
+			"image" => Factory.img(),
+			"defaultUnitOfEffort" => Factory.insert!(:unit).id,
+			"defaultUnitOfResource" => Factory.insert!(:unit).id,
 		},
 		resource_specification: Factory.insert!(:resource_specification),
 	}
@@ -35,17 +35,19 @@ end
 describe "Query" do
 	test "resourceSpecification()", %{resource_specification: res_spec} do
 		assert %{data: %{"resourceSpecification" => data}} =
-			query!("""
-				resourceSpecification(id: "#{res_spec.id}") {
-					id
-					name
-					resourceClassifiedAs
-					defaultUnitOfResource { id }
-					defaultUnitOfEffort { id }
-					note
-					image
+			run!("""
+				query ($id: ID!) {
+					resourceSpecification(id: $id) {
+						id
+						name
+						resourceClassifiedAs
+						defaultUnitOfResource { id }
+						defaultUnitOfEffort { id }
+						note
+						image
+					}
 				}
-			""")
+			""", vars: %{"id" => res_spec.id})
 
 		assert data["id"] == res_spec.id
 		assert data["name"] == res_spec.name
@@ -53,81 +55,70 @@ describe "Query" do
 		assert data["defaultUnitOfResource"]["id"] == res_spec.default_unit_of_resource_id
 		assert data["defaultUnitOfEffort"]["id"] == res_spec.default_unit_of_effort_id
 		assert data["note"] == res_spec.note
-		assert data["image"] == nil
+		assert data["image"] == res_spec.image
 	end
 end
 
 describe "Mutation" do
 	test "createResourceSpecification()", %{params: params} do
 		assert %{data: %{"createResourceSpecification" => %{"resourceSpecification" => data}}} =
-			mutation!("""
-				createResourceSpecification(resourceSpecification: {
-					name: "#{params.name}"
-					resourceClassifiedAs: #{inspect(params.resource_classified_as)}
-					defaultUnitOfResource: "#{params.default_unit_of_resource_id}"
-					defaultUnitOfEffort: "#{params.default_unit_of_effort_id}"
-					note: "#{params.note}"
-					image: "#{params.image}"
-				}) {
-					resourceSpecification {
-						id
-						name
-						resourceClassifiedAs
-						defaultUnitOfResource { id }
-						defaultUnitOfEffort { id }
-						note
-						image
+			run!("""
+				mutation ($resourceSpecification: ResourceSpecificationCreateParams!) {
+					createResourceSpecification(resourceSpecification: $resourceSpecification) {
+						resourceSpecification {
+							id
+							name
+							resourceClassifiedAs
+							defaultUnitOfResource { id }
+							defaultUnitOfEffort { id }
+							note
+							image
+						}
 					}
 				}
-			""")
+			""", vars: %{"resourceSpecification" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["resourceClassifiedAs"] == params.resource_classified_as
-		assert data["defaultUnitOfResource"]["id"] == params.default_unit_of_resource_id
-		assert data["defaultUnitOfEffort"]["id"] == params.default_unit_of_effort_id
-		assert data["note"] == params.note
-		assert data["image"] == params.image
+		keys = ~w[name note resourceClassifiedAs note image]
+		assert Map.take(data, keys) == Map.take(params, keys)
+		assert data["defaultUnitOfResource"]["id"] == params["defaultUnitOfResource"]
+		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]
 	end
 
 	test "updateResourceSpecification()", %{params: params, resource_specification: res_spec} do
 		assert %{data: %{"updateResourceSpecification" => %{"resourceSpecification" => data}}} =
-			mutation!("""
-				updateResourceSpecification(resourceSpecification: {
-					id: "#{res_spec.id}"
-					name: "#{params.name}"
-					resourceClassifiedAs: #{inspect(params.resource_classified_as)}
-					defaultUnitOfResource: "#{params.default_unit_of_resource_id}"
-					defaultUnitOfEffort: "#{params.default_unit_of_effort_id}"
-					note: "#{params.note}"
-					image: "#{params.image}"
-				}) {
-					resourceSpecification {
-						id
-						name
-						resourceClassifiedAs
-						defaultUnitOfResource { id }
-						defaultUnitOfEffort { id }
-						note
-						image
+			run!("""
+				mutation ($resourceSpecification: ResourceSpecificationUpdateParams!) {
+					updateResourceSpecification(resourceSpecification: $resourceSpecification) {
+						resourceSpecification {
+							id
+							name
+							resourceClassifiedAs
+							defaultUnitOfResource { id }
+							defaultUnitOfEffort { id }
+							note
+							image
+						}
 					}
 				}
-			""")
+			""", vars: %{"resourceSpecification" =>
+				Map.put(params, "id", res_spec.id),
+			})
 
 		assert data["id"] == res_spec.id
-		assert data["name"] == params.name
-		assert data["resourceClassifiedAs"] == params.resource_classified_as
-		assert data["defaultUnitOfResource"]["id"] == params.default_unit_of_resource_id
-		assert data["defaultUnitOfEffort"]["id"] == params.default_unit_of_effort_id
-		assert data["note"] == params.note
-		assert data["image"] == params.image
+		keys = ~w[name note resourceClassifiedAs note image]
+		assert Map.take(data, keys) == Map.take(params, keys)
+		assert data["defaultUnitOfResource"]["id"] == params["defaultUnitOfResource"]
+		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]
 	end
 
 	test "deleteResourceSpecification()", %{resource_specification: %{id: id}} do
 		assert %{data: %{"deleteResourceSpecification" => true}} =
-			mutation!("""
-				deleteResourceSpecification(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteResourceSpecification(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

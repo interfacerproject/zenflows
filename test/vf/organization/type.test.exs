@@ -21,11 +21,11 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			# image
-			classified_as: Factory.uniq_list("uri"),
-			note: Factory.uniq("note"),
-			primary_location_id: Factory.insert!(:spatial_thing).id,
+			"name" => Factory.uniq("name"),
+			"image" => Factory.img(),
+			"classifiedAs" => Factory.uniq_list("uri"),
+			"note" => Factory.uniq("note"),
+			"primaryLocation" => Factory.insert!(:spatial_thing).id,
 		},
 		org: Factory.insert!(:organization),
 	}
@@ -34,19 +34,23 @@ end
 describe "Query" do
 	test "organization()", %{org: org} do
 		assert %{data: %{"organization" => data}} =
-			query!("""
-				organization(id: "#{org.id}") {
-					id
-					name
-					note
-					primaryLocation { id }
-					classifiedAs
+			run!("""
+				query ($id: ID!) {
+					organization(id: $id) {
+						id
+						name
+						note
+						image
+						primaryLocation { id }
+						classifiedAs
+					}
 				}
-			""")
+			""", vars: %{"id" => org.id})
 
 		assert data["id"] == org.id
 		assert data["name"] == org.name
 		assert data["note"] == org.note
+		assert data["image"] == org.image
 		assert data["primaryLocation"]["id"] == org.primary_location_id
 		assert data["classifiedAs"] == org.classified_as
 	end
@@ -55,62 +59,64 @@ end
 describe "Mutation" do
 	test "createOrganization", %{params: params} do
 		assert %{data: %{"createOrganization" => %{"agent" => data}}} =
-			mutation!("""
-				createOrganization(organization: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-					primaryLocation: "#{params.primary_location_id}"
-					classifiedAs: #{inspect(params.classified_as)}
-				}) {
-					agent {
-						id
-						name
-						note
-						primaryLocation { id }
-						classifiedAs
+			run!("""
+				mutation ($organization: OrganizationCreateParams!) {
+					createOrganization(organization: $organization) {
+						agent {
+							id
+							name
+							note
+							image
+							primaryLocation { id }
+							classifiedAs
+						}
 					}
 				}
-			""")
+			""", vars: %{"organization" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["primaryLocation"]["id"] == params.primary_location_id
-		assert data["classifiedAs"] == params.classified_as
+		data = Map.delete(data, "id")
+
+		assert data["primaryLocation"]["id"] == params["primaryLocation"]
+		data = Map.delete(data, "primaryLocation")
+		params = Map.delete(params, "primaryLocation")
+
+		assert data == params
 	end
 
 	test "updateOrganization()", %{params: params, org: org} do
 		assert %{data: %{"updateOrganization" => %{"agent" => data}}} =
-			mutation!("""
-				updateOrganization(organization: {
-					id: "#{org.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-					primaryLocation: "#{params.primary_location_id}"
-					classifiedAs: #{inspect(params.classified_as)}
-				}) {
-					agent {
-						id
-						name
-						note
-						primaryLocation { id }
-						classifiedAs
+			run!("""
+				mutation ($organization: OrganizationUpdateParams!) {
+					updateOrganization(organization: $organization) {
+						agent {
+							id
+							name
+							note
+							image
+							primaryLocation { id }
+							classifiedAs
+						}
 					}
 				}
-			""")
+			""", vars: %{"organization" =>
+				params
+				|> Map.take(~w[name note image primaryLocation classifiedAs])
+				|> Map.put("id", org.id)
+			})
 
-		assert data["id"] == org.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["primaryLocation"]["id"] == params.primary_location_id
-		assert data["classifiedAs"] == params.classified_as
+		keys = ~w[name image note classifiedAs]
+		assert Map.take(data, keys) == Map.take(params, keys)
+		assert data["primaryLocation"]["id"] == params["primaryLocation"]
 	end
 
 	test "deleteOrganization", %{org: org} do
 		assert %{data: %{"deleteOrganization" => true}} =
-			mutation!("""
-				deleteOrganization(id: "#{org.id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteOrganization(id: $id)
+				}
+			""", vars: %{"id" => org.id})
 	end
 end
 end

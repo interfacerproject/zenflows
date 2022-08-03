@@ -35,7 +35,7 @@ setup do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			substitutable: Factory.bool(),
 			note: Factory.uniq("note"),
-			image: Factory.uri(),
+			image: Factory.img(),
 		},
 		recipe_resource: Factory.insert!(:recipe_resource),
 	}
@@ -88,7 +88,7 @@ describe "update/2" do
 		assert new.resource_conforms_to_id == old.resource_conforms_to_id
 		assert new.substitutable == old.substitutable
 		assert new.note == old.note
-		assert new.image == nil # old.image
+		assert new.image == old.image
 	end
 end
 

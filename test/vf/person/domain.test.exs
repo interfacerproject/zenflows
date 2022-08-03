@@ -24,7 +24,7 @@ alias Zenflows.VF.{Person, Person.Domain}
 setup ctx do
 	params = %{
 		name: Factory.uniq("name"),
-		image: Factory.uri(),
+		image: Factory.img(),
 		note: Factory.uniq("note"),
 		primary_location_id: Factory.insert!(:spatial_thing).id,
 		user: Factory.uniq("user"),
@@ -114,7 +114,7 @@ describe "update/2" do
 
 		assert new.name == old.name
 		assert new.note == old.note
-		assert new.image == nil # old.image
+		assert new.image == old.image
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email

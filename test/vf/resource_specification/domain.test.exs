@@ -31,7 +31,7 @@ setup do
 			name: Factory.uniq("name"),
 			resource_classified_as: Factory.uniq_list("uri"),
 			note: Factory.uniq("note"),
-			image: Factory.uri(),
+			image: Factory.img(),
 			default_unit_of_effort_id: Factory.insert!(:unit).id,
 			default_unit_of_resource_id: Factory.insert!(:unit).id,
 		},
@@ -78,7 +78,7 @@ describe "update/2" do
 		assert new.name == old.name
 		assert new.resource_classified_as == old.resource_classified_as
 		assert new.note == old.note
-		assert new.image == nil # old.image
+		assert new.image == old.image
 		assert new.default_unit_of_resource_id == old.default_unit_of_resource_id
 		assert new.default_unit_of_effort_id == old.default_unit_of_effort_id
 	end

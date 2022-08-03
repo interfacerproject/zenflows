@@ -36,7 +36,7 @@ describe "by_id/1" do
 		assert agent.type == per.type and agent.type == :per
 		assert agent.name == per.name
 		assert agent.note == per.note
-		assert agent.image == nil # per.image
+		assert agent.image == per.image
 		assert agent.primary_location_id == per.primary_location_id
 
 		# person
@@ -55,7 +55,7 @@ describe "by_id/1" do
 		assert agent.type == org.type and agent.type == :org
 		assert agent.name == org.name
 		assert agent.note == org.note
-		assert agent.image == nil # org.image
+		assert agent.image == org.image
 		assert agent.primary_location_id == org.primary_location_id
 
 		# person

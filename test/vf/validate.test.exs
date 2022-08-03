@@ -36,6 +36,11 @@ defp note_chgset(changes) do
 	Changeset.change({%{}, %{note: :string}}, changes)
 end
 
+@spec img_chgset(map()) :: Changeset.t()
+defp img_chgset(changes) do
+	Changeset.change({%{}, %{img: :string}}, changes)
+end
+
 @spec uri_chgset(map()) :: Changeset.t()
 defp uri_chgset(changes) do
 	Changeset.change({%{}, %{uri: :string}}, changes)
@@ -130,6 +135,35 @@ describe "note/2" do
 			|> Validate.note(:note)
 
 		assert :error = Keyword.fetch(errs, :note)
+	end
+end
+
+describe "img/2" do
+	test "with too short param" do
+		assert %Changeset{errors: errs} =
+			%{img: ""}
+			|> img_chgset()
+			|> Validate.img(:img)
+
+		assert {:ok, _} = Keyword.fetch(errs, :img)
+	end
+
+	test "with too long param" do
+		assert %Changeset{errors: errs} =
+			%{img: String.duplicate("a", 25 * 1024**2 + 1)}
+			|> img_chgset()
+			|> Validate.img(:img)
+
+		assert {:ok, _} = Keyword.fetch(errs, :img)
+	end
+
+	test "with the right size param" do
+		assert %Changeset{errors: errs} =
+			%{img: String.duplicate("a", 1024)}
+			|> img_chgset()
+			|> Validate.img(:img)
+
+		assert :error = Keyword.fetch(errs, :img)
 	end
 end
 

@@ -47,7 +47,6 @@ main() {
 	dep.setup)     shift ; cmd_dep_setup "$@" ;;
 	dep.clean)     shift ; cmd_dep_clean "$@" ;;
 	dep.copy)      shift ; cmd_dep_copy "$@" ;;
-	dep.update)    shift ; cmd_dep_update "$@" ;;
 	db.setup)      shift ; cmd_db_setup "$@" ;;
 	db.reset)      shift ; cmd_db_reset "$@" ;;
 	db.create)     shift ; cmd_db_create "$@" ;;
@@ -108,7 +107,6 @@ commands:
     env.setup      Setup configs.
     dep.setup      Setup dependencies.
     dep.clean      Clean dependencies.
-    dep.update     Update a dependency.
     dep.copy       Copy deps to .deps.  Should be used only by devs.
     db.setup       Create the database and run the migrations.
     db.reset       Drop the database, recrate and remigrate it.

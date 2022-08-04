@@ -268,7 +268,7 @@ cmd_devop_setup() {
 	else
 		admin_key=$(openssl rand -hex 64)
 		db_pass=$(openssl rand -hex 16)
-		room_key=$(openssl rand -hex 64)
+		room_pass=$(openssl rand -hex 64)
 		sed 's,$ADMIN_KEY,'"$admin_key"', ;
 		     s,$DB_PASS,'"$db_pass"', ;
 		     s,$ROOM_PASS,'"$room_pass"',' devop/.docker-compose.templ >devop/docker-compose.yml

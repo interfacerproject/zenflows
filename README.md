@@ -68,10 +68,11 @@ To start using Zenflows with native-to-host Elixir, PostgreSQL, and Restroom ins
 
 1. Run `./mann env.setup` to generate the configuration file, `conf/env.sh`.
 2. Edit `conf/env.sh` to suit your needs.  Read the [Configuration Guide](docs/configuration-guide.md) for more info.
-3. Run `./mann db.setup` to setup the database and run the migrations.
-4. Run `./mann serve` to start the application.
-5. Head over to [`localhost:4000/play`](http://localhost:4000/play) for the GraphiQL playground.
-6. Use the URL `http://localhost:4000/api` in case if you'd like to use your own GraphQL client.
+3. Run `./mann dep.setup` to install dependencies.
+4. Run `./mann db.setup` to setup the database and run the migrations.
+5. Run `./mann serve` to start the application.
+6. Head over to [`localhost:4000/play`](http://localhost:4000/play) for the GraphiQL playground.
+7. Use the URL `http://localhost:4000/api` in case if you'd like to use your own GraphQL client.
 
 To start using Zenflows with docker(-compose):
 

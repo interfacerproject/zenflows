@@ -24,31 +24,41 @@ alias Zenflows.VF.Agreement
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: Agreement.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(Agreement, id)
+@spec one(repo(), id()) :: {:ok, Agreement.t()} | {:error, String.t()}
+def one(repo \\ Repo, id) do
+	one_by(repo, id: id)
+end
+
+@spec one_by(repo(), map() | Keyword.t())
+	:: {:ok, Agreement.t()} | {:error, String.t()}
+def one_by(repo \\ Repo, clauses) do
+	case repo.get_by(Agreement, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
 end
 
 @spec create(params()) :: {:ok, Agreement.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:agreem, Agreement.chgset(params))
+	|> Multi.insert(:insert, Agreement.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{agreem: a}} -> {:ok, a}
+		{:ok, %{insert: a}} -> {:ok, a}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, Agreement.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, Agreement.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &Agreement.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one_by/2)
+	|> Multi.update(:update, &Agreement.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: a}} -> {:ok, a}
@@ -56,27 +66,16 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, Agreement.t()} | {:error, chgset()}
+@spec delete(id()) :: {:ok, Agreement.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one_by/2)
+	|> Multi.delete(:delete, &(&1.one))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: a}} -> {:ok, a}
 		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
-	end
-end
-
-# Returns a Agreement in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, Agreement.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			a -> {:ok, a}
-		end
 	end
 end
 end

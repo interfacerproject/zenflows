@@ -24,48 +24,58 @@ alias Zenflows.VF.{Agreement, Agreement.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:agreement),
+		id: Factory.id(),
 	}
 end
 
-test "by_id/1 returns a Agreement", %{inserted: agreem} do
-	assert %Agreement{} = Domain.by_id(agreem.id)
+describe "one/1" do
+	test "with good id: finds the Agreement", %{inserted: %{id: id}} do
+		assert {:ok, %Agreement{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the Agreement", %{id: id} do
+		assert {:error, "not found"} = Domain.one(id)
+	end
 end
 
 describe "create/1" do
-	test "creates a Agreement with valid params", %{params: params} do
+	test "with good params: creates an Agreement", %{params: params} do
 		assert {:ok, %Agreement{} = agreem} = Domain.create(params)
-
 		assert agreem.name == params.name
 		assert agreem.note == params.note
 	end
 
-	test "doesn't create a Agreement with invalid params" do
+	test "with bad params: doesn't create an" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a Agreement with valid params", %{params: params, inserted: old} do
+	test "with good params: updates the Agreement", %{params: params, inserted: old} do
 		assert {:ok, %Agreement{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.note == params.note
 	end
 
-	test "doesn't update a Agreement", %{inserted: old} do
+	test "with bad params: doesn't update the Agreement", %{inserted: old} do
 		assert {:ok, %Agreement{} = new} = Domain.update(old.id, %{})
-
 		assert new.name == old.name
 		assert new.note == old.note
 	end
 end
 
-test "delete/1 deletes a Agreement", %{inserted: %{id: id}} do
-	assert {:ok, %Agreement{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the Agreement", %{inserted: %{id: id}} do
+		assert {:ok, %Agreement{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the Agreement", %{id: id} do
+		assert {:error, "not found"} = Domain.delete(id)
+	end
 end
 end

@@ -21,80 +21,96 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 		},
-		agreement: Factory.insert!(:agreement),
+		inserted: Factory.insert!(:agreement),
 	}
 end
 
 describe "Query" do
-	test "agreement()", %{agreement: agreem} do
+	test "agreement", %{inserted: agreem} do
 		assert %{data: %{"agreement" => data}} =
-			query!("""
-				agreement(id: "#{agreem.id}") {
-					id
-					name
-					note
-					created
+			run!("""
+				query ($id: ID!) {
+					agreement(id: $id) {
+						id
+						name
+						note
+						created
+					}
 				}
-			""")
+			""", vars: %{"id" => agreem.id})
 
 		assert data["id"] == agreem.id
 		assert data["name"] == agreem.name
 		assert data["note"] == agreem.note
+		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
+		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 	end
 end
 
 describe "Mutation" do
-	test "createAgreement()", %{params: params} do
+	test "createAgreement", %{params: params} do
 		assert %{data: %{"createAgreement" => %{"agreement" => data}}} =
-			mutation!("""
-				createAgreement(agreement: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					agreement {
-						id
-						name
-						note
-						created
+			run!("""
+				mutation ($name: String! $note: String!) {
+					createAgreement(agreement: {
+						name: $name
+						note: $note
+					}) {
+						agreement {
+							id
+							name
+							note
+							created
+						}
 					}
 				}
-			""")
+			""", vars: params)
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert Map.take(data, ~w[name note]) == params
+		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
+		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 	end
 
-	test "updateAgreement()", %{params: params, agreement: agreem} do
+	test "updateAgreement", %{params: params, inserted: agreem} do
 		assert %{data: %{"updateAgreement" => %{"agreement" => data}}} =
-			mutation!("""
-				updateAgreement(agreement: {
-					id: "#{agreem.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					agreement {
-						id
-						name
-						note
-						created
+			run!("""
+				mutation (
+					$id: ID!
+					$name: String!
+					$note: String!
+				) {
+					updateAgreement(agreement: {
+						id: $id
+						name: $name
+						note: $note
+					}) {
+						agreement {
+							id
+							name
+							note
+							created
+						}
 					}
 				}
-			""")
+			""", vars: params |> Map.put("id", agreem.id))
 
 		assert data["id"] == agreem.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert Map.take(data, ~w[name note]) == params
+		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
+		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 	end
 
-	test "deleteAgreement()", %{agreement: %{id: id}} do
+	test "deleteAgreement", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteAgreement" => true}} =
-			mutation!("""
-				deleteAgreement(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteAgreement(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

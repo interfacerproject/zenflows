@@ -21,7 +21,7 @@ defmodule Zenflows.VF.Agreement.Resolv do
 alias Zenflows.VF.Agreement.Domain
 
 def agreement(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+	Domain.one(id)
 end
 
 def create_agreement(%{agreement: params}, _info) do

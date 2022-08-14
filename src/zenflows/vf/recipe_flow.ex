@@ -57,6 +57,7 @@ schema "vf_recipe_flow" do
 	belongs_to :effort_quantity_has_unit, Unit
 	field :effort_quantity_has_numerical_value, :float
 	belongs_to :recipe_clause_of, RecipeExchange
+	timestamps()
 end
 
 @reqr ~w[action_id recipe_flow_resource_id]a

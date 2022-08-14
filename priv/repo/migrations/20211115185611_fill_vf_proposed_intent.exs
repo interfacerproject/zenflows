@@ -23,6 +23,7 @@ def change() do
 		add :reciprocal, :boolean, default: false, null: false
 		add :publishes_id, references("vf_intent"), null: false
 		add :published_in_id, references("vf_proposal"), null: false
+		timestamps()
 	end
 end
 end

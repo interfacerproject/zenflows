@@ -32,6 +32,7 @@ alias Zenflows.VF.Validate
 schema "vf_role_behavior" do
 	field :name, :string
 	field :note, :string
+	timestamps()
 end
 
 @reqr [:name]

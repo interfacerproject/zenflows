@@ -28,6 +28,7 @@ def change() do
 	alter table("vf_event_or_commitment") do
 		add :event_id, references("vf_economic_event")
 		add :commitment_id, references("vf_commitment")
+		timestamps()
 	end
 
 	create constraint("vf_event_or_commitment", :mutex, check: @check)

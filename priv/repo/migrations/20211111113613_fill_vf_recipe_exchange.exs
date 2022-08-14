@@ -22,6 +22,7 @@ def change() do
 	alter table("vf_recipe_exchange") do
 		add :name, :text, null: false
 		add :note, :text
+		timestamps()
 	end
 end
 end

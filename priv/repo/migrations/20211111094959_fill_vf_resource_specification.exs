@@ -26,6 +26,7 @@ def change() do
 		add :resource_classified_as, {:array, :text}
 		add :default_unit_of_resource_id, references("vf_unit")
 		add :default_unit_of_effort_id, references("vf_unit")
+		timestamps()
 	end
 end
 end

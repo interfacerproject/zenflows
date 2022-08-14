@@ -38,6 +38,7 @@ schema "vf_agent" do
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :classified_as, {:array, :string}
+	timestamps()
 end
 
 @reqr [:name]

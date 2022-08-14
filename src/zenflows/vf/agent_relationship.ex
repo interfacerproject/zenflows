@@ -43,6 +43,7 @@ schema "vf_agent_relationship" do
 	belongs_to :relationship, AgentRelationshipRole
 	# in_scope_of
 	field :note, :string
+	timestamps()
 end
 
 @reqr ~w[subject_id object_id relationship_id]a

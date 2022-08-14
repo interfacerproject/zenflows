@@ -25,7 +25,6 @@ setup ctx do
 	params = %{
 		name: Factory.uniq("name"),
 		note: Factory.uniq("note"),
-		created: DateTime.utc_now(),
 		due: DateTime.utc_now(),
 		refinement_of_id: Factory.insert!(:scenario).id,
  	}
@@ -48,7 +47,6 @@ describe "create/1" do
 
 		assert plan.name == params.name
 		assert plan.note == params.note
-		assert plan.created == params.created
 		assert plan.due == params.due
 		assert plan.refinement_of_id == params.refinement_of_id
 	end
@@ -64,7 +62,6 @@ describe "update/2" do
 
 		assert new.name == params.name
 		assert new.note == params.note
-		assert new.created == params.created
 		assert new.due == params.due
 		assert new.refinement_of_id == params.refinement_of_id
 	end
@@ -74,7 +71,6 @@ describe "update/2" do
 
 		assert new.name == old.name
 		assert new.note == old.note
-		assert new.created == old.created
 		assert new.due == old.due
 		assert new.refinement_of_id == old.refinement_of_id
 	end

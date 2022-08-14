@@ -49,6 +49,7 @@ schema "vf_fulfillment" do
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
 	field :effort_quantity_has_numerical_value, :float
+	timestamps()
 end
 
 @reqr ~w[fulfilled_by_id fulfills_id]a

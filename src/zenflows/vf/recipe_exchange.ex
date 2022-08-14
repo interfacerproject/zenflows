@@ -32,6 +32,7 @@ alias Zenflows.VF.Validate
 schema "vf_recipe_exchange" do
 	field :name, :string
 	field :note, :string
+	timestamps()
 end
 
 @reqr [:name]

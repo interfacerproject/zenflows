@@ -46,6 +46,7 @@ schema "vf_scenario" do
 	# field :in_scope_of
 	belongs_to :defined_as, ScenarioDefinition
 	belongs_to :refinement_of, Scenario
+	timestamps()
 end
 
 @reqr [:name]

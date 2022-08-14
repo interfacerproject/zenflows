@@ -27,6 +27,7 @@ def change() do
 		add :effort_quantity_has_unit_id, references("vf_unit")
 		add :effort_quantity_has_numerical_value, :float
 		add :note, :text
+		timestamps()
 	end
 end
 end

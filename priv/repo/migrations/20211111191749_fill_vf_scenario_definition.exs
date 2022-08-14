@@ -30,6 +30,7 @@ def change() do
 		add :note, :text
 		add :has_duration_unit_type, :vf_time_unit
 		add :has_duration_numeric_duration, :float
+		timestamps()
 	end
 
 	create constraint("vf_scenario_definition", :has_duration, check: @check)

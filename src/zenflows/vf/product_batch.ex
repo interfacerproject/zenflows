@@ -35,6 +35,7 @@ schema "vf_product_batch" do
 	field :batch_number, :string
 	field :expiry_date, :utc_datetime_usec
 	field :production_date, :utc_datetime_usec
+	timestamps()
 end
 
 @reqr [:batch_number]

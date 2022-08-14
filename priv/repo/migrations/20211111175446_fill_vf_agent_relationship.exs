@@ -25,6 +25,7 @@ def change() do
 		add :object_id, references("vf_agent"), null: false
 		add :relationship_id, references("vf_agent_relationship_role"), null: false
 		# inscope_of
+		timestamps()
 	end
 end
 end

@@ -37,7 +37,6 @@ setup do
 		},
 		triggered_by_id: Factory.insert!(:economic_event).id,
 		due: DateTime.utc_now(),
-		created: DateTime.utc_now(),
 		finished: Factory.bool(),
 		note: Factory.uniq("note"),
 		agreed_in: Factory.uniq("uri"),
@@ -63,7 +62,6 @@ test "create Claim", %{params: params} do
 	assert claim.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
 	assert claim.triggered_by_id == params.triggered_by_id
 	assert claim.due == params.due
-	assert claim.created == params.created
 	assert claim.finished == params.finished
 	assert claim.note == params.note
 	assert claim.agreed_in == params.agreed_in
@@ -89,7 +87,6 @@ test "update Appreciation", %{params: params} do
 	assert claim.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
 	assert claim.triggered_by_id == params.triggered_by_id
 	assert claim.due == params.due
-	assert claim.created == params.created
 	assert claim.finished == params.finished
 	assert claim.note == params.note
 	assert claim.agreed_in == params.agreed_in

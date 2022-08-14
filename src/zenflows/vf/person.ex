@@ -50,6 +50,7 @@ schema "vf_agent" do
 	field :ethereum_address, :string
 	field :reflow_public_key, :string
 	field :schnorr_public_key, :string
+	timestamps()
 end
 
 @insert_reqr ~w[name user email]a

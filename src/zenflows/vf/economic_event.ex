@@ -89,6 +89,7 @@ schema "vf_economic_event" do
 	# field :in_scope_of
 	field :agreed_in, :string
 	belongs_to :triggered_by, EconomicEvent
+	timestamps()
 end
 
 @insert_reqr ~w[action_id provider_id receiver_id]a

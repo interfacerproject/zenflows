@@ -23,6 +23,7 @@ def change() do
 		add :batch_number, :text, null: false
 		add :expiry_date, :timestamptz
 		add :production_date, :timestamptz
+		timestamps()
 	end
 end
 end

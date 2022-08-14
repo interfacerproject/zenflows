@@ -26,6 +26,7 @@ def change() do
 		add :lat, :float
 		add :long, :float
 		add :alt, :float
+		timestamps()
 	end
 end
 end

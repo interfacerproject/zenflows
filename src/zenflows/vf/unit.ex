@@ -34,6 +34,7 @@ alias Zenflows.VF.Validate
 schema "vf_unit" do
 	field :label, :string
 	field :symbol, :string
+	timestamps()
 end
 
 @reqr ~w[label symbol]a

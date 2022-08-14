@@ -37,6 +37,7 @@ schema "vf_agent_relationship_role" do
 	field :role_label, :string
 	field :inverse_role_label, :string
 	field :note, :string
+	timestamps()
 end
 
 @reqr [:role_label]

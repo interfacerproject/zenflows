@@ -22,6 +22,7 @@ def change() do
 	alter table("vf_unit") do
 		add :label, :text, null: false
 		add :symbol, :text, null: false
+		timestamps()
 	end
 end
 end

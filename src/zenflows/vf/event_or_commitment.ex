@@ -32,6 +32,7 @@ alias Zenflows.VF.{Commitment, EconomicEvent}
 schema "vf_event_or_commitment" do
 	belongs_to :event, EconomicEvent
 	belongs_to :commitment, Commitment
+	timestamps()
 end
 
 @cast ~w[event_id commitment_id]a

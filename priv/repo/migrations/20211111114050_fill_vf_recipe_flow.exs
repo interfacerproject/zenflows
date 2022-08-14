@@ -46,6 +46,7 @@ def change() do
 		add :resource_quantity_has_numerical_value, :float
 		add :effort_quantity_has_unit_id, references("vf_unit")
 		add :effort_quantity_has_numerical_value, :float
+		timestamps()
 	end
 
 	create constraint("vf_recipe_flow", :resource_quantity_check, check: @resqty_check)

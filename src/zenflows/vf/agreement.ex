@@ -26,16 +26,15 @@ alias Zenflows.VF.Validate
 	id: String.t(),
 	name: String.t(),
 	note: String.t() | nil,
-	created: DateTime.t(),
 }
 
-@reqr ~w[name created]a
+@reqr [:name]
 @cast @reqr ++ [:note]
 
 schema "vf_agreement" do
 	field :name, :string
 	field :note, :string
-	field :created, :utc_datetime_usec
+	timestamps()
 end
 
 @doc false

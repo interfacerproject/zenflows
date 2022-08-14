@@ -36,6 +36,7 @@ schema "vf_proposed_intent" do
 	field :reciprocal, :boolean, default: false
 	belongs_to :publishes, Intent
 	belongs_to :published_in, Proposal
+	timestamps()
 end
 
 @reqr ~w[publishes_id published_in_id]a

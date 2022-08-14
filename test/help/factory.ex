@@ -291,7 +291,6 @@ end
 def build(:agreement) do
 	%VF.Agreement{
 		name: uniq("some name"),
-		created: DateTime.utc_now(),
 		note: uniq("some note"),
 	}
 end
@@ -322,7 +321,6 @@ end
 def build(:plan) do
 	%VF.Plan{
 		name: uniq("some name"),
-		created: DateTime.utc_now(),
 		due: DateTime.utc_now(),
 		note: uniq("some note"),
 		refinement_of: build(:scenario),
@@ -513,7 +511,6 @@ def build(:claim) do
 		effort_quantity_has_numerical_value: effqty.has_numerical_value,
 		triggered_by: if(bool(), do: build(:economic_event), else: nil),
 		due: DateTime.utc_now(),
-		created: DateTime.utc_now(),
 		finished: bool(),
 		agreed_in: uniq("some uri"),
 		note: uniq("some note"),

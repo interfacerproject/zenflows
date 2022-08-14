@@ -36,6 +36,7 @@ def change() do
 		add :note, :text
 		add :agreed_in, :text
 		# add :in_scope_of
+		timestamps()
 	end
 end
 end

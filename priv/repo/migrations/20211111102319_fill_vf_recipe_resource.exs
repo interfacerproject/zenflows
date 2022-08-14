@@ -28,6 +28,7 @@ def change() do
 		add :resource_conforms_to_id, references("vf_resource_specification")
 		add :unit_of_resource_id, references("vf_unit")
 		add :unit_of_effort_id, references("vf_unit")
+		timestamps()
 	end
 end
 end

@@ -24,6 +24,7 @@ def change() do
 		add :role_label, :text, null: false
 		add :inverse_role_label, :text
 		add :role_behavior_id, references("vf_role_behavior")
+		timestamps()
 	end
 end
 end

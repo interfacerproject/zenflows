@@ -43,6 +43,7 @@ def change() do
 		add :triggered_by_id, references("vf_economic_event")
 		# add :in_scope_of
 		add :agreed_in, :text
+		timestamps()
 	end
 end
 end

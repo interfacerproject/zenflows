@@ -27,6 +27,7 @@ def change() do
 		add :defined_as_id, references("vf_scenario_definition")
 		add :refinement_of_id, references("vf_scenario")
 		# :in_scope_of
+		timestamps()
 	end
 end
 end

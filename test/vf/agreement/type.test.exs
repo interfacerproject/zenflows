@@ -23,7 +23,6 @@ setup do
 		params: %{
 			name: Factory.uniq("name"),
 			note: Factory.uniq("note"),
-			created: DateTime.utc_now(),
 		},
 		agreement: Factory.insert!(:agreement),
 	}
@@ -44,7 +43,6 @@ describe "Query" do
 		assert data["id"] == agreem.id
 		assert data["name"] == agreem.name
 		assert data["note"] == agreem.note
-		assert data["created"] == DateTime.to_iso8601(agreem.created)
 	end
 end
 
@@ -55,7 +53,6 @@ describe "Mutation" do
 				createAgreement(agreement: {
 					name: "#{params.name}"
 					note: "#{params.note}"
-					created: "#{params.created}"
 				}) {
 					agreement {
 						id
@@ -69,7 +66,6 @@ describe "Mutation" do
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
 		assert data["name"] == params.name
 		assert data["note"] == params.note
-		assert data["created"] == DateTime.to_iso8601(params.created)
 	end
 
 	test "updateAgreement()", %{params: params, agreement: agreem} do
@@ -79,7 +75,6 @@ describe "Mutation" do
 					id: "#{agreem.id}"
 					name: "#{params.name}"
 					note: "#{params.note}"
-					created: "#{params.created}"
 				}) {
 					agreement {
 						id
@@ -93,7 +88,6 @@ describe "Mutation" do
 		assert data["id"] == agreem.id
 		assert data["name"] == params.name
 		assert data["note"] == params.note
-		assert data["created"] == DateTime.to_iso8601(params.created)
 	end
 
 	test "deleteAgreement()", %{agreement: %{id: id}} do

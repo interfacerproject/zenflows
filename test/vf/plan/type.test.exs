@@ -23,7 +23,6 @@ setup do
 		params: %{
 			name: Factory.uniq("name"),
 			note: Factory.uniq("note"),
-			created: DateTime.utc_now(),
 			due: DateTime.utc_now(),
 			refinement_of_id: Factory.insert!(:scenario).id,
 		},
@@ -61,7 +60,6 @@ describe "Mutation" do
 				createPlan(plan: {
 					name: "#{params.name}"
 					note: "#{params.note}"
-					created: "#{params.created}"
 					due: "#{params.due}"
 					refinementOf: "#{params.refinement_of_id}"
 				}) {
@@ -79,7 +77,6 @@ describe "Mutation" do
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
 		assert data["name"] == params.name
 		assert data["note"] == params.note
-		assert data["created"] == DateTime.to_iso8601(params.created)
 		assert data["due"] == DateTime.to_iso8601(params.due)
 		assert data["refinementOf"]["id"] == params.refinement_of_id
 	end
@@ -91,7 +88,6 @@ describe "Mutation" do
 					id: "#{plan.id}"
 					name: "#{params.name}"
 					note: "#{params.note}"
-					created: "#{params.created}"
 					due: "#{params.due}"
 					refinementOf: "#{params.refinement_of_id}"
 				}) {
@@ -109,7 +105,6 @@ describe "Mutation" do
 		assert data["id"] == plan.id
 		assert data["name"] == params.name
 		assert data["note"] == params.note
-		assert data["created"] == DateTime.to_iso8601(params.created)
 		assert data["due"] == DateTime.to_iso8601(params.due)
 		assert data["refinementOf"]["id"] == params.refinement_of_id
 	end

@@ -42,6 +42,7 @@ schema "vf_resource_specification" do
 	field :note, :string
 	belongs_to :default_unit_of_resource, Unit
 	belongs_to :default_unit_of_effort, Unit
+	timestamps()
 end
 
 @reqr [:name]

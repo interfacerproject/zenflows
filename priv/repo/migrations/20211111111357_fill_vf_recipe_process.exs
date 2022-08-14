@@ -32,6 +32,7 @@ def change() do
 		add :process_classified_as, {:array, :text}
 		add :has_duration_unit_type, :vf_time_unit
 		add :has_duration_numeric_duration, :float
+		timestamps()
 	end
 
 	create constraint("vf_recipe_process", :has_duration, check: @check)

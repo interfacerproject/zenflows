@@ -52,7 +52,6 @@ alias Zenflows.VF.{
 	has_end: DateTime.t() | nil,
 	has_point_in_time: DateTime.t() | nil,
 	due: DateTime.t() | nil,
-	created: DateTime.t() | nil,
 	finished: boolean(),
 	note: String.t() | nil,
 	# in_scope_of:
@@ -82,7 +81,6 @@ schema "vf_commitment" do
 	field :has_end, :utc_datetime_usec
 	field :has_point_in_time, :utc_datetime_usec
 	field :due, :utc_datetime_usec
-	timestamps(inserted_at: :created, updated_at: false)
 	field :finished, :boolean, default: false
 	field :note, :string
 	# field :in_scope_of
@@ -90,6 +88,7 @@ schema "vf_commitment" do
 	belongs_to :independent_demand_of, Plan
 	belongs_to :at_location, SpatialThing
 	belongs_to :clause_of, Agreement
+	timestamps()
 end
 
 @reqr ~w[action_id provider_id receiver_id]a

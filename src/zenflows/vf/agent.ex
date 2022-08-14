@@ -52,6 +52,7 @@ schema "vf_agent" do
 	field :note, :string
 	field :image, :string
 	belongs_to :primary_location, SpatialThing
+	timestamps()
 
 	# person
 	field :user, :string

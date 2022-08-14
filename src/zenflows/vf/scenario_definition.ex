@@ -42,6 +42,7 @@ schema "vf_scenario_definition" do
 	field :has_duration, :map, virtual: true
 	field :has_duration_unit_type, TimeUnitEnum
 	field :has_duration_numeric_duration, :float
+	timestamps()
 end
 
 @reqr [:name]

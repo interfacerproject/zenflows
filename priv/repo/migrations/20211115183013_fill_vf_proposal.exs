@@ -25,9 +25,9 @@ def change() do
 		add :has_end, :utc_datetime_usec
 		# add :in_scope_of_id
 		add :unit_based, :boolean, default: false, null: false
-		timestamps(inserted_at: :created, updated_at: false)
 		add :note, :text
 		add :eligible_location_id, references("vf_spatial_thing")
+		timestamps()
 	end
 end
 end

@@ -89,6 +89,7 @@ schema "vf_intent" do
 	field :note, :string
 	# field :in_scope_of
 	field :agreed_in, :string
+	timestamps()
 end
 
 @reqr [:action_id]

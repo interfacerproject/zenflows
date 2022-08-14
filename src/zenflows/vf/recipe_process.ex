@@ -47,6 +47,7 @@ schema "vf_recipe_process" do
 	field :has_duration, :map, virtual: true
 	field :has_duration_unit_type, TimeUnitEnum
 	field :has_duration_numeric_duration, :float
+	timestamps()
 end
 
 @reqr ~w[name process_conforms_to_id]a

@@ -101,7 +101,6 @@ describe "create Commitment" do
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == params.has_point_in_time
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -135,7 +134,6 @@ describe "create Commitment" do
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == nil
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -169,7 +167,6 @@ describe "create Commitment" do
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -205,7 +202,6 @@ describe "create Commitment" do
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -256,7 +252,6 @@ describe "create Commitment" do
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == params.has_point_in_time
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -292,7 +287,6 @@ describe "create Commitment" do
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == params.has_point_in_time
 		assert comm.due == params.due
-		assert DateTime.compare(comm.created, DateTime.utc_now()) != :gt
 		assert comm.finished == params.finished
 		assert comm.note == params.note
 		# assert in_scope_of_id
@@ -327,7 +321,6 @@ test "with present assocs", %{params: params} do
 	assert new.has_end == old.has_end
 	assert new.has_point_in_time == old.has_point_in_time
 	assert new.due == params.due
-	assert DateTime.compare(new.created, DateTime.utc_now()) != :gt
 	assert new.finished == params.finished
 	assert new.note == params.note
 	# assert in_scope_of_id

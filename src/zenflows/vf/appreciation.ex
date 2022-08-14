@@ -36,6 +36,7 @@ schema "vf_appreciation" do
 	belongs_to :appreciation_of, EconomicEvent
 	belongs_to :appreciation_with, EconomicEvent
 	field :note, :string
+	timestamps()
 end
 
 @reqr ~w[appreciation_of_id appreciation_with_id]a

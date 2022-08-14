@@ -23,6 +23,7 @@ def change() do
 		add :appreciation_of_id, references("vf_economic_event"), null: false
 		add :appreciation_with_id, references("vf_economic_event"), null: false
 		add :note, :text
+		timestamps()
 	end
 end
 end

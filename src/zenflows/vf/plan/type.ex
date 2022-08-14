@@ -46,7 +46,7 @@ object :plan do
 	field :note, :string
 
 	@desc @created
-	field :created, :datetime
+	field :inserted_at, non_null(:datetime), name: "created"
 
 	@desc @due
 	field :due, :datetime
@@ -69,9 +69,6 @@ input_object :plan_create_params do
 	@desc @note
 	field :note, :string
 
-	@desc @created
-	field :created, :datetime
-
 	@desc @due
 	field :due, :datetime
 
@@ -90,9 +87,6 @@ input_object :plan_update_params do
 
 	@desc @note
 	field :note, :string
-
-	@desc @created
-	field :created, :datetime
 
 	@desc @due
 	field :due, :datetime

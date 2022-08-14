@@ -47,6 +47,7 @@ def change() do
 		add :image, :text
 		add :note, :text
 		add :primary_location_id, references("vf_spatial_thing")
+		timestamps()
 
 		# person
 		add :user, :text

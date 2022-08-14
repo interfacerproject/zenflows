@@ -26,7 +26,6 @@ setup do
 		params: %{
 			name: Factory.uniq("name"),
 			note: Factory.uniq("note"),
-			created: DateTime.utc_now(),
 		},
 		inserted: Factory.insert!(:agreement),
 	}
@@ -42,7 +41,6 @@ describe "create/1" do
 
 		assert agreem.name == params.name
 		assert agreem.note == params.note
-		assert agreem.created == params.created
 	end
 
 	test "doesn't create a Agreement with invalid params" do
@@ -56,7 +54,6 @@ describe "update/2" do
 
 		assert new.name == params.name
 		assert new.note == params.note
-		assert new.created == params.created
 	end
 
 	test "doesn't update a Agreement", %{inserted: old} do
@@ -64,7 +61,6 @@ describe "update/2" do
 
 		assert new.name == old.name
 		assert new.note == old.note
-		assert new.created == old.created
 	end
 end
 

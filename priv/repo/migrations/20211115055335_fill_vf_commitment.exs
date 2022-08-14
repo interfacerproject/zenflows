@@ -36,7 +36,6 @@ def change() do
 		add :has_end, :timestamptz
 		add :has_point_in_time, :timestamptz
 		add :due, :timestamptz
-		timestamps(inserted_at: :created, updated_at: false)
 		add :finished, :boolean, default: false, null: false
 		add :note, :text
 		# add :in_scope_of
@@ -44,6 +43,7 @@ def change() do
 		add :independent_demand_of_id, references("vf_plan")
 		add :at_location_id, references("vf_spatial_thing")
 		add :clause_of_id, references("vf_agreement")
+		timestamps()
 	end
 end
 end

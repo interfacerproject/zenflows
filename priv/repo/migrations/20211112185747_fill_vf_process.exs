@@ -30,6 +30,7 @@ def change() do
 		add :planned_within_id, references("vf_plan")
 		add :nested_in_id, references("vf_scenario")
 		# :in_scope_of
+		timestamps()
 	end
 end
 end

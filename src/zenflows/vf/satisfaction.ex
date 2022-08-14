@@ -49,6 +49,7 @@ schema "vf_satisfaction" do
 	belongs_to :effort_quantity_has_unit, Unit
 	field :effort_quantity_has_numerical_value, :float
 	field :note, :string
+	timestamps()
 end
 
 @reqr ~w[satisfied_by_id satisfies_id]a

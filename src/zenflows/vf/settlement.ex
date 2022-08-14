@@ -49,6 +49,7 @@ schema "vf_settlement" do
 	belongs_to :effort_quantity_has_unit, Unit
 	field :effort_quantity_has_numerical_value, :float
 	field :note, :string
+	timestamps()
 end
 
 @reqr ~w[settled_by_id settles_id]a

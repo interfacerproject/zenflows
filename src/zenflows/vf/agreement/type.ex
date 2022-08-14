@@ -40,7 +40,7 @@ object :agreement do
 	field :note, :string
 
 	@desc @created
-	field :created, non_null(:datetime)
+	field :inserted_at, non_null(:datetime), name: "created"
 end
 
 object :agreement_response do
@@ -53,9 +53,6 @@ input_object :agreement_create_params do
 
 	@desc @note
 	field :note, :string
-
-	@desc @created
-	field :created, non_null(:datetime)
 end
 
 input_object :agreement_update_params do
@@ -66,9 +63,6 @@ input_object :agreement_update_params do
 
 	@desc @note
 	field :note, :string
-
-	@desc @created
-	field :created, :datetime
 end
 
 object :query_agreement do

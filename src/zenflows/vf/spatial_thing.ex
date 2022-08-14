@@ -44,6 +44,7 @@ schema "vf_spatial_thing" do
 	field :long, :float
 	field :alt, :float
 	field :note, :string
+	timestamps()
 end
 
 @doc false

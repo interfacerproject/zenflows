@@ -27,7 +27,6 @@ alias Zenflows.VF.{Scenario, Validate}
 
 @type t() :: %__MODULE__{
 	name: String.t(),
-	created: DateTime.t() | nil,
 	due: DateTime.t() | nil,
 	note: String.t() | nil,
 	refinement_of: Scenario.t() | nil,
@@ -35,14 +34,14 @@ alias Zenflows.VF.{Scenario, Validate}
 
 schema "vf_plan" do
 	field :name, :string
-	field :created, :utc_datetime_usec
 	field :due, :utc_datetime_usec
 	field :note, :string
 	belongs_to :refinement_of, Scenario
+	timestamps()
 end
 
 @reqr [:name]
-@cast @reqr ++ ~w[created due note refinement_of_id]a
+@cast @reqr ++ ~w[due note refinement_of_id]a
 
 @doc false
 @spec chgset(Schema.t(), params()) :: Changeset.t()

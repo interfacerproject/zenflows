@@ -33,6 +33,7 @@ alias Zenflows.VF.{Agent, Proposal}
 schema "vf_proposed_to" do
 	belongs_to :proposed_to, Agent
 	belongs_to :proposed, Proposal
+	timestamps()
 end
 
 @reqr ~w[proposed_to_id proposed_id]a

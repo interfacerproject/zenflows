@@ -56,6 +56,7 @@ schema "vf_process" do
 	# belongs_to :in_scope_of
 	belongs_to :planned_within, Plan
 	belongs_to :nested_in, Scenario
+	timestamps()
 
 	has_many :inputs, EconomicEvent, foreign_key: :input_of_id
 	has_many :outputs, EconomicEvent, foreign_key: :output_of_id

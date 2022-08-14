@@ -25,6 +25,7 @@ def change() do
 		add :created, :timestamptz
 		add :due, :timestamptz
 		add :refinement_of_id, references("vf_scenario")
+		timestamps()
 	end
 end
 end

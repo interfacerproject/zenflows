@@ -79,6 +79,7 @@ schema "vf_economic_resource" do
 	belongs_to :lot, ProductBatch
 	belongs_to :contained_in, EconomicResource
 	belongs_to :unit_of_effort, Unit
+	timestamps()
 end
 
 @reqr ~w[

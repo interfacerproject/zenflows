@@ -48,6 +48,7 @@ schema "vf_recipe_resource" do
 	field :substitutable, :boolean, default: false
 	field :image, :string
 	field :note, :string
+	timestamps()
 end
 
 @reqr [:name]

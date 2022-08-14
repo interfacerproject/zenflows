@@ -25,6 +25,18 @@ alias Zenflows.VF
 
 defdelegate id(), to: Zenflows.DB.ID, as: :gen
 
+@doc "Returns `DateTime.utc_now/0`."
+@spec now() :: DateTime.t()
+def now() do
+	DateTime.utc_now()
+end
+
+@doc "Like `now/0`, but piped to `DateTime.to_iso8601/1`."
+@spec iso_now() :: String.t()
+def iso_now() do
+	now() |> DateTime.to_iso8601()
+end
+
 @doc """
 Returns the same string with a unique positive integer attached at
 the end.

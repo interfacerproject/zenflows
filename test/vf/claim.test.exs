@@ -36,7 +36,7 @@ setup do
 			has_numerical_value: Factory.float(),
 		},
 		triggered_by_id: Factory.insert!(:economic_event).id,
-		due: DateTime.utc_now(),
+		due: Factory.now(),
 		finished: Factory.bool(),
 		note: Factory.uniq("note"),
 		agreed_in: Factory.uniq("uri"),

@@ -23,7 +23,7 @@ use Absinthe.Schema.Notation
 alias Zenflows.VF.{Plan, Plan.Domain}
 
 def plan(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+	Domain.one(id)
 end
 
 def create_plan(%{plan: params}, _info) do

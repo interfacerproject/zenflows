@@ -21,54 +21,54 @@ use ZenflowsTest.Help.EctoCase, async: true
 alias Ecto.Changeset
 alias Zenflows.VF.{Plan, Plan.Domain, Scenario}
 
-setup ctx do
-	params = %{
-		name: Factory.uniq("name"),
-		note: Factory.uniq("note"),
-		due: DateTime.utc_now(),
-		refinement_of_id: Factory.insert!(:scenario).id,
- 	}
+setup do
+	%{
+		params: %{
+			name: Factory.str("name"),
+			note: Factory.str("note"),
+			due: Factory.now(),
+			refinement_of_id: Factory.insert!(:scenario).id,
+	 	},
+		inserted: Factory.insert!(:plan),
+		id: Factory.id(),
+	 }
+end
 
-	if ctx[:no_insert] do
-		%{params: params}
-	else
-		%{params: params, inserted: Factory.insert!(:plan)}
+describe "one/1" do
+	test "with good id: finds the Plan", %{inserted: %{id: id}} do
+		assert {:ok, %Plan{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the Plan", %{id: id} do
+		assert {:error, "not found"} = Domain.one(id)
 	end
 end
 
-test "by_id/1 returns a Plan", %{inserted: plan} do
-	assert %Plan{} = Domain.by_id(plan.id)
-end
-
 describe "create/1" do
-	@tag :no_insert
-	test "creates a Plan with valid params", %{params: params} do
+	test "with good params: creates a Plan", %{params: params} do
 		assert {:ok, %Plan{} = plan} = Domain.create(params)
-
 		assert plan.name == params.name
 		assert plan.note == params.note
 		assert plan.due == params.due
 		assert plan.refinement_of_id == params.refinement_of_id
 	end
 
-	test "doesn't create a Plan with invalid params" do
+	test "with bad params: doesn't create an" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a Plan with valid params", %{params: params, inserted: old} do
+	test "with good params: updates the Plan", %{params: params, inserted: old} do
 		assert {:ok, %Plan{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.due == params.due
 		assert new.refinement_of_id == params.refinement_of_id
 	end
 
-	test "doesn't update a Plan", %{inserted: old} do
+	test "with bad params: doesn't update the Plan", %{inserted: old} do
 		assert {:ok, %Plan{} = new} = Domain.update(old.id, %{})
-
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.due == old.due
@@ -76,9 +76,15 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a Plan", %{inserted: %{id: id}} do
-	assert {:ok, %Plan{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the Plan", %{inserted: %{id: id}} do
+		assert {:ok, %Plan{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the Plan", %{id: id} do
+		assert {:error, "not found"} = Domain.delete(id)
+	end
 end
 
 describe "preload/2" do

@@ -323,8 +323,8 @@ def build(:scenario) do
 	%VF.Scenario{
 		name: uniq("some name"),
 		note: uniq("some note"),
-		has_beginning: DateTime.utc_now(),
-		has_end: DateTime.utc_now(),
+		has_beginning: now(),
+		has_end: now(),
 		defined_as: build(:scenario_definition),
 		refinement_of: if(recurse?, do: build(:scenario)),
 	}
@@ -333,7 +333,7 @@ end
 def build(:plan) do
 	%VF.Plan{
 		name: uniq("some name"),
-		due: DateTime.utc_now(),
+		due: now(),
 		note: uniq("some note"),
 		refinement_of: build(:scenario),
 	}
@@ -343,8 +343,8 @@ def build(:process) do
 	%VF.Process{
 		name: uniq("some name"),
 		note: uniq("some note"),
-		has_beginning: DateTime.utc_now(),
-		has_end: DateTime.utc_now(),
+		has_beginning: now(),
+		has_end: now(),
 		finished: bool(),
 		classified_as: uniq_list("some uri"),
 		based_on: build(:process_specification),
@@ -357,8 +357,8 @@ end
 def build(:product_batch) do
 	%VF.ProductBatch{
 		batch_number: uniq("some batch number"),
-		expiry_date: DateTime.utc_now(),
-		production_date: DateTime.utc_now(),
+		expiry_date: now(),
+		production_date: now(),
 	}
 end
 
@@ -423,10 +423,10 @@ def build(:intent) do
 		available_quantity_has_unit: availqty.has_unit,
 		available_quantity_has_numerical_value: availqty.has_numerical_value,
 		at_location: build(:spatial_thing),
-		has_beginning: DateTime.utc_now(),
-		has_end: DateTime.utc_now(),
-		has_point_in_time: DateTime.utc_now(),
-		due: DateTime.utc_now(),
+		has_beginning: now(),
+		has_end: now(),
+		has_point_in_time: now(),
+		due: now(),
 		finished: bool(),
 		image: img(),
 		note: uniq("some note"),
@@ -454,10 +454,10 @@ def build(:commitment) do
 		resource_quantity_has_numerical_value: resqty.has_numerical_value,
 		effort_quantity_has_unit: effqty.has_unit,
 		effort_quantity_has_numerical_value: effqty.has_numerical_value,
-		has_beginning: if(datetime_mutex?, do: DateTime.utc_now()),
-		has_end: if(datetime_mutex?, do: DateTime.utc_now()),
-		has_point_in_time: unless(datetime_mutex?, do: DateTime.utc_now()),
-		due: DateTime.utc_now(),
+		has_beginning: if(datetime_mutex?, do: now()),
+		has_end: if(datetime_mutex?, do: now()),
+		has_point_in_time: unless(datetime_mutex?, do: now()),
+		due: now(),
 		finished: bool(),
 		note: uniq("some note"),
 		# in_scope_of:
@@ -522,7 +522,7 @@ def build(:claim) do
 		effort_quantity_has_unit: effqty.has_unit,
 		effort_quantity_has_numerical_value: effqty.has_numerical_value,
 		triggered_by: if(bool(), do: build(:economic_event), else: nil),
-		due: DateTime.utc_now(),
+		due: now(),
 		finished: bool(),
 		agreed_in: uniq("some uri"),
 		note: uniq("some note"),
@@ -548,8 +548,8 @@ end
 def build(:proposal) do
 	%VF.Proposal{
 		name: uniq("some name"),
-		has_beginning: DateTime.utc_now(),
-		has_end: DateTime.utc_now(),
+		has_beginning: now(),
+		has_end: now(),
 		unit_based: bool(),
 		note: uniq("some note"),
 		eligible_location: build(:spatial_thing),

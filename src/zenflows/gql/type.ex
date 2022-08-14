@@ -35,6 +35,49 @@ scalar :base64, name: "Base64" do
 	serialize & &1
 end
 
+@desc "Cursors for pagination"
+object :page_info do
+	@desc """
+	Cursor pointing to the first of the results returned, to be
+	used with `before` query parameter if the backend supports
+	reverse pagination.
+	"""
+	field :start_cursor, :id
+
+	@desc """
+	Cursor pointing to the last of the results returned, to be used
+	with `after` query parameter if the backend supports forward
+	pagination.
+	"""
+	field :end_cursor, :id
+
+	@desc """
+	True if there are more results before `startCursor`.  If unable
+	to be determined, implementations should return `true` to allow
+	for requerying.
+	"""
+	field :has_previous_page, non_null(:boolean)
+
+	@desc """
+	True if there are more results after `endCursor`.  If unable
+	to be determined, implementations should return `true` to allow
+	for requerying.
+	"""
+	field :has_next_page, non_null(:boolean)
+
+	@desc "The total result count, if it can be determined."
+	field :total_count, :integer
+
+	@desc """
+	The number of items requested per page.  Allows the storage
+	backend to indicate this when it is responsible for setting a
+	default and the client does not provide it.  Note this may be
+	different to the number of items returned, if there is less than
+	1 page of results.
+	"""
+	field :page_limit, :integer
+end
+
 # TODO: Decide whether we really want these to be valid URIs or just
 # Strings.
 @spec uri_parse(Input.t()) :: {:ok, String.t() | nil} | :error

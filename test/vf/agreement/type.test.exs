@@ -28,17 +28,22 @@ setup do
 	}
 end
 
+@frag """
+fragment agreement on Agreement {
+	id
+	name
+	note
+	created
+}
+"""
+
 describe "Query" do
 	test "agreement", %{inserted: agreem} do
 		assert %{data: %{"agreement" => data}} =
 			run!("""
+				#{@frag}
 				query ($id: ID!) {
-					agreement(id: $id) {
-						id
-						name
-						note
-						created
-					}
+					agreement(id: $id) {...agreement}
 				}
 			""", vars: %{"id" => agreem.id})
 
@@ -54,20 +59,13 @@ describe "Mutation" do
 	test "createAgreement", %{params: params} do
 		assert %{data: %{"createAgreement" => %{"agreement" => data}}} =
 			run!("""
-				mutation ($name: String! $note: String!) {
-					createAgreement(agreement: {
-						name: $name
-						note: $note
-					}) {
-						agreement {
-							id
-							name
-							note
-							created
-						}
+				#{@frag}
+				mutation ($agreement: AgreementCreateParams!) {
+					createAgreement(agreement: $agreement) {
+						agreement {...agreement}
 					}
 				}
-			""", vars: params)
+			""", vars: %{"agreement" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
 		assert Map.take(data, ~w[name note]) == params
@@ -78,25 +76,15 @@ describe "Mutation" do
 	test "updateAgreement", %{params: params, inserted: agreem} do
 		assert %{data: %{"updateAgreement" => %{"agreement" => data}}} =
 			run!("""
-				mutation (
-					$id: ID!
-					$name: String!
-					$note: String!
-				) {
-					updateAgreement(agreement: {
-						id: $id
-						name: $name
-						note: $note
-					}) {
-						agreement {
-							id
-							name
-							note
-							created
-						}
+				#{@frag}
+				mutation ($agreement: AgreementUpdateParams!) {
+					updateAgreement(agreement: $agreement) {
+						agreement {...agreement}
 					}
 				}
-			""", vars: params |> Map.put("id", agreem.id))
+			""", vars: %{
+				"agreement" => Map.put(params, "id", agreem.id),
+			})
 
 		assert data["id"] == agreem.id
 		assert Map.take(data, ~w[name note]) == params

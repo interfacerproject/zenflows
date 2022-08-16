@@ -83,7 +83,7 @@ end
 describe "name/2" do
 	test "with too short param" do
 		assert %Changeset{errors: errs} =
-			%{name: "a"}
+			%{name: ""}
 			|> name_chgset()
 			|> Validate.name(:name)
 
@@ -112,7 +112,7 @@ end
 describe "note/2" do
 	test "with too short param" do
 		assert %Changeset{errors: errs} =
-			%{note: "a"}
+			%{note: ""}
 			|> note_chgset()
 			|> Validate.note(:note)
 
@@ -170,7 +170,7 @@ end
 describe "uri/2" do
 	test "with too short param" do
 		assert %Changeset{errors: errs} =
-			%{uri: "aa"}
+			%{uri: ""}
 			|> uri_chgset()
 			|> Validate.uri(:uri)
 
@@ -217,7 +217,7 @@ describe "class/2" do
 
 	test "with one of the items too short" do
 		assert %Changeset{errors: errs} =
-			%{list: Enum.map(0..64, &("uri #{&1}")) ++ ["aa"]}
+			%{list: Enum.map(0..64, &("uri #{&1}")) ++ [""]}
 			|> class_chgset()
 			|> Validate.class(:list)
 

@@ -23,6 +23,7 @@ Published requests or offers, sometimes with what is expected in return.
 use Zenflows.DB.Schema
 
 alias Zenflows.VF.{
+	Intent,
 	ProposedIntent,
 	SpatialThing,
 	Validate,
@@ -35,6 +36,9 @@ alias Zenflows.VF.{
 	unit_based: boolean(),
 	note: String.t() | nil,
 	eligible_location: SpatialThing.t() | nil,
+	publishes: [ProposedIntent.t()],
+	primary_intents: [Intent.t()],
+	reciprocal_intents: [Intent.t()],
 }
 
 schema "vf_proposal" do
@@ -47,6 +51,10 @@ schema "vf_proposal" do
 	timestamps()
 
 	has_many :publishes, ProposedIntent, foreign_key: :published_in_id
+	many_to_many :primary_intents, Intent, join_through: ProposedIntent,
+		join_keys: [published_in_id: :id, publishes_id: :id], join_where: [reciprocal: false]
+	many_to_many :reciprocal_intents, Intent, join_through: ProposedIntent,
+		join_keys: [published_in_id: :id, publishes_id: :id], join_where: [reciprocal: true]
 end
 
 @cast ~w[name has_beginning has_end unit_based note eligible_location_id]a

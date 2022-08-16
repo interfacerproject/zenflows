@@ -28,6 +28,7 @@ alias Zenflows.VF.{
 	EconomicResource,
 	Measure,
 	Process,
+	ProposedIntent,
 	ResourceSpecification,
 	SpatialThing,
 	Unit,
@@ -57,6 +58,8 @@ alias Zenflows.VF.{
 	note: String.t() | nil,
 	# in_scope_of:
 	agreed_in: String.t() | nil,
+
+	published_in: [ProposedIntent.t()],
 }
 
 schema "vf_intent" do
@@ -90,6 +93,8 @@ schema "vf_intent" do
 	# field :in_scope_of
 	field :agreed_in, :string
 	timestamps()
+
+	has_many :published_in, ProposedIntent, foreign_key: :publishes_id
 end
 
 @reqr [:action_id]

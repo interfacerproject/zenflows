@@ -35,18 +35,24 @@ setup do
 			default_unit_of_effort_id: Factory.insert!(:unit).id,
 			default_unit_of_resource_id: Factory.insert!(:unit).id,
 		},
-		resource_specification: Factory.insert!(:resource_specification),
+		inserted: Factory.insert!(:resource_specification),
+		id: Factory.id()
 	}
 end
 
-test "by_id/1 returns a ResourceSpecification", %{resource_specification: res_spec} do
-	assert %ResourceSpecification{} = Domain.by_id(res_spec.id)
+describe "one/1" do
+	test "with good id: finds the ResourceSpecification", %{inserted: %{id: id}} do
+		assert {:ok, %ResourceSpecification{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the ResourceSpecification", %{id: id} do
+		assert {:error, "not found"} = Domain.one(id)
+	end
 end
 
 describe "create/1" do
-	test "creates a ResourceSpecification with valid params", %{params: params} do
+	test "with good params: creates a ResourceSpecification", %{params: params} do
 		assert {:ok, %ResourceSpecification{} = res_spec} = Domain.create(params)
-
 		assert res_spec.name == params.name
 		assert res_spec.resource_classified_as == params.resource_classified_as
 		assert res_spec.note == params.note
@@ -55,15 +61,14 @@ describe "create/1" do
 		assert res_spec.default_unit_of_effort_id == params.default_unit_of_effort_id
 	end
 
-	test "doesn't create a ResourceSpecification with invalid params" do
+	test "with bad params: doesn't create a ResourceSpecification" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a ResourceSpecification with valid params", %{params: params, resource_specification: old} do
+	test "with good params: updates the ResourceSpecification", %{params: params, inserted: old} do
 		assert {:ok, %ResourceSpecification{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.resource_classified_as == params.resource_classified_as
 		assert new.note == params.note
@@ -72,9 +77,8 @@ describe "update/2" do
 		assert new.default_unit_of_effort_id == params.default_unit_of_effort_id
 	end
 
-	test "doesn't update a ResourceSpecification", %{resource_specification: old} do
+	test "with bad params: doesn't update the ResourceSpecification", %{inserted: old} do
 		assert {:ok, %ResourceSpecification{} = new} = Domain.update(old.id, %{})
-
 		assert new.name == old.name
 		assert new.resource_classified_as == old.resource_classified_as
 		assert new.note == old.note
@@ -84,22 +88,28 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a ResourceSpecification", %{resource_specification: %{id: id}} do
-	assert {:ok, %ResourceSpecification{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the ResourceSpecification", %{inserted: %{id: id}} do
+		assert {:ok, %ResourceSpecification{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the ResourceSpecification", %{id: id} do
+		assert {:error, "not found"} = Domain.delete(id)
+	end
 end
 
 describe "preload/2" do
-	test "preloads :default_unit_of_resource", %{resource_specification: res_spec} do
+	test "preloads `:default_unit_of_resource`", %{inserted: %{id: id}} do
+		assert {:ok, res_spec} =  Domain.one(id)
 		res_spec = Domain.preload(res_spec, :default_unit_of_resource)
-		assert unit_res = %Unit{} = res_spec.default_unit_of_resource
-		assert unit_res.id == res_spec.default_unit_of_resource_id
-	end
+		assert %Unit{} = res_spec.default_unit_of_resource
+ 	end
 
-	test "preloads :default_unit_of_effort", %{resource_specification: res_spec} do
+	test "preloads `:default_unit_of_effort`", %{inserted: %{id: id}} do
+		assert {:ok, res_spec} =  Domain.one(id)
 		res_spec = Domain.preload(res_spec, :default_unit_of_effort)
-		assert unit_eff = %Unit{} = res_spec.default_unit_of_effort
-		assert unit_eff.id == res_spec.default_unit_of_effort_id
-	end
+		assert %Unit{} = res_spec.default_unit_of_effort
+ 	end
 end
 end

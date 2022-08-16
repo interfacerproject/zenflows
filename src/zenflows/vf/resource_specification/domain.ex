@@ -24,31 +24,41 @@ alias Zenflows.VF.ResourceSpecification
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: ResourceSpecification.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(ResourceSpecification, id)
+@spec one(repo(), id()) :: {:ok, ResourceSpecification.t()} | {:error, String.t()}
+def one(repo \\ Repo, id) do
+	one_by(repo, id: id)
 end
 
-@spec create(params()) :: {:ok, ResourceSpecification.t()} | {:error, chgset()}
-def create(params) do
+@spec one_by(repo(), map() | Keyword.t())
+	:: {:ok, ResourceSpecification.t()} | {:error, String.t()}
+def one_by(repo \\ Repo, clauses) do
+	case repo.get_by(ResourceSpecification, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec create(repo(), params()) :: {:ok, ResourceSpecification.t()} | {:error, chgset()}
+def create(repo \\ Repo, params) do
 	Multi.new()
-	|> Multi.insert(:res_spec, ResourceSpecification.chgset(params))
-	|> Repo.transaction()
+	|> Multi.insert(:insert, ResourceSpecification.chgset(params))
+	|> repo.transaction()
 	|> case do
-		{:ok, %{res_spec: rs}} -> {:ok, rs}
+		{:ok, %{insert: rs}} -> {:ok, rs}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, ResourceSpecification.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, ResourceSpecification.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &ResourceSpecification.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one_by/2)
+	|> Multi.update(:update, &ResourceSpecification.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: rs}} -> {:ok, rs}
@@ -56,11 +66,13 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, ResourceSpecification.t()} | {:error, chgset()}
+@spec delete(id())
+	:: {:ok, ResourceSpecification.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one_by/2)
+	|> Multi.delete(:delete, &(&1.one))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: rs}} -> {:ok, rs}
@@ -68,7 +80,8 @@ def delete(id) do
 	end
 end
 
-@spec preload(ResourceSpecification.t(), :default_unit_of_resource | :default_unit_of_effort)
+@spec preload(ResourceSpecification.t(),
+		:default_unit_of_resource | :default_unit_of_effort)
 	:: ResourceSpecification.t()
 def preload(res_spec, :default_unit_of_resource) do
 	Repo.preload(res_spec, :default_unit_of_resource)
@@ -76,17 +89,5 @@ end
 
 def preload(res_spec, :default_unit_of_effort) do
 	Repo.preload(res_spec, :default_unit_of_effort)
-end
-
-# Returns a ResourceSpecification in ok-err tuple from given ID.
-# Used inside Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, ResourceSpecification.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			rs -> {:ok, rs}
-		end
-	end
 end
 end

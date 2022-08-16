@@ -24,7 +24,7 @@ alias Zenflows.VF.{
 }
 
 def resource_specification(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+	Domain.one(id)
 end
 
 def create_resource_specification(%{resource_specification: params}, _info) do

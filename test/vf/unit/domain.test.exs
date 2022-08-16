@@ -24,48 +24,58 @@ alias Zenflows.VF.{Unit, Unit.Domain}
 setup do
 	%{
 		params: %{
-			label: Factory.uniq("label"),
-			symbol: Factory.uniq("symbol"),
+			label: Factory.str("label"),
+			symbol: Factory.str("symbol"),
 		},
-		unit: Factory.insert!(:unit),
+		inserted: Factory.insert!(:unit),
+		id: Factory.id(),
 	}
 end
 
-test "by_id/1 returns a Unit", %{unit: unit} do
-	assert %Unit{} = Domain.by_id(unit.id)
+describe "one/1" do
+	test "with good id: finds the Unit", %{inserted: %{id: id}} do
+		assert {:ok, %Unit{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the Unit", %{id: id} do
+		assert {:error, "not found"} = Domain.one(id)
+	end
 end
 
 describe "create/1" do
-	test "creates a Unit with valid params", %{params: params} do
+	test "with good params: creates a Unit", %{params: params} do
 		assert {:ok, %Unit{} = unit} = Domain.create(params)
-
 		assert unit.label == params.label
 		assert unit.symbol == params.symbol
 	end
 
-	test "doesn't create a Unit with invalid params" do
+	test "with bad params: doesn't create a Unit" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a Unit with valid params", %{params: params, unit: old} do
+	test "with good params: updates the Unit", %{params: params, inserted: old} do
 		assert {:ok, %Unit{} = new} = Domain.update(old.id, params)
-
 		assert new.label == params.label
 		assert new.symbol == params.symbol
 	end
 
-	test "doesn't update a Unit", %{unit: old} do
+	test "with bad params: doesn't update the Unit", %{inserted: old} do
 		assert {:ok, %Unit{} = new} = Domain.update(old.id, %{})
-
 		assert new.label == old.label
 		assert new.symbol == old.symbol
 	end
 end
 
-test "delete/1 deletes a Unit", %{unit: %{id: id}} do
-	assert {:ok, %Unit{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the Unit", %{inserted: %{id: id}} do
+		assert {:ok, %Unit{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the Unit", %{id: id} do
+		assert {:error, "not found"} = Domain.delete(id)
+	end
 end
 end

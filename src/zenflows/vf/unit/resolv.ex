@@ -21,7 +21,7 @@ defmodule Zenflows.VF.Unit.Resolv do
 alias Zenflows.VF.Unit.Domain
 
 def unit(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+	Domain.one(id)
 end
 
 def create_unit(%{unit: params}, _info) do

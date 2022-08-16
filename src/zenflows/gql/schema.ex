@@ -27,6 +27,7 @@ import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
 import_types Zenflows.SWPass.Type
 import_types Zenflows.Keypairoom.Type
+import_types Zenflows.InstVars.Type
 
 import_types VF.TimeUnit.Type
 import_types VF.Action.Type
@@ -77,6 +78,7 @@ query do
 	end
 
 	import_fields :query_sw_pass
+	import_fields :query_inst_vars
 
 	import_fields :query_unit
 	import_fields :query_spatial_thing

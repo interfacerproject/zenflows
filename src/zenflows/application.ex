@@ -25,6 +25,7 @@ def start(_type, _args) do
 
 	children = [
 		Zenflows.DB.Repo,
+		Zenflows.InstVars.Domain,
 		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web.Router, options: [port: 8000]},
 	]
 

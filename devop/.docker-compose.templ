@@ -38,7 +38,7 @@ services:
 
       ROOM_HOST: zvmlet
       ROOM_PORT: &room_port 3000
-      ROOM_PASS: $ROOM_PASS
+      ROOM_SALT: $ROOM_SALT
     depends_on:
       - zvmlet
       - db

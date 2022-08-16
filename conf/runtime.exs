@@ -71,7 +71,7 @@ config :zenflows, Zenflows.DB.Repo, db_conf
 config :zenflows, Zenflows.Restroom,
 	room_host: fetch_env!("ROOM_HOST"),
 	room_port: fetch_env!("ROOM_PORT"),
-	room_pass: fetch_env!("ROOM_PASS")
+	room_salt: fetch_env!("ROOM_SALT")
 
 #
 # admin

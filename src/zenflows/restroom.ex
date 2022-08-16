@@ -56,7 +56,7 @@ See https://github.com/dyne/keypairoom for details.
 def keypairoom_server(data) do
 	data = %{
 		"userData" => data,
-		"theBackendPassword" => pass(),
+		"serverSideSalt" => salt(),
 	}
 	case exec("keypairoomServer-6-7", data) do
 		{:ok, %{"seedServerSideShard.HMAC" => hmac}} -> {:ok, hmac}
@@ -100,11 +100,11 @@ defp host() do
 	"#{conf[:room_host]}:#{conf[:room_port]}"
 end
 
-# Return the passphrase from the configs.
-@spec pass() :: String.t()
-defp pass() do
+# Return the salt from the configs.
+@spec salt() :: String.t()
+defp salt() do
 	conf = conf()
-	conf[:room_pass]
+	conf[:room_salt]
 end
 
 # Return the application configurations of this module.

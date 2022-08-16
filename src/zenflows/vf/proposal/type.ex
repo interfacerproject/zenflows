@@ -35,6 +35,7 @@ create commitments; commonly seen in a price list or e-commerce.
 """
 @created "The date and time the proposal was created."
 @eligible_location "The location at which this proposal is eligible."
+@eligible_location_id "(`SpatialThing`) #{@eligible_location}"
 
 @desc """
 Published requests or offers, sometimes with what is expected in return.
@@ -61,10 +62,16 @@ object :proposal do
 	field :inserted_at, :datetime, name: "created"
 
 	@desc @eligible_location
-	field :eligible_location, resolve: &Resolv.eligible_location/3
+	field :eligible_location, :spatial_thing, resolve: &Resolv.eligible_location/3
 
 	field :publishes, list_of(non_null(:proposed_intent)),
 		resolve: &Resolv.publishes/3
+
+	field :primary_intents, list_of(non_null(:intent)),
+		resolve: &Resolv.primary_intents/3
+
+	field :reciprocal_intents, list_of(non_null(:intent)),
+		resolve: &Resolv.reciprocal_intents/3
 end
 
 object :proposal_response do
@@ -97,8 +104,8 @@ input_object :proposal_create_params do
 	@desc @unit_based
 	field :unit_based, :boolean
 
-	@desc "(`SpatialThing`) #{@eligible_location}"
-	field :eligible_location_id, name: "eligible_location"
+	@desc @eligible_location_id
+	field :eligible_location_id, :id, name: "eligible_location"
 end
 
 input_object :proposal_update_params do
@@ -119,8 +126,8 @@ input_object :proposal_update_params do
 	@desc @unit_based
 	field :unit_based, :boolean
 
-	@desc "(`SpatialThing`) #{@eligible_location}"
-	field :eligible_location_id, name: "eligible_location"
+	@desc @eligible_location_id
+	field :eligible_location_id, :id, name: "eligible_location"
 end
 
 object :query_proposal do

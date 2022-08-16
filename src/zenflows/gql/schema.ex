@@ -56,15 +56,15 @@ import_types VF.ProductBatch.Type
 import_types VF.EconomicResource.Type
 import_types VF.EconomicEvent.Type
 #import_types VF.Appreciation.Type
-#import_types VF.Intent.Type
+import_types VF.Intent.Type
 #import_types VF.Commitment.Type
 #import_types VF.Fulfillment.Type
 #import_types VF.EventOrCommitment.Type
 #import_types VF.Satisfaction.Type
 #import_types VF.Claim.Type
 #import_types VF.Settlement.Type
-#import_types VF.Proposal.Type
-#import_types VF.ProposedIntent.Type
+import_types VF.Proposal.Type
+import_types VF.ProposedIntent.Type
 #import_types VF.ProposedTo.Type
 
 query do
@@ -102,15 +102,14 @@ query do
 	import_fields :query_economic_resource
 	import_fields :query_economic_event
 	#import_fields :query_appreciation
-	#import_fields :query_intent
+	import_fields :query_intent
 	#import_fields :query_commitment
 	#import_fields :query_fulfillment
 	#import_fields :query_event_or_commitment
 	#import_fields :query_satisfaction
 	#import_fields :query_claim
 	#import_fields :query_settlement
-	#import_fields :query_proposal
-	#import_fields :query_proposed_intent
+	import_fields :query_proposal
 	#import_fields :query_proposed_to
 end
 
@@ -150,15 +149,15 @@ mutation do
 	import_fields :mutation_economic_resource
 	import_fields :mutation_economic_event
 	#import_fields :mutation_appreciation
-	#import_fields :mutation_intent
+	import_fields :mutation_intent
 	#import_fields :mutation_commitment
 	#import_fields :mutation_fulfillment
 	#import_fields :mutation_event_or_commitment
 	#import_fields :mutation_satisfaction
 	#import_fields :mutation_claim
 	#import_fields :mutation_settlement
-	#import_fields :mutation_proposal
-	#import_fields :mutation_proposed_intent
+	import_fields :mutation_proposal
+	import_fields :mutation_proposed_intent
 	#import_fields :mutation_proposed_to
 end
 

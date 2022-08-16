@@ -49,7 +49,7 @@ describe "create/1" do
 		assert agreem.note == params.note
 	end
 
-	test "with bad params: doesn't create an" do
+	test "with bad params: doesn't create an Agreement" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end

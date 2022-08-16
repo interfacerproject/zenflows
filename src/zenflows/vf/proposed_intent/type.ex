@@ -37,7 +37,10 @@ object :proposed_intent do
 	field :reciprocal, non_null(:boolean)
 
 	@desc "The published proposal which this intent is part of."
-	field :published_in, non_null(proposal)
+	field :published_in, non_null(:proposal), resolve: &Resolv.published_in/3
+
+	@desc "The intent which is part of this published proposal."
+	field :publishes, non_null(:intent), resolve: &Resolv.publishes/3
 end
 
 object :proposed_intent_response do

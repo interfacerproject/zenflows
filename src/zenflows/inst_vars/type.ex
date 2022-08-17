@@ -24,14 +24,18 @@ alias Zenflows.InstVars.Resolv
 
 object :instance_units do
 	field :unit_one, non_null(:unit), resolve: &Resolv.unit_one/3
-	field :unit_currency, non_null(:unit), resolve: &Resolv.unit_currency/3
 end
 
 object :instance_specs do
+	field :spec_currency, non_null(:resource_specification),
+		resolve: &Resolv.spec_currency/3
+
 	field :spec_project_design, non_null(:resource_specification),
 		resolve: &Resolv.spec_project_design/3
+
 	field :spec_project_service, non_null(:resource_specification),
 		resolve: &Resolv.spec_project_service/3
+
 	field :spec_project_product, non_null(:resource_specification),
 		resolve: &Resolv.spec_project_product/3
 end

@@ -25,7 +25,7 @@ def up() do
 	create table("zf_inst_vars", primary_key: false) do
 		add :one_row, :boolean, default: true, primary_key: true
 		add :unit_one_id, references("vf_unit"), null: false
-		add :unit_currency_id, references("vf_unit"), null: false
+		add :spec_currency_id, references("vf_resource_specification"), null: false
 		add :spec_project_design_id, references("vf_resource_specification"), null: false
 		add :spec_project_service_id, references("vf_resource_specification"), null: false
 		add :spec_project_product_id, references("vf_resource_specification"), null: false
@@ -38,14 +38,14 @@ def up() do
 	execute(fn ->
 		r = repo()
 		{:ok, unit_one} = Unit.Domain.create(r, %{label: "one", symbol: "#"})
-		{:ok, unit_currency} = Unit.Domain.create(r, %{label: "currency", symbol: "$"})
+		{:ok, spec_currency} = ResourceSpecification.Domain.create(r, %{name: "currency", default_unit_of_resource_id: unit_one.id})
 		{:ok, spec_design} = ResourceSpecification.Domain.create(r, %{name: "Design", default_unit_of_resource_id: unit_one.id})
 		{:ok, spec_service} = ResourceSpecification.Domain.create(r, %{name: "Service", default_unit_of_resource_id: unit_one.id})
 		{:ok, spec_product} = ResourceSpecification.Domain.create(r, %{name: "Product", default_unit_of_resource_id: unit_one.id})
 
 		r.insert!(%InstVars{
 			unit_one_id: unit_one.id,
-			unit_currency_id: unit_currency.id,
+			spec_currency_id: spec_currency.id,
 			spec_project_design_id: spec_design.id,
 			spec_project_service_id: spec_service.id,
 			spec_project_product_id: spec_product.id,

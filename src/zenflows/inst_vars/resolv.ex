@@ -29,8 +29,8 @@ def unit_one(%{unit_one: %{id: id}}, _, _) do
 	Unit.Domain.one(id)
 end
 
-def unit_currency(%{unit_currency: %{id: id}}, _, _) do
-	Unit.Domain.one(id)
+def spec_currency(%{spec_currency: %{id: id}}, _, _) do
+	ResourceSpecification.Domain.one(id)
 end
 
 def spec_project_design(%{spec_project_design: %{id: id}}, _, _) do

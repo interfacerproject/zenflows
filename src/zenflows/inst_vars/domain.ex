@@ -25,13 +25,13 @@ alias Zenflows.VF.{Unit, ResourceSpecification}
 
 @doc false
 def start_link(_) do
-	[vars] = Repo.all(InstVars)
+	[vars] = Repo.all(InstVars, timeout: :infinity)
 	Agent.start_link(fn -> %{
 		units: %{
 			unit_one: %{id: vars.unit_one_id},
-			unit_currency: %{id: vars.unit_currency_id},
 		},
 		specs: %{
+			spec_currency: %{id: vars.spec_currency_id},
 			spec_project_design: %{id: vars.spec_project_design_id},
 			spec_project_service: %{id: vars.spec_project_service_id},
 			spec_project_product: %{id: vars.spec_project_product_id},

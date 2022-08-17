@@ -26,7 +26,7 @@ alias Zenflows.VF.{Unit, ResourceSpecification}
 
 @type t() :: %__MODULE__{
 	unit_one: Unit,
-	unit_currency: Unit,
+	spec_currency: ResourceSpecification,
 	spec_project_design: ResourceSpecification,
 	spec_project_service: ResourceSpecification,
 	spec_project_product: ResourceSpecification,
@@ -36,7 +36,7 @@ alias Zenflows.VF.{Unit, ResourceSpecification}
 @foreign_key_type Zenflows.DB.ID
 schema "zf_inst_vars" do
 	belongs_to :unit_one, Unit
-	belongs_to :unit_currency, Unit
+	belongs_to :spec_currency, ResourceSpecification
 	belongs_to :spec_project_design, ResourceSpecification
 	belongs_to :spec_project_service, ResourceSpecification
 	belongs_to :spec_project_product, ResourceSpecification

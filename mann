@@ -36,37 +36,37 @@ main() {
 	shift "$((OPTIND-1))"
 
 	case $1 in
-	help)          shift ; help "$@" ;;
-	mix)           shift ; cmd_mix "$@" ;;
-	serve)         shift ; cmd_serve "$@" ;;
-	clean)         shift ; cmd_clean "$@" ;;
-	test)          shift ; cmd_test "$@" ;;
-	cover)         shift ; cmd_cover "$@" ;;
-	cover.clean)   shift ; cmd_cover_clean "$@" ;;
-	env.setup)     shift ; cmd_env_setup "$@" ;;
-	dep.setup)     shift ; cmd_dep_setup "$@" ;;
-	dep.clean)     shift ; cmd_dep_clean "$@" ;;
-	dep.copy)      shift ; cmd_dep_copy "$@" ;;
-	db.setup)      shift ; cmd_db_setup "$@" ;;
-	db.reset)      shift ; cmd_db_reset "$@" ;;
-	db.create)     shift ; cmd_db_create "$@" ;;
-	db.drop)       shift ; cmd_db_drop "$@" ;;
-	db.migrate)    shift ; cmd_db_migrate "$@" ;;
-	db.rollback)   shift ; cmd_db_rollback "$@" ;;
-	db.remigrate)  shift ; cmd_db_remigrate "$@" ;;
-	doc)           shift ; cmd_doc "$@" ;;
-	doc.serve)     shift ; cmd_doc_serve "$@" ;;
-	doc.clean)     shift ; cmd_doc_clean "$@" ;;
-	devop.setup)   shift ; cmd_devop_setup "$@";;
-	devop.serve)   shift ; cmd_devop_serve "$@";;
-	devop.comp)    shift ; cmd_devop_comp "$@";;
-	devop.build)   shift ; cmd_devop_build "$@";;
-	devop.run)     shift ; cmd_devop_run "$@";;
-	devop.exec)    shift ; cmd_devop_exec "$@";;
-	devop.up)      shift ; cmd_devop_up "$@";;
-	devop.down)    shift ; cmd_devop_down "$@";;
-	devop.logs)    shift ; cmd_devop_logs "$@";;
-	*)             usage ;;
+	help)           shift ; help "$@" ;;
+	mix)            shift ; cmd_mix "$@" ;;
+	serve)          shift ; cmd_serve "$@" ;;
+	clean)          shift ; cmd_clean "$@" ;;
+	test)           shift ; cmd_test "$@" ;;
+	cover)          shift ; cmd_cover "$@" ;;
+	cover.clean)    shift ; cmd_cover_clean "$@" ;;
+	env.setup)      shift ; cmd_env_setup "$@" ;;
+	dep.setup)      shift ; cmd_dep_setup "$@" ;;
+	dep.clean)      shift ; cmd_dep_clean "$@" ;;
+	dep.copy)       shift ; cmd_dep_copy "$@" ;;
+	db.setup)       shift ; cmd_db_setup "$@" ;;
+	db.reset)       shift ; cmd_db_reset "$@" ;;
+	db.create)      shift ; cmd_db_create "$@" ;;
+	db.drop)        shift ; cmd_db_drop "$@" ;;
+	db.migrate)     shift ; cmd_db_migrate "$@" ;;
+	db.rollback)    shift ; cmd_db_rollback "$@" ;;
+	db.remigrate)   shift ; cmd_db_remigrate "$@" ;;
+	doc)            shift ; cmd_doc "$@" ;;
+	doc.serve)      shift ; cmd_doc_serve "$@" ;;
+	doc.clean)      shift ; cmd_doc_clean "$@" ;;
+	devop.setup)    shift ; cmd_devop_setup "$@" ;;
+	devop.serve)    shift ; cmd_devop_serve "$@" ;;
+	devop.comp)     shift ; cmd_devop_comp "$@" ;;
+	devop.build)    shift ; cmd_devop_build "$@" ;;
+	devop.run)      shift ; cmd_devop_run "$@" ;;
+	devop.exec)     shift ; cmd_devop_exec "$@" ;;
+	devop.up)       shift ; cmd_devop_up "$@" ;;
+	devop.down)     shift ; cmd_devop_down "$@" ;;
+	devop.logs)     shift ; cmd_devop_logs "$@" ;;
+	*)              usage ;;
 	esac
 }
 
@@ -268,7 +268,7 @@ cmd_devop_setup() {
 	else
 		admin_key=$(openssl rand -hex 64)
 		db_pass=$(openssl rand -hex 16)
-		room_salt=$(openssl rand -base64 64 | tr \d \\n)
+		room_salt=$(openssl rand -base64 64 | tr -d \\n)
 		sed 's,$ADMIN_KEY,'"$admin_key"', ;
 		     s,$DB_PASS,'"$db_pass"', ;
 		     s,$ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ >devop/docker-compose.yml

@@ -76,10 +76,11 @@ To start using Zenflows with native-to-host Elixir, PostgreSQL, and Restroom ins
 
 To start using Zenflows with docker(-compose):
 
-1. Run `./mann devop.serve`.  This will create the necessary docker-compose file and fill in the secrets.
-2. When the iex (elixir shell) comes up, just type `Zenflows.Reltask.migrate()` and hit enter to migrate the database.
-
-Optionally, you can run `./mann devop.setup` before running `./mann devop.serve` to generate the docker-compose file, and edit it to suit your needs.
+1. Run `./mann devop.setup` to generate the docker-copmose file, `devop/docker-compose.yml`.
+2. Edit `devop/docker-compose.yml` to suit your needs.  Read the [Configuration Guide](docs/configuration-guide.md) for more info.
+2. Run `./mann devop.db.setup` to setup the database and run the migrations
+   (run it multiple times if it fails due to connection issues).
+3. Run `./mann devop.serve` to start the application.
 
 **[🔝 back to top](#toc)**
 

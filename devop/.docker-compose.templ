@@ -28,17 +28,17 @@ services:
     ports:
       - 8000:8000
     environment:
-      ADMIN_KEY: $ADMIN_KEY
+      ADMIN_KEY: @ADMIN_KEY
 
       DB_HOST: db
       DB_NAME: &db_name zenflows
       DB_USER: &db_user zenflows_dbuser
-      DB_PASS: &db_pass $DB_PASS
+      DB_PASS: &db_pass @DB_PASS
       # DB_PORT: 5432
 
       ROOM_HOST: zvmlet
       ROOM_PORT: &room_port 3000
-      ROOM_SALT: $ROOM_SALT
+      ROOM_SALT: @ROOM_SALT
     depends_on:
       - zvmlet
       - db

@@ -37,7 +37,7 @@ defmacro __using__(opts) do
 
 		@primary_key {:id, Zenflows.DB.ID, autogenerate: true}
 		@foreign_key_type Zenflows.DB.ID
-		@timestamps_opts type: :utc_datetime_usec
+		@timestamps_opts type: :utc_datetime_usec, inserted_at: false
 	end
 end
 end

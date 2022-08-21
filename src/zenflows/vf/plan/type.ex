@@ -46,7 +46,7 @@ object :plan do
 	field :note, :string
 
 	@desc @created
-	field :inserted_at, non_null(:datetime), name: "created"
+	field :created, non_null(:datetime), resolve: &Resolv.created/3
 
 	@desc @due
 	field :due, :datetime

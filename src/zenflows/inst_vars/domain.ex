@@ -21,7 +21,7 @@ defmodule Zenflows.InstVars.Domain do
 use Agent
 
 alias Zenflows.{DB.Repo, InstVars}
-alias Zenflows.VF.{Unit, ResourceSpecification}
+alias Zenflows.VF.{ResourceSpecification, Unit}
 
 @doc false
 def start_link(_) do

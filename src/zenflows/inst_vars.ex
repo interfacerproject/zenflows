@@ -22,7 +22,7 @@ defmodule Zenflows.InstVars do
 
 use Ecto.Schema
 
-alias Zenflows.VF.{Unit, ResourceSpecification}
+alias Zenflows.VF.{ResourceSpecification, Unit}
 
 @type t() :: %__MODULE__{
 	unit_one: Unit,

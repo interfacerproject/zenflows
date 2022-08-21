@@ -19,7 +19,7 @@ defmodule Zenflows.InstVars.Resolv do
 @moduledoc "Resolvers of instance-level, global variables."
 
 alias Zenflows.InstVars.Domain
-alias Zenflows.VF.{Unit, ResourceSpecification}
+alias Zenflows.VF.{ResourceSpecification, Unit}
 
 def instance_variables(_, _) do
 	{:ok, Domain.get()}

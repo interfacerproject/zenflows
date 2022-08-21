@@ -18,8 +18,8 @@
 defmodule Zenflows.DB.Repo.Migrations.Create_and_fill_zf_inst_vars do
 use Ecto.Migration
 
-alias Zenflows.VF.{Unit, ResourceSpecification}
 alias Zenflows.InstVars
+alias Zenflows.VF.{ResourceSpecification, Unit}
 
 def up() do
 	create table("zf_inst_vars", primary_key: false) do

@@ -40,7 +40,7 @@ object :agreement do
 	field :note, :string
 
 	@desc @created
-	field :inserted_at, non_null(:datetime), name: "created"
+	field :created, non_null(:datetime), resolve: &Resolv.created/3
 end
 
 object :agreement_response do

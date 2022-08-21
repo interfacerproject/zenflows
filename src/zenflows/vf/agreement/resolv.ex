@@ -20,6 +20,10 @@ defmodule Zenflows.VF.Agreement.Resolv do
 
 alias Zenflows.VF.Agreement.Domain
 
+def created(%{id: id}, _, _) do
+	Zenflows.DB.ID.ts(id)
+end
+
 def agreement(%{id: id}, _info) do
 	Domain.one(id)
 end

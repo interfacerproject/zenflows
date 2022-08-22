@@ -20,6 +20,32 @@ defmodule Zenflows.VF.Intent.Resolv do
 
 alias Zenflows.VF.Intent.Domain
 
+def intent(params, _) do
+	Domain.one(params)
+end
+
+def intents(params, _) do
+	Domain.all(params)
+end
+
+def create_intent(%{intent: params}, _) do
+	with {:ok, int} <- Domain.create(params) do
+		{:ok, %{intent: int}}
+	end
+end
+
+def update_intent(%{intent: %{id: id} = params}, _) do
+	with {:ok, int} <- Domain.update(id, params) do
+		{:ok, %{intent: int}}
+	end
+end
+
+def delete_intent(%{id: id}, _) do
+	with {:ok, _} <- Domain.delete(id) do
+		{:ok, true}
+	end
+end
+
 def action(int, _, _) do
 	int = Domain.preload(int, :action)
 	{:ok, int.action}
@@ -78,37 +104,5 @@ end
 def published_in(int, _, _) do
 	int = Domain.preload(int, :published_in)
 	{:ok, int.published_in}
-end
-
-def intent(%{id: id}, _) do
-	Domain.one(id)
-end
-
-def intents(_, _) do
-	{:ok, %{
-		edges: [],
-		page_info: %{
-			has_previous_page: false,
-			has_next_page: false,
-		},
-	}}
-end
-
-def create_intent(%{intent: params}, _) do
-	with {:ok, int} <- Domain.create(params) do
-		{:ok, %{intent: int}}
-	end
-end
-
-def update_intent(%{intent: %{id: id} = params}, _) do
-	with {:ok, int} <- Domain.update(id, params) do
-		{:ok, %{intent: int}}
-	end
-end
-
-def delete_intent(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
-		{:ok, true}
-	end
 end
 end

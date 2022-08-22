@@ -175,20 +175,6 @@ object :intent do
 		resolve: &Resolv.published_in/3
 end
 
-object :intent_response do
-	field :intent, non_null(:intent)
-end
-
-object :intent_edge do
-	field :cursor, non_null(:string)
-	field :node, non_null(:intent)
-end
-
-object :intent_connection do
-	field :page_info, non_null(:page_info)
-	field :edges, non_null(list_of(non_null(:intent_edge)))
-end
-
 input_object :intent_create_params do
 	@desc @action_id
 	field :action_id, non_null(:string), name: "action"
@@ -321,6 +307,20 @@ input_object :intent_update_params do
 	field :agreed_in, :uri
 end
 
+object :intent_response do
+	field :intent, non_null(:intent)
+end
+
+object :intent_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:intent)
+end
+
+object :intent_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:intent_edge)))
+end
+
 object :query_intent do
 	field :intent, :intent do
 		arg :id, non_null(:id)
@@ -329,9 +329,9 @@ object :query_intent do
 
 	field :intents, non_null(:intent_connection) do
 		arg :first, :integer
-		arg :after, :string
+		arg :after, :id
 		arg :last, :integer
-		arg :before, :string
+		arg :before, :id
 		resolve &Resolv.intents/2
 	end
 end

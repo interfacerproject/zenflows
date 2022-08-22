@@ -77,8 +77,8 @@ setup ctx do
 end
 
 #@tag :skip
-#test "by_id/1 returns a EconomicEvent" do
-#	assert %EconomicEvent{} = Domain.by_id(eco_evt.id)
+#test "one/1 returns a EconomicEvent", %{inserted: new} do
+#	assert {:ok, %EconomicEvent{}} = Domain.one(new.id)
 #end
 
 describe "`create/2` with raise:" do
@@ -142,9 +142,9 @@ describe "`create/2` with raise:" do
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value + params.resource_quantity.has_numerical_value
@@ -242,9 +242,9 @@ describe "`create/2` with produce:" do
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value + params.resource_quantity.has_numerical_value
@@ -295,9 +295,9 @@ describe "`create/2` with lower:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
 		assert res_after.onhand_quantity_has_numerical_value ==
@@ -349,9 +349,9 @@ describe "`create/2` with consume:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -515,7 +515,7 @@ describe "`create/2` with dropoff:" do
 
 	test "pass when all good", %{params: params} do
 		assert {:ok, %EconomicEvent{} = evt} = Domain.create(params, nil)
-		res = EconomicResource.Domain.by_id(evt.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(evt.resource_inventoried_as_id)
 		assert res.current_location_id == params.to_location_id
 	end
 
@@ -566,9 +566,9 @@ describe "`create/2` with accept:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value
@@ -662,12 +662,12 @@ describe "`create/2` with modify:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 		assert res_before.stage_id == nil
 
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		proc = Process.Domain.by_id(params.output_of_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, proc} = Process.Domain.one(params.output_of_id)
 		assert res_after.stage_id == proc.based_on_id
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value
@@ -758,7 +758,7 @@ describe "`create/2` with transferCustody:" do
 	end
 
 	test "pass without `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		contained_ids = Enum.map(0..9, fn _ ->
 			agent = Factory.insert!(:agent)
@@ -788,7 +788,7 @@ describe "`create/2` with transferCustody:" do
 			lot_id: Factory.insert!(:product_batch).id,
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value
@@ -821,12 +821,12 @@ describe "`create/2` with transferCustody:" do
 
 	@tag :want_to_resource
 	test "pass with `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_before = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_before} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_after = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_after} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value
@@ -864,7 +864,7 @@ describe "`create/2` with transferCustody:" do
 	@tag :want_container
 	test "fail when the resource is a container and onhand-quantity is non-positive", %{params: params} do
 		err = "the transfer-custody events need container resources to have positive onhand-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -903,7 +903,9 @@ describe "`create/2` with transferCustody:" do
 		}
 		assert {:ok, _, tmp_res, _} = Domain.create(raise_params, %{name: Factory.str("name")})
 		# TODO: use combine-separate when implemented instead
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(contained_in_id: tmp_res.id)
 		|> Repo.update!()
 
@@ -936,7 +938,9 @@ describe "`create/2` with transferCustody:" do
 
 	@tag :want_to_resource
 	test "fail when event's unit and to-resource's unit differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(onhand_quantity_has_unit_id: Factory.insert!(:unit).id)
 		|> Repo.update!()
 
@@ -946,7 +950,9 @@ describe "`create/2` with transferCustody:" do
 
 	@tag :want_to_resource
 	test "fail when resoure and to-resource don't conform to the same spec", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(conforms_to_id: Factory.insert!(:resource_specification).id)
 		|> Repo.update!()
 
@@ -1000,7 +1006,7 @@ describe "`create/2` with transferAllRights:" do
 	end
 
 	test "pass without `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		contained_ids = Enum.map(0..9, fn _ ->
 			agent = Factory.insert!(:agent)
@@ -1030,7 +1036,7 @@ describe "`create/2` with transferAllRights:" do
 			lot_id: Factory.insert!(:product_batch).id,
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1062,12 +1068,12 @@ describe "`create/2` with transferAllRights:" do
 
 	@tag :want_to_resource
 	test "pass with `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_before = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_before} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_after = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_after} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1105,7 +1111,7 @@ describe "`create/2` with transferAllRights:" do
 	@tag :want_container
 	test "fail when the resource is a container and accounting-quantity is non-positive", %{params: params} do
 		err = "the transfer-all-rights events need container resources to have positive accounting-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -1144,7 +1150,9 @@ describe "`create/2` with transferAllRights:" do
 		}
 		assert {:ok, _, tmp_res, _} = Domain.create(raise_params, %{name: Factory.str("name")})
 		# TODO: use combine-separate when implemented instead
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(contained_in_id: tmp_res.id)
 		|> Repo.update!()
 
@@ -1177,7 +1185,9 @@ describe "`create/2` with transferAllRights:" do
 
 	@tag :want_to_resource
 	test "fail when event's unit and to-resource's unit differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(accounting_quantity_has_unit_id: Factory.insert!(:unit).id)
 		|> Repo.update!()
 
@@ -1187,7 +1197,9 @@ describe "`create/2` with transferAllRights:" do
 
 	@tag :want_to_resource
 	test "fail when resoure and to-resource don't conform to the same spec", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(conforms_to_id: Factory.insert!(:resource_specification).id)
 		|> Repo.update!()
 
@@ -1241,7 +1253,7 @@ describe "`create/2` with transfer:" do
 	end
 
 	test "pass without `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		contained_ids = Enum.map(0..9, fn _ ->
 			agent = Factory.insert!(:agent)
@@ -1271,7 +1283,7 @@ describe "`create/2` with transfer:" do
 			lot_id: Factory.insert!(:product_batch).id,
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1304,12 +1316,12 @@ describe "`create/2` with transfer:" do
 
 	@tag :want_to_resource
 	test "pass with `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_before = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_before} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_after = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_after} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1323,7 +1335,9 @@ describe "`create/2` with transfer:" do
 	end
 
 	test "fail when provider doesn't have accountability over the resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(primary_accountable_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have accountability over this resource"} =
@@ -1331,7 +1345,9 @@ describe "`create/2` with transfer:" do
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(custodian_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have custody over this resource"} =
@@ -1352,7 +1368,9 @@ describe "`create/2` with transfer:" do
 
 	@tag :want_to_resource
 	test "fail when event's unit and to-resource's unit differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(accounting_quantity_has_unit_id: Factory.insert!(:unit).id)
 		|> Repo.update!()
 
@@ -1363,7 +1381,7 @@ describe "`create/2` with transfer:" do
 	@tag :want_container
 	test "fail when the resource is a container and accounting-quantity is non-positive", %{params: params} do
 		err = "the transfer events need container resources to have positive accounting-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -1375,7 +1393,7 @@ describe "`create/2` with transfer:" do
 	@tag :want_container
 	test "fail when the resource is a container and onhand-quantity is non-positive", %{params: params} do
 		err = "the transfer events need container resources to have positive onhand-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -1386,7 +1404,9 @@ describe "`create/2` with transfer:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's accounting-quantity value differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(accounting_quantity_has_numerical_value: params.resource_quantity.has_numerical_value + 1)
 		|> Repo.update!()
 		assert {:error, "the transfer events need to fully transfer the resource"} =
@@ -1395,7 +1415,9 @@ describe "`create/2` with transfer:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's onhnad-quantity value differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(onhand_quantity_has_numerical_value: params.resource_quantity.has_numerical_value + 1)
 		|> Repo.update!()
 		assert {:error, "the transfer events need to fully transfer the resource"} =
@@ -1425,7 +1447,9 @@ describe "`create/2` with transfer:" do
 		}
 		assert {:ok, _, tmp_res, _} = Domain.create(raise_params, %{name: Factory.str("name")})
 		# TODO: use combine-separate when implemented instead
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(contained_in_id: tmp_res.id)
 		|> Repo.update!()
 
@@ -1458,7 +1482,9 @@ describe "`create/2` with transfer:" do
 
 	@tag :want_to_resource
 	test "fail when resoure and to-resource don't conform to the same spec", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(conforms_to_id: Factory.insert!(:resource_specification).id)
 		|> Repo.update!()
 
@@ -1511,7 +1537,7 @@ describe "`create/2` with move:" do
 	end
 
 	test "pass without `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		contained_ids = Enum.map(0..9, fn _ ->
 			agent = Factory.insert!(:agent)
@@ -1541,7 +1567,7 @@ describe "`create/2` with move:" do
 			lot_id: Factory.insert!(:product_batch).id,
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1574,12 +1600,12 @@ describe "`create/2` with move:" do
 
 	@tag :want_to_resource
 	test "pass with `:to_resource_inventoried_as`", %{params: params} do
-		res_before = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_before = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_before} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_before} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert {:ok, %EconomicEvent{}} = Domain.create(params, nil)
-		res_after = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
-		to_res_after = EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+		{:ok, to_res_after} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
 
 		assert res_after.accounting_quantity_has_numerical_value ==
 			res_before.accounting_quantity_has_numerical_value - params.resource_quantity.has_numerical_value
@@ -1593,7 +1619,9 @@ describe "`create/2` with move:" do
 	end
 
 	test "fail when provider doesn't have accountability over the resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(primary_accountable_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have accountability over resource-inventoried-as"} =
@@ -1601,7 +1629,9 @@ describe "`create/2` with move:" do
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(custodian_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have custody over resource-inventoried-as"} =
@@ -1610,7 +1640,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_to_resource
 	test "fail when provider doesn't have accountability over the to-resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(primary_accountable_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have accountability over to-resource-inventoried-as"} =
@@ -1619,7 +1651,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_to_resource
 	test "fail when provider doesn't have custody over the to-resource", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(custodian_id: Factory.insert!(:agent).id)
 		|> Repo.update!()
 		assert {:error, "you don't have custody over to-resource-inventoried-as"} =
@@ -1640,7 +1674,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_to_resource
 	test "fail when event's unit and to-resource's unit differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(accounting_quantity_has_unit_id: Factory.insert!(:unit).id)
 		|> Repo.update!()
 
@@ -1651,7 +1687,7 @@ describe "`create/2` with move:" do
 	@tag :want_container
 	test "fail when the resource is a container and accounting-quantity is non-positive", %{params: params} do
 		err = "the move events need container resources to have positive accounting-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -1663,7 +1699,7 @@ describe "`create/2` with move:" do
 	@tag :want_container
 	test "fail when the resource is a container and onhand-quantity is non-positive", %{params: params} do
 		err = "the move events need container resources to have positive onhand-quantity"
-		res = EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: 0.0) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params, nil)
@@ -1674,7 +1710,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's accounting-quantity value differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(accounting_quantity_has_numerical_value: params.resource_quantity.has_numerical_value + 1)
 		|> Repo.update!()
 		assert {:error, "the move events need to fully move the resource"} =
@@ -1683,7 +1721,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's onhnad-quantity value differ", %{params: params} do
-		EconomicResource.Domain.by_id(params.resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(onhand_quantity_has_numerical_value: params.resource_quantity.has_numerical_value + 1)
 		|> Repo.update!()
 		assert {:error, "the move events need to fully move the resource"} =
@@ -1713,7 +1753,9 @@ describe "`create/2` with move:" do
 		}
 		assert {:ok, _, tmp_res, _} = Domain.create(raise_params, %{name: Factory.str("name")})
 		# TODO: use combine-separate when implemented instead
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(contained_in_id: tmp_res.id)
 		|> Repo.update!()
 
@@ -1746,7 +1788,9 @@ describe "`create/2` with move:" do
 
 	@tag :want_to_resource
 	test "fail when resoure and to-resource don't conform to the same spec", %{params: params} do
-		EconomicResource.Domain.by_id(params.to_resource_inventoried_as_id)
+		{:ok, res} = EconomicResource.Domain.one(params.to_resource_inventoried_as_id)
+
+		res
 		|> Changeset.change(conforms_to_id: Factory.insert!(:resource_specification).id)
 		|> Repo.update!()
 

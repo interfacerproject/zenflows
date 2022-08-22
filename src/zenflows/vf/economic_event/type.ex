@@ -173,30 +173,13 @@ object :economic_event do
 		resolve: &Resolv.triggered_by/3
 end
 
-object :economic_event_response do
-	@desc "Details of the newly created event."
-	field :economic_event, non_null(:economic_event)
-
-	#@desc """
-	#Details of any newly created `EconomicResource`, for events that
-	#create new resources.
-	#"""
-	#field :economic_resource, :economic_resource
-end
-
 input_object :economic_event_create_params do
 	@desc @action
 	field :action_id, non_null(:string), name: "action"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @input_of_id
 	field :input_of_id, :id, name: "input_of"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @output_of_id
 	field :output_of_id, :id, name: "output_of"
 
@@ -206,24 +189,15 @@ input_object :economic_event_create_params do
 	@desc @receiver_id
 	field :receiver_id, :id, name: "receiver"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @resource_inventoried_as_id
 	field :resource_inventoried_as_id, :id, name: "resource_inventoried_as"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @to_resource_inventoried_as_id
 	field :to_resource_inventoried_as_id, :id, name: "to_resource_inventoried_as"
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @resource_conforms_to_id
 	field :resource_conforms_to_id, :id, name: "resource_conforms_to"
 
@@ -245,30 +219,18 @@ input_object :economic_event_create_params do
 	@desc @note
 	field :note, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @to_location_id
 	field :to_location_id, :id, name: "to_location"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @at_location_id
 	field :at_location_id, :id, name: "at_location"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @realization_of_id
 	field :realization_of_id, :id, name: "realization_of"
 
 	@desc @agreed_in
 	field :agreed_in, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @triggered_by_id
 	field :triggered_by_id, :id, name: "triggered_by"
 end
@@ -279,26 +241,43 @@ input_object :economic_event_update_params do
 	@desc @note
 	field :note, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @realization_of_id
 	field :realization_of_id, :id, name: "realization_of"
 
 	@desc @agreed_in
 	field :agreed_in, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @triggered_by_id
 	field :triggered_by_id, :id, name: "triggered_by"
+end
+
+object :economic_event_response do
+	@desc "Details of the newly created event."
+	field :economic_event, non_null(:economic_event)
+end
+
+object :economic_event_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:economic_event)
+end
+
+object :economic_event_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:economic_event_edge)))
 end
 
 object :query_economic_event do
 	field :economic_event, :economic_event do
 		arg :id, non_null(:id)
 		resolve &Resolv.economic_event/2
+	end
+
+	field :economic_events, :economic_event_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.economic_events/2
 	end
 
 	#recipeFlow(start: ID, limit: Int): [EconomicEvent!]

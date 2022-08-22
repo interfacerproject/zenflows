@@ -108,7 +108,6 @@ describe "Mutation" do
 				}
 			""", vars: %{"process" => Map.put(params, "id", old.id)})
 
-
 		assert data["id"] == old.id
 		keys = ~w[name hasBeginning hasEnd finished classifiedAs]
 		assert Map.take(data, keys) == Map.take(params, keys)

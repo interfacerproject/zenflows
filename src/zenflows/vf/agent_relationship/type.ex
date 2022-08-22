@@ -26,11 +26,14 @@ alias Zenflows.VF.AgentRelationship.Resolv
 The subject of a relationship between two agents.  For example, if Mary
 is a member of a group, then Mary is the subject.
 """
+@subject_id "(`Agent`) #{@subject}"
 @object """
 The object of a relationship between two agents.  For example, if Mary
 is a member of a group, then the group is the object.
 """
+@object_id "(`Agent`) #{@object}"
 @relationship "A kind of relationship that exists between two agents."
+@relationship_id "(`AgentRelationshipRole`) #{@relationship}"
 #@in_scope_of """
 #Grouping around something to create a boundary or context, used for
 #documenting, accounting, planning.
@@ -61,18 +64,14 @@ object :agent_relationship do
 	field :note, :string
 end
 
-object :agent_relationship_response do
-	field :agent_relationship, non_null(:agent_relationship)
-end
-
 input_object :agent_relationship_create_params do
-	@desc "(`Agent`) " <> @subject
+	@desc @subject_id
 	field :subject_id, non_null(:id), name: "subject"
 
-	@desc "(`Agent`) " <> @object
+	@desc @object_id
 	field :object_id, non_null(:id), name: "object"
 
-	@desc "(`AgentRelationshipRole`) " <> @relationship
+	@desc @relationship_id
 	field :relationship_id, non_null(:id), name: "relationship"
 
 	#@desc @in_scope_of
@@ -85,13 +84,13 @@ end
 input_object :agent_relationship_update_params do
 	field :id, non_null(:id)
 
-	@desc "(`Agent`) " <> @subject
+	@desc @subject_id
 	field :subject_id, :id, name: "subject"
 
-	@desc "(`Agent`) " <> @object
+	@desc @object_id
 	field :object_id, :id, name: "object"
 
-	@desc "(`AgentRelationshipRole`) " <> @relationship
+	@desc @relationship_id
 	field :relationship_id, :id, name: "relationship"
 
 	#@desc @in_scope_of
@@ -101,6 +100,20 @@ input_object :agent_relationship_update_params do
 	field :note, :string
 end
 
+object :agent_relationship_response do
+	field :agent_relationship, non_null(:agent_relationship)
+end
+
+object :agent_relationship_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:agent_relationship)
+end
+
+object :agent_relationship_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:agent_relationship_edge)))
+end
+
 object :query_agent_relationship do
 	@desc "Retrieve details of an agent relationship by its ID."
 	field :agent_relationship, :agent_relationship do
@@ -108,11 +121,17 @@ object :query_agent_relationship do
 		resolve &Resolv.agent_relationship/2
 	end
 
-	#@desc """
-	#Retrieve details of all the relationships between all agents
-	#registered in this collaboration space.
-	#"""
-	#agentRelationships(start: ID, limit: Int): [AgentRelationship!]
+	@desc """
+	Retrieve details of all the relationships between all agents
+	registered in this collaboration space.
+	"""
+	field :agent_relationships, :agent_relationship_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.agent_relationships/2
+	end
 end
 
 object :mutation_agent_relationship do

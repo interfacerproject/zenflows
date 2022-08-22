@@ -30,42 +30,45 @@ setup do
 			# in_scope_of:
 			note: Factory.uniq("note"),
 		},
-		agent_relationship: Factory.insert!(:agent_relationship),
+		inserted: Factory.insert!(:agent_relationship),
 	}
 end
 
-test "by_id/1 returns an AgentRelationship", %{agent_relationship: rel} do
-	assert %AgentRelationship{} = Domain.by_id(rel.id)
+describe "one/1" do
+	test "with good id: finds the AgentRelationship", %{inserted: %{id: id}} do
+		assert {:ok, %AgentRelationship{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the AgentRelationship"do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates an AgentRelationship with valid params", %{params: params} do
-		assert {:ok, %AgentRelationship{} = rel} = Domain.create(params)
-
-		assert rel.subject_id == params.subject_id
-		assert rel.object_id == params.object_id
-		assert rel.relationship_id == params.relationship_id
-		assert rel.note == params.note
-	end
-
-	test "doesn't create a AgentRelationship with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates an AgentRelationship with valid params", %{params: params, agent_relationship: old} do
-		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates an AgentRelationship", %{params: params} do
+		assert {:ok, %AgentRelationship{} = new} = Domain.create(params)
 		assert new.subject_id == params.subject_id
 		assert new.object_id == params.object_id
 		assert new.relationship_id == params.relationship_id
 		assert new.note == params.note
 	end
 
-	test "doesn't update a AgentRelationship", %{agent_relationship: old} do
-		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create an AgentRelationship" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the AgentRelationship", %{params: params, inserted: old} do
+		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, params)
+		assert new.subject_id == params.subject_id
+		assert new.object_id == params.object_id
+		assert new.relationship_id == params.relationship_id
+		assert new.note == params.note
+	end
+
+	test "with bad params: doesn't update the AgentRelationship", %{inserted: old} do
+		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, %{})
 		assert new.subject_id == old.subject_id
 		assert new.object_id == old.object_id
 		assert new.relationship_id == old.relationship_id
@@ -73,8 +76,14 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes an AgentRelationship", %{agent_relationship: %{id: id}} do
-	assert {:ok, %AgentRelationship{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the AgentRelationship", %{inserted: %{id: id}} do
+		assert {:ok, %AgentRelationship{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the AgentRelationship" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 end

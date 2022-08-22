@@ -20,40 +20,44 @@ defmodule Zenflows.VF.Person.Resolv do
 
 alias Zenflows.VF.{Agent, Person, Person.Domain}
 
-def person(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def person(params, _) do
+	Domain.one(params)
 end
 
-def person_exists(params, _info) do
-	{:ok, Domain.by(params)}
+def people(params, _) do
+	Domain.all(params)
 end
 
-def create_person(%{person: params}, _info) do
+def person_exists(params, _) do
+	Domain.one(params)
+end
+
+def create_person(%{person: params}, _) do
 	with {:ok, per} <- Domain.create(params) do
 		{:ok, %{agent: per}}
 	end
 end
 
-def update_person(%{person: %{id: id} = params}, _info) do
+def update_person(%{person: %{id: id} = params}, _) do
 	with {:ok, per} <- Domain.update(id, params) do
 		{:ok, %{agent: per}}
 	end
 end
 
-def delete_person(%{id: id}, _info) do
+def delete_person(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def primary_location(%Person{} = per, _args, _info) do
+def primary_location(%Person{} = per, _, _) do
 	per = Domain.preload(per, :primary_location)
 	{:ok, per.primary_location}
 end
 
 # For some reason, Absinthe calls this one instead of the one on
 # Zenflows.VF.Agent.Type for queries to Agent itself.
-def primary_location(%Agent{} = agent, args, info) do
-	Agent.Resolv.primary_location(agent, args, info)
+def primary_location(%Agent{} = agent, params, info) do
+	Agent.Resolv.primary_location(agent, params, info)
 end
 end

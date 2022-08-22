@@ -34,6 +34,7 @@ occur and mail can be sent.	 This is usually a mappable geographic
 location.  It also could be a website address, as in the case of agents
 who have no physical location.
 """
+@primary_location_id "(`SpatialThing`) #{@primary_location}"
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
 @ecdh_public_key "ecdh public key, encoded by zenroom"
@@ -83,10 +84,6 @@ object :person do
 	field :schnorr_public_key, :string
 end
 
-object :person_response do
-	field :agent, non_null(:person)
-end
-
 input_object :person_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -100,7 +97,7 @@ input_object :person_create_params do
 	# TODO: When
 	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
 	# apply the correct changes if any.
-	@desc "(`SpatialThing`) " <> @primary_location
+	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @user
@@ -137,11 +134,25 @@ input_object :person_update_params do
 	@desc @note
 	field :note, :string
 
-	@desc "(`SpatialThing`) " <> @primary_location
+	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @user
 	field :user, :string
+end
+
+object :person_response do
+	field :agent, non_null(:person)
+end
+
+object :person_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:person)
+end
+
+object :person_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:person_edge)))
 end
 
 object :query_person do
@@ -151,6 +162,18 @@ object :query_person do
 		resolve &Resolv.person/2
 	end
 
+	@desc """
+	Loads all people who have publicly registered with this collaboration
+	space.
+	"""
+	field :people, :person_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.people/2
+	end
+
 	@desc "Find if a person exists by email and eddsa-public-key."
 	field :person_exists, :person do
 		meta only_guest?: true
@@ -158,9 +181,6 @@ object :query_person do
 		arg :eddsa_public_key, non_null(:string)
 		resolve &Resolv.person_exists/2
 	end
-
-	#"Loads all people who have publicly registered with this collaboration space."
-	#people(start: ID, limit: Int): [Person!]
 end
 
 object :mutation_person do

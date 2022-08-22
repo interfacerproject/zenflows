@@ -21,80 +21,65 @@ use ZenflowsTest.Help.EctoCase, async: true
 alias Ecto.Changeset
 alias Zenflows.VF.{Person, Person.Domain}
 
-setup ctx do
-	params = %{
-		name: Factory.uniq("name"),
-		image: Factory.img(),
-		note: Factory.uniq("note"),
-		primary_location_id: Factory.insert!(:spatial_thing).id,
-		user: Factory.uniq("user"),
-		email: "#{Factory.uniq("user")}@example.com",
-		ecdh_public_key: Base.encode64("ecdh_public_key"),
-		eddsa_public_key: Base.encode64("eddsa_public_key"),
-		ethereum_address: Base.encode64("ethereum_address"),
-		reflow_public_key: Base.encode64("reflow_public_key"),
-		schnorr_public_key: Base.encode64("schnorr_public_key"),
+setup do
+	%{
+		params: %{
+			name: Factory.uniq("name"),
+			image: Factory.img(),
+			note: Factory.uniq("note"),
+			primary_location_id: Factory.insert!(:spatial_thing).id,
+			user: Factory.uniq("user"),
+			email: "#{Factory.uniq("user")}@example.com",
+			ecdh_public_key: Base.encode64("ecdh_public_key"),
+			eddsa_public_key: Base.encode64("eddsa_public_key"),
+			ethereum_address: Base.encode64("ethereum_address"),
+			reflow_public_key: Base.encode64("reflow_public_key"),
+			schnorr_public_key: Base.encode64("schnorr_public_key"),
+		},
+		inserted: Factory.insert!(:person),
 	}
-
-	if ctx[:no_insert] do
-		%{params: params}
-	else
-		%{params: params, per: Factory.insert!(:person)}
-	end
 end
 
-describe "by_id/1" do
-	test "returns a Person", %{per: per}  do
-		assert %Person{type: :per} = Domain.by_id(per.id)
+describe "one/1" do
+	test "with good id: finds the Person", %{inserted: %{id: id}} do
+		assert {:ok, %Person{}} = Domain.one(id)
 	end
 
-	test "doesn't return an Organization" do
+	test "with org's id: doesn't return an Organization" do
 		org = Factory.insert!(:organization)
-
-		assert Domain.by_id(org.id) == nil
+		assert {:error, "not found"} = Domain.one(org.id)
 	end
-end
 
-@tag :no_insert
-test "all/0 returns all Persons" do
-	want_ids =
-		Enum.map(1..10, fn _ -> Factory.insert!(:person).id end)
-		|> Enum.sort()
-	have_ids =
-		Domain.all()
-		|> Enum.map(& &1.id)
-		|> Enum.sort()
-
-	assert have_ids == want_ids
+	test "with bad id: doesn't find the Person" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates a Person with valid params", %{params: params} do
-		assert {:ok, %Person{} = per} = Domain.create(params)
-
-		assert per.type == :per
-		assert per.name == params.name
-		assert per.note == params.note
-		assert per.image == params.image
-		assert per.primary_location_id == params.primary_location_id
-		assert per.user == params.user
-		assert per.email == params.email
-		assert per.ecdh_public_key == params.ecdh_public_key
-		assert per.eddsa_public_key == params.eddsa_public_key
-		assert per.ethereum_address == params.ethereum_address
-		assert per.reflow_public_key == params.reflow_public_key
-		assert per.schnorr_public_key == params.schnorr_public_key
+	test "with good params: creates a Person", %{params: params} do
+		assert {:ok, %Person{} = new} = Domain.create(params)
+		assert new.type == :per
+		assert new.name == params.name
+		assert new.note == params.note
+		assert new.image == params.image
+		assert new.primary_location_id == params.primary_location_id
+		assert new.user == params.user
+		assert new.email == params.email
+		assert new.ecdh_public_key == params.ecdh_public_key
+		assert new.eddsa_public_key == params.eddsa_public_key
+		assert new.ethereum_address == params.ethereum_address
+		assert new.reflow_public_key == params.reflow_public_key
+		assert new.schnorr_public_key == params.schnorr_public_key
 	end
 
-	test "doesn't create a Person with invalid params" do
+	test "with bad params: doesn't create a Person" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a Person with valid params", %{params: params, per: old} do
+	test "with good params: updates the Person", %{params: params, inserted: old} do
 		assert {:ok, %Person{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.image == params.image
@@ -108,10 +93,8 @@ describe "update/2" do
 		assert new.schnorr_public_key == old.schnorr_public_key
 	end
 
-	test "doesn't update a Person with invalid params", %{per: old} do
-		assert {:ok, %Person{} = new} =
-			Domain.update(old.id, %{email: "can't change that yet"})
-
+	test "with bad params: doesn't update the Person", %{inserted: old} do
+		assert {:ok, %Person{} = new} = Domain.update(old.id, %{email: "can't change that yet"})
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.image == old.image
@@ -126,8 +109,14 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a Person", %{per: %{id: id}} do
-	assert {:ok, %Person{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the Person", %{inserted: %{id: id}} do
+		assert {:ok, %Person{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the Person" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 end

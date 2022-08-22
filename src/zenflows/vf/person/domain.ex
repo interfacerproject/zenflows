@@ -22,62 +22,55 @@ import Ecto.Query
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.Person
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by(repo(), Keyword.t() | map()) :: Person.t() | nil
-def by(repo \\ Repo, clauses)
-def by(repo, clauses) when is_map(clauses) do
-	repo.get_by(Person, Map.put(clauses, :type, :per))
-end
-def by(repo, clauses) when is_list(clauses) do
-	repo.get_by(Person, Keyword.put(clauses, :type, :per))
-end
-
-@spec by_id(repo(), id()) :: Person.t() | nil
-def by_id(repo \\ Repo, id) do
-	by(repo, id: id)
-end
-
-@spec by_user(repo(), String.t()) :: Person.t() | nil
-def by_user(repo \\ Repo, user) do
-	by(repo, user: user)
+@spec one(repo(), id() | map() | Keyword.t()) :: {:ok, Person.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	clauses = if(is_map(clauses),
+		do: Map.put(clauses, :type, :per),
+		else: Keyword.put(clauses, :type, :per))
+	case repo.get_by(Person, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
 end
 
-@spec exists_email(String.t()) :: boolean()
-def exists_email(email) do
-	where(Person, email: ^email) |> Repo.exists?()
+@spec all(Paging.params()) :: Paging.result(Person.t())
+def all(params) do
+	Paging.page(where(Person, type: :per), params)
 end
 
-@spec all() :: [Person.t()]
-def all() do
-	Person
-	|> from()
-	|> where(type: :per)
-	|> Repo.all()
+@spec exists?(Keyword.t()) :: boolean()
+def exists?(conds) do
+	where(Person, ^conds) |> Repo.exists?()
 end
 
 @spec create(params()) :: {:ok, Person.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:per, Person.chgset(params))
+	|> Multi.insert(:insert, Person.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{per: p}} -> {:ok, p}
+		{:ok, %{insert: p}} -> {:ok, p}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, Person.t()} | {:error, String.t() | chgset()}
+@spec update(id(), params())
+	:: {:ok, Person.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &Person.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &Person.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: p}} -> {:ok, p}
@@ -88,8 +81,9 @@ end
 @spec delete(id()) :: {:ok, Person.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, &(&1.one))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: p}} -> {:ok, p}
@@ -100,17 +94,5 @@ end
 @spec preload(Person.t(), :primary_location) :: Person.t()
 def preload(per, :primary_location) do
 	Repo.preload(per, :primary_location)
-end
-
-# Returns a Person in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, Person.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			per -> {:ok, per}
-		end
-	end
 end
 end

@@ -20,35 +20,48 @@ defmodule Zenflows.VF.Process.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.Process
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: Process.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(Process, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, Process.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(Process, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(Process.t())
+def all(params) do
+	Paging.page(Process, params)
 end
 
 @spec create(params()) :: {:ok, Process.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:proc, Process.chgset(params))
+	|> Multi.insert(:insert, Process.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{proc: p}} -> {:ok, p}
+		{:ok, %{insert: p}} -> {:ok, p}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, Process.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, Process.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &Process.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &Process.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: p}} -> {:ok, p}
@@ -56,11 +69,12 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, Process.t()} | {:error, chgset()}
+@spec delete(id()) :: {:ok, Process.t()} | {:error, String.t()  | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: p}} -> {:ok, p}
@@ -80,18 +94,5 @@ end
 
 def preload(proc, :nested_in) do
 	Repo.preload(proc, :nested_in)
-end
-
-# Returns a Process in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id())
-	:: (repo(), changes() -> {:ok, Process.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			p -> {:ok, p}
-		end
-	end
 end
 end

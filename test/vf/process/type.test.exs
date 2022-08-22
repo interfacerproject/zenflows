@@ -21,143 +21,111 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
-			has_beginning: DateTime.utc_now(),
-			has_end: DateTime.utc_now(),
-			finished: Factory.bool(),
-			classified_as: Factory.uniq_list("class"),
-			based_on_id: Factory.insert!(:process_specification).id,
-			planned_within_id: Factory.insert!(:plan).id,
-			nested_in_id: Factory.insert!(:scenario).id,
+			"name" => Factory.uniq("name"),
+			"note" => Factory.uniq("note"),
+			"hasBeginning" => Factory.iso_now(),
+			"hasEnd" => Factory.iso_now(),
+			"finished" => Factory.bool(),
+			"classifiedAs" => Factory.uniq_list("class"),
+			"basedOn" => Factory.insert!(:process_specification).id,
+			"plannedWithin" => Factory.insert!(:plan).id,
+			"nestedIn" => Factory.insert!(:scenario).id,
 		},
-		process: Factory.insert!(:process),
+		inserted: Factory.insert!(:process),
 	}
 end
 
-describe "Query" do
-	test "process()", %{process: proc} do
-		assert %{data: %{"process" => data}} =
-			query!("""
-				process(id: "#{proc.id}") {
-					id
-					name
-					note
-					hasBeginning
-					hasEnd
-					finished
-					deletable
-					classifiedAs
-					basedOn {id}
-					plannedWithin {id}
-					nestedIn {id}
-				}
-			""")
+@frag """
+fragment process on Process {
+	id
+	name
+	note
+	hasBeginning
+	hasEnd
+	finished
+	deletable
+	classifiedAs
+	basedOn {id}
+	plannedWithin {id}
+	nestedIn {id}
+}
+"""
 
-		assert data["id"] == proc.id
-		assert data["name"] == proc.name
-		assert data["hasBeginning"] == DateTime.to_iso8601(proc.has_beginning)
-		assert data["hasEnd"] == DateTime.to_iso8601(proc.has_end)
-		assert data["finished"] == proc.finished
+describe "Query" do
+	test "process", %{inserted: new} do
+		assert %{data: %{"process" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					process(id: $id) {...process}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["hasBeginning"] == DateTime.to_iso8601(new.has_beginning)
+		assert data["hasEnd"] == DateTime.to_iso8601(new.has_end)
+		assert data["finished"] == new.finished
 		assert data["deletable"] == false
-		assert data["classifiedAs"] == proc.classified_as
-		assert data["basedOn"]["id"] == proc.based_on_id
-		assert data["plannedWithin"]["id"] == proc.planned_within_id
-		assert data["nestedIn"]["id"] == proc.nested_in_id
+		assert data["classifiedAs"] == new.classified_as
+		assert data["basedOn"]["id"] == new.based_on_id
+		assert data["plannedWithin"]["id"] == new.planned_within_id
+		assert data["nestedIn"]["id"] == new.nested_in_id
 	end
 end
 
 describe "Mutation" do
-	test "createProcess()", %{params: params} do
+	test "createProcess", %{params: params} do
 		assert %{data: %{"createProcess" => %{"process" => data}}} =
-			mutation!("""
-				createProcess(process: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-					hasBeginning: "#{params.has_beginning}"
-					hasEnd: "#{params.has_end}"
-					finished: #{params.finished}
-					classifiedAs: #{inspect(params.classified_as)}
-					basedOn: "#{params.based_on_id}"
-					plannedWithin: "#{params.planned_within_id}"
-					nestedIn: "#{params.nested_in_id}"
-				}) {
-					process {
-						id
-						name
-						note
-						hasBeginning
-						hasEnd
-						finished
-						deletable
-						classifiedAs
-						basedOn {id}
-						plannedWithin {id}
-						nestedIn {id}
+			run!("""
+				#{@frag}
+				mutation ($process: ProcessCreateParams!) {
+					createProcess(process: $process) {
+						process {...process}
 					}
 				}
-			""")
+			""", vars: %{"process" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["hasBeginning"] == DateTime.to_iso8601(params.has_beginning)
-		assert data["hasEnd"] == DateTime.to_iso8601(params.has_end)
-		assert data["finished"] == params.finished
+
+		keys = ~w[name hasBeginning hasEnd finished classifiedAs]
+		assert Map.take(data, keys) == Map.take(params, keys)
+
 		assert data["deletable"] == false
-		assert data["classifiedAs"] == params.classified_as
-		assert data["basedOn"]["id"] == params.based_on_id
-		assert data["plannedWithin"]["id"] == params.planned_within_id
-		assert data["nestedIn"]["id"] == params.nested_in_id
+		assert data["basedOn"]["id"] == params["basedOn"]
+		assert data["plannedWithin"]["id"] == params["plannedWithin"]
+		assert data["nestedIn"]["id"] == params["nestedIn"]
 	end
 
-	test "updateProcess()", %{params: params, process: proc} do
+	test "updateProcess", %{params: params, inserted: old} do
 		assert %{data: %{"updateProcess" => %{"process" => data}}} =
-			mutation!("""
-				updateProcess(process: {
-					id: "#{proc.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-					hasBeginning: "#{params.has_beginning}"
-					hasEnd: "#{params.has_end}"
-					finished: #{params.finished}
-					classifiedAs: #{inspect(params.classified_as)}
-					basedOn: "#{params.based_on_id}"
-					plannedWithin: "#{params.planned_within_id}"
-					nestedIn: "#{params.nested_in_id}"
-				}) {
-					process {
-						id
-						name
-						note
-						hasBeginning
-						hasEnd
-						finished
-						deletable
-						classifiedAs
-						basedOn {id}
-						plannedWithin {id}
-						nestedIn {id}
+			run!("""
+				#{@frag}
+				mutation ($process: ProcessUpdateParams!) {
+					updateProcess(process: $process) {
+						process {...process}
 					}
 				}
-			""")
+			""", vars: %{"process" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == proc.id
-		assert data["name"] == params.name
-		assert data["hasBeginning"] == DateTime.to_iso8601(params.has_beginning)
-		assert data["hasEnd"] == DateTime.to_iso8601(params.has_end)
-		assert data["finished"] == params.finished
+
+		assert data["id"] == old.id
+		keys = ~w[name hasBeginning hasEnd finished classifiedAs]
+		assert Map.take(data, keys) == Map.take(params, keys)
+
 		assert data["deletable"] == false
-		assert data["classifiedAs"] == params.classified_as
-		assert data["basedOn"]["id"] == params.based_on_id
-		assert data["plannedWithin"]["id"] == params.planned_within_id
-		assert data["nestedIn"]["id"] == params.nested_in_id
+		assert data["basedOn"]["id"] == params["basedOn"]
+		assert data["plannedWithin"]["id"] == params["plannedWithin"]
+		assert data["nestedIn"]["id"] == params["nestedIn"]
 	end
 
-	test "deleteProcess()", %{process: %{id: id}} do
+	test "deleteProcess", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteProcess" => true}} =
-			mutation!("""
-				deleteProcess(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteProcess(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

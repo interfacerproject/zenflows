@@ -41,12 +41,15 @@ References one or more concepts in a common taxonomy or other
 classification scheme for purposes of categorization or grouping.
 """
 @based_on "The definition or specification for a process."
+@based_on_id "(`ProcesssSpecification`) #{@based_on}"
 @planned_within """
 The process with its inputs and outputs is part of the plan.
 """
+@planned_within_id "(`Plan`) #{@planned_within}"
 @nested_in """
 The process with its inputs and outputs is part of the scenario.
 """
+@nested_in_id "(`Scenario`) #{@nested_in}"
 
 @desc """
 A logical collection of processes that constitute a body of processned work
@@ -88,10 +91,6 @@ object :process do
 	field :nested_in, :scenario, resolve: &Resolv.nested_in/3
 end
 
-object :process_response do
-	field :process, non_null(:process)
-end
-
 input_object :process_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -111,22 +110,13 @@ input_object :process_create_params do
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`ProcessSpecification`) " <> @based_on
+	@desc @based_on_id
 	field :based_on_id, :id, name: "based_on"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Plan`) " <> @planned_within
+	@desc @planned_within_id
 	field :planned_within_id, :id, name: "planned_within"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @nested_in
+	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
 end
 
@@ -151,23 +141,28 @@ input_object :process_update_params do
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`ProcessSpecification`) " <> @based_on
+	@desc :based_on_id
 	field :based_on_id, :id, name: "based_on"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Plan`) " <> @planned_within
+	@desc @planned_within_id
 	field :planned_within_id, :id, name: "planned_within"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @nested_in
+	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
+end
+
+object :process_response do
+	field :process, non_null(:process)
+end
+
+object :process_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:process)
+end
+
+object :process_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:process_edge)))
 end
 
 object :query_process do
@@ -176,7 +171,13 @@ object :query_process do
 		resolve &Resolv.process/2
 	end
 
-	#processes(start: ID, limit: Int): [Process!]
+	field :processes, :process_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.processes/2
+	end
 end
 
 object :mutation_process do

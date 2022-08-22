@@ -39,6 +39,9 @@ services:
       ROOM_HOST: zvmlet
       ROOM_PORT: &room_port 3000
       ROOM_SALT: @ROOM_SALT
+
+      GQL_DEF_PAGE_SIZE: 50
+      GQL_MAX_PAGE_SIZE: 100
     depends_on:
       - zvmlet
       - db

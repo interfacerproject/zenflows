@@ -67,7 +67,7 @@ setup ctx do
 end
 
 test "by_id/1 returns a EconomicResource", %{inserted: eco_res} do
-	assert %EconomicResource{} = Domain.by_id(eco_res.id)
+	assert {:ok, %EconomicResource{}} = Domain.one(eco_res.id)
 end
 
 describe "update/2" do
@@ -118,10 +118,9 @@ describe "update/2" do
 	end
 end
 
-@tag skip: "TODO: fix economic resource factory"
 test "delete/1 deletes a EconomicResource", %{inserted: %{id: id}} do
 	assert {:ok, %EconomicResource{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+	assert {:error, "not found"} = Domain.one(id)
 end
 
 describe "preload/2" do

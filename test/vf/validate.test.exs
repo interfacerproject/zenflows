@@ -150,7 +150,7 @@ describe "img/2" do
 
 	test "with too long param" do
 		assert %Changeset{errors: errs} =
-			%{img: String.duplicate("a", 25 * 1024**2 + 1)}
+			%{img: String.duplicate("a", 25 * 1024 * 1024 + 1)}
 			|> img_chgset()
 			|> Validate.img(:img)
 

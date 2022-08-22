@@ -20,12 +20,12 @@ defmodule Zenflows.VF.Agreement.Resolv do
 
 alias Zenflows.VF.Agreement.Domain
 
-def created(%{id: id}, _, _) do
-	Zenflows.DB.ID.ts(id)
+def agreement(params, _info) do
+	Domain.one(params)
 end
 
-def agreement(%{id: id}, _info) do
-	Domain.one(id)
+def agreements(params, _) do
+	Domain.all(params)
 end
 
 def create_agreement(%{agreement: params}, _info) do
@@ -44,5 +44,9 @@ def delete_agreement(%{id: id}, _info) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
+end
+
+def created(%{id: id}, _, _) do
+	Zenflows.DB.ID.ts(id)
 end
 end

@@ -21,77 +21,77 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 		},
-		process_specification: Factory.insert!(:process_specification),
+		inserted: Factory.insert!(:process_specification),
 	}
 end
 
-describe "Query" do
-	test "processSpecification()", %{process_specification: proc_spec} do
-		assert %{data: %{"processSpecification" => data}} =
-			query!("""
-				processSpecification(id: "#{proc_spec.id}") {
-					id
-					name
-					note
-				}
-			""")
+@frag """
+fragment processSpecification on ProcessSpecification {
+	id
+	name
+	note
+}
+"""
 
-		assert data["id"] == proc_spec.id
-		assert data["name"] == proc_spec.name
-		assert data["note"] == proc_spec.note
+describe "Query" do
+	test "processSpecification", %{inserted: new} do
+		assert %{data: %{"processSpecification" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					processSpecification(id: $id) {...processSpecification}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
 	end
 end
 
 describe "Mutation" do
-	test "createProcessSpecification()", %{params: params} do
+	test "createProcessSpecification", %{params: params} do
 		assert %{data: %{"createProcessSpecification" => %{"processSpecification" => data}}} =
-			mutation!("""
-				createProcessSpecification(processSpecification: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					processSpecification {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($processSpecification: ProcessSpecificationCreateParams!) {
+					createProcessSpecification(processSpecification: $processSpecification) {
+						processSpecification {...processSpecification}
 					}
 				}
-			""")
+			""", vars: %{"processSpecification" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "updateProcessSpecification()", %{params: params, process_specification: proc_spec} do
+	test "updateProcessSpecification", %{params: params, inserted: old} do
 		assert %{data: %{"updateProcessSpecification" => %{"processSpecification" => data}}} =
-			mutation!("""
-				updateProcessSpecification(processSpecification: {
-					id: "#{proc_spec.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					processSpecification {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($processSpecification: ProcessSpecificationUpdateParams!) {
+					updateProcessSpecification(processSpecification: $processSpecification) {
+						processSpecification {...processSpecification}
 					}
 				}
-			""")
+			""", vars: %{"processSpecification" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == proc_spec.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "deleteProcessSpecification()", %{process_specification: %{id: id}} do
+	test "deleteProcessSpecification", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteProcessSpecification" => true}} =
-			mutation!("""
-				deleteProcessSpecification(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteProcessSpecification(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

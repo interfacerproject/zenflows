@@ -35,11 +35,11 @@ setup ctx do
 	%{id: unit_id} = Factory.insert!(:unit)
 	num_val = Factory.float()
 	params = %{
-		name: Factory.uniq("name"),
-		note: Factory.uniq("note"),
+		name: Factory.str("name"),
+		note: Factory.str("note"),
 		image: Factory.img(),
-		tracking_identifier: Factory.uniq("tracking identifier"),
-		classified_as: Factory.uniq_list("uri"),
+		tracking_identifier: Factory.str("tracking identifier"),
+		classified_as: Factory.str_list("uri"),
 		conforms_to_id: Factory.insert!(:resource_specification).id,
 		accounting_quantity: %{
 			has_unit_id: unit_id,
@@ -67,7 +67,7 @@ setup ctx do
 end
 
 test "by_id/1 returns a EconomicResource", %{inserted: eco_res} do
-	assert %EconomicResource{} = Domain.by_id(eco_res.id)
+	assert {:ok, %EconomicResource{}} = Domain.one(eco_res.id)
 end
 
 describe "update/2" do
@@ -118,10 +118,9 @@ describe "update/2" do
 	end
 end
 
-@tag skip: "TODO: fix economic resource factory"
 test "delete/1 deletes a EconomicResource", %{inserted: %{id: id}} do
 	assert {:ok, %EconomicResource{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+	assert {:error, "not found"} = Domain.one(id)
 end
 
 describe "preload/2" do

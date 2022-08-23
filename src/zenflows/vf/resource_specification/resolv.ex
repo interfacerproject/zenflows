@@ -18,39 +18,40 @@
 defmodule Zenflows.VF.ResourceSpecification.Resolv do
 @moduledoc "Resolvers of ResourceSpecifications."
 
-alias Zenflows.VF.{
-	ResourceSpecification,
-	ResourceSpecification.Domain,
-}
+alias Zenflows.VF.ResourceSpecification.Domain
 
-def resource_specification(%{id: id}, _info) do
-	Domain.one(id)
+def resource_specification(params, _) do
+	Domain.one(params)
 end
 
-def create_resource_specification(%{resource_specification: params}, _info) do
+def resource_specifications(params, _) do
+	Domain.all(params)
+end
+
+def create_resource_specification(%{resource_specification: params}, _) do
 	with {:ok, proc_spec} <- Domain.create(params) do
 		{:ok, %{resource_specification: proc_spec}}
 	end
 end
 
-def update_resource_specification(%{resource_specification: %{id: id} = params}, _info) do
+def update_resource_specification(%{resource_specification: %{id: id} = params}, _) do
 	with {:ok, proc_spec} <- Domain.update(id, params) do
 		{:ok, %{resource_specification: proc_spec}}
 	end
 end
 
-def delete_resource_specification(%{id: id}, _info) do
+def delete_resource_specification(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def default_unit_of_resource(%ResourceSpecification{} = res_spec, _args, _info) do
+def default_unit_of_resource(res_spec, _, _) do
 	res_spec = Domain.preload(res_spec, :default_unit_of_resource)
 	{:ok, res_spec.default_unit_of_resource}
 end
 
-def default_unit_of_effort(%ResourceSpecification{} = res_spec, _args, _info) do
+def default_unit_of_effort(res_spec, _, _) do
 	res_spec = Domain.preload(res_spec, :default_unit_of_effort)
 	{:ok, res_spec.default_unit_of_effort}
 end

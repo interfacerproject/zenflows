@@ -81,3 +81,16 @@ if byte_size(admin_key) != 64,
 	do: raise "ADMIN_KEY must be a 64-octect long, lowercase-base16-encoded string"
 config :zenflows, Zenflows.Admin,
 	admin_key: admin_key
+
+#
+# gql
+#
+def_page_size = get_env_int.("GQL_DEF_PAGE_SIZE", 50)
+if def_page_size < 1,
+	do: raise "GQL_DEF_PAGE_SIZE must be greater than 1"
+max_page_size = get_env_int.("GQL_MAX_PAGE_SIZE", 100)
+if max_page_size < def_page_size,
+	do: raise "GQL_MAX_PAGE_SIZE can't be less than GQL_DEF_PAGE_SIZE"
+config :zenflows, Zenflows.GQL,
+	def_page_size: def_page_size,
+	max_page_size: max_page_size

@@ -43,10 +43,6 @@ object :agreement do
 	field :created, non_null(:datetime), resolve: &Resolv.created/3
 end
 
-object :agreement_response do
-	field :agreement, non_null(:agreement)
-end
-
 input_object :agreement_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -65,10 +61,32 @@ input_object :agreement_update_params do
 	field :note, :string
 end
 
+object :agreement_response do
+	field :agreement, non_null(:agreement)
+end
+
+object :agreement_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:agreement)
+end
+
+object :agreement_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:agreement_edge)))
+end
+
 object :query_agreement do
 	field :agreement, :agreement do
 		arg :id, non_null(:id)
 		resolve &Resolv.agreement/2
+	end
+
+	field :agreements, :agreement_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.agreements/2
 	end
 end
 

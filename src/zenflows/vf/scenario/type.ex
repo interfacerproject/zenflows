@@ -38,10 +38,12 @@ period.
 @defined_as """
 The scenario definition for this scenario, for example yearly budget.
 """
+@defined_as_id "(`ScenarioDefinition`) #{@defined_as}"
 @refinement_of """
 This scenario refines another scenario, often as time moves closer or
 for more detail.
 """
+@refinement_of_id "(`Scenario`) #{@refinement_of}"
 
 @desc """
 An estimated or analytical logical collection of higher level processes
@@ -70,10 +72,6 @@ object :scenario do
 	field :refinement_of, :scenario, resolve: &Resolv.refinement_of/3
 end
 
-object :scenario_response do
-	field :scenario, non_null(:scenario)
-end
-
 input_object :scenario_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -87,16 +85,10 @@ input_object :scenario_create_params do
 	@desc @has_end
 	field :has_end, :datetime
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`ScenarioDefinition`) " <> @defined_as
+	@desc @defined_as_id
 	field :defined_as_id, :id, name: "defined_as"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @refinement_of
+	@desc @refinement_of_id
 	field :refinement_of_id, :id, name: "refinement_of"
 end
 
@@ -115,17 +107,25 @@ input_object :scenario_update_params do
 	@desc @has_end
 	field :has_end, :datetime
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`ScenarioDefinition`) " <> @defined_as
+	@desc @defined_as_id
 	field :defined_as_id, :id, name: "defined_as"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @refinement_of
+	@desc @refinement_of_id
 	field :refinement_of_id, :id, name: "refinement_of"
+end
+
+object :scenario_response do
+	field :scenario, non_null(:scenario)
+end
+
+object :scenario_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:scenario)
+end
+
+object :scenario_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:scenario_edge)))
 end
 
 object :query_scenario do
@@ -134,7 +134,13 @@ object :query_scenario do
 		resolve &Resolv.scenario/2
 	end
 
-	#scenarioDefinitions(start: ID, limit: Int): [Scenario!]
+	field :scenarios, :scenario_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.scenarios/2
+	end
 end
 
 object :mutation_scenario do

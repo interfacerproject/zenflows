@@ -24,7 +24,7 @@ alias Zenflows.VF.{ProductBatch, ProductBatch.Domain}
 setup do
 	%{
 		params: %{
-			batch_number: Factory.uniq("batch number"),
+			batch_number: Factory.str("batch number"),
 			expiry_date: DateTime.utc_now(),
 			production_date: DateTime.utc_now(),
 		},
@@ -32,44 +32,53 @@ setup do
 	}
 end
 
-test "by_id/1 returns a ProductBatch", %{inserted: batch} do
-	assert %ProductBatch{} = Domain.by_id(batch.id)
+describe "one/1" do
+	test "with good id: finds the ProductBatch", %{inserted: %{id: id}} do
+		assert {:ok, %ProductBatch{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the ProductBatch" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates a ProductBatch with valid params", %{params: params} do
-		assert {:ok, %ProductBatch{} = batch} = Domain.create(params)
-
-		assert batch.batch_number == params.batch_number
-		assert batch.expiry_date == params.expiry_date
-		assert batch.production_date == params.production_date
-	end
-
-	test "doesn't create a ProductBatch with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates a ProductBatch with valid params", %{params: params, inserted: old} do
-		assert {:ok, %ProductBatch{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates a ProductBatch", %{params: params} do
+		assert {:ok, %ProductBatch{} = new} = Domain.create(params)
 		assert new.batch_number == params.batch_number
 		assert new.expiry_date == params.expiry_date
 		assert new.production_date == params.production_date
 	end
 
-	test "doesn't update a ProductBatch", %{inserted: old} do
-		assert {:ok, %ProductBatch{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create a ProductBatch" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the ProductBatch", %{params: params, inserted: old} do
+		assert {:ok, %ProductBatch{} = new} = Domain.update(old.id, params)
+		assert new.batch_number == params.batch_number
+		assert new.expiry_date == params.expiry_date
+		assert new.production_date == params.production_date
+	end
+
+	test "with bad params: doesn't update the ProductBatch", %{inserted: old} do
+		assert {:ok, %ProductBatch{} = new} = Domain.update(old.id, %{})
 		assert new.batch_number == old.batch_number
 		assert new.expiry_date == old.expiry_date
 		assert new.production_date == old.production_date
 	end
 end
 
-test "delete/1 deletes a ProductBatch", %{inserted: %{id: id}} do
-	assert {:ok, %ProductBatch{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the ProductBatch", %{inserted: %{id: id}} do
+		assert {:ok, %ProductBatch{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the ProductBatch" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 end

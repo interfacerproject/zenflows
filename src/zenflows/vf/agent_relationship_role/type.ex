@@ -25,6 +25,7 @@ alias Zenflows.VF.AgentRelationshipRole.Resolv
 @role_behavior """
 The general shape or behavior grouping of an agent relationship role.
 """
+@role_behavior_id "(`RoleBehavior`) #{@role_behavior}"
 @role_label """
 The human readable name of the role, from the subject to the object.
 """
@@ -50,15 +51,8 @@ object :agent_relationship_role do
 	field :note, :string
 end
 
-object :agent_relationship_role_response do
-	field :agent_relationship_role, non_null(:agent_relationship_role)
-end
-
 input_object :agent_relationship_role_create_params do
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RoleBhavior`) " <> @role_behavior
+	@desc @role_behavior_id
 	field :role_behavior_id, :id, name: "role_behavior"
 
 	@desc @role_label
@@ -74,7 +68,7 @@ end
 input_object :agent_relationship_role_update_params do
 	field :id, non_null(:id)
 
-	@desc "(`RoleBhavior`) " <> @role_behavior
+	@desc @role_behavior_id
 	field :role_behavior_id, :id, name: "role_behavior"
 
 	@desc @role_label
@@ -87,6 +81,20 @@ input_object :agent_relationship_role_update_params do
 	field :note, :string
 end
 
+object :agent_relationship_role_response do
+	field :agent_relationship_role, non_null(:agent_relationship_role)
+end
+
+object :agent_relationship_role_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:agent_relationship_role)
+end
+
+object :agent_relationship_role_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:agent_relationship_role_edge)))
+end
+
 object :query_agent_relationship_role do
 	@desc "Retrieve details of an agent relationship role by its ID."
 	field :agent_relationship_role, :agent_relationship_role do
@@ -94,11 +102,17 @@ object :query_agent_relationship_role do
 		resolve &Resolv.agent_relationship_role/2
 	end
 
-	# @desc """
-	# Retrieve possible kinds of associations that agents may have
-	# with one another in this collaboration space.
-	# """
-	# agentRelationshipRoles(start: ID, limit: Int): [AgentRelationshipRole!]
+	@desc """
+	Retrieve possible kinds of associations that agents may have
+	with one another in this collaboration space.
+	"""
+	field :agent_relationship_roles, :agent_relationship_role_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.agent_relationship_roles/2
+	end
 end
 
 object :mutation_agent_relationship_role do

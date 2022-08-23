@@ -20,55 +20,71 @@ defmodule Zenflows.VF.AgentRelationship.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.AgentRelationship
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: AgentRelationship.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(AgentRelationship, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, AgentRelationship.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(AgentRelationship, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(AgentRelationship.t())
+def all(params) do
+	Paging.page(AgentRelationship, params)
 end
 
 @spec create(params()) :: {:ok, AgentRelationship.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:rel, AgentRelationship.chgset(params))
+	|> Multi.insert(:insert, AgentRelationship.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{rel: rel}} -> {:ok, rel}
+		{:ok, %{insert: ar}} -> {:ok, ar}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, AgentRelationship.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, AgentRelationship.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &AgentRelationship.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &AgentRelationship.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{update: rel}} -> {:ok, rel}
+		{:ok, %{update: ar}} -> {:ok, ar}
 		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
 	end
 end
 
-@spec delete(id()) :: {:ok, AgentRelationship.t()} | {:error, chgset()}
+@spec delete(id())
+	:: {:ok, AgentRelationship.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, &(&1.one))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: rel}} -> {:ok, rel}
+		{:ok, %{delete: ar}} -> {:ok, ar}
 		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
 	end
 end
 
-@spec preload(AgentRelationship.t(), :subject | :object | :relationship) :: AgentRelationship.t()
+@spec preload(AgentRelationship.t(), :subject | :object | :relationship)
+	:: AgentRelationship.t()
 def preload(rel, :subject) do
 	Repo.preload(rel, :subject)
 end
@@ -79,17 +95,5 @@ end
 
 def preload(rel, :relationship) do
 	Repo.preload(rel, :relationship)
-end
-
-# Returns an AgentRelationship in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, AgentRelationship.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			rel -> {:ok, rel}
-		end
-	end
 end
 end

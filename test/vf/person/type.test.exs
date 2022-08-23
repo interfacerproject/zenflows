@@ -21,106 +21,91 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
+			"name" => Factory.str("name"),
 			"image" => Factory.img(),
-			"note" => Factory.uniq("note"),
+			"note" => Factory.str("note"),
 			"primaryLocation" => Factory.insert!(:spatial_thing).id,
-			"user" => Factory.uniq("user"),
-			"email" => "#{Factory.uniq("user")}@example.com",
+			"user" => Factory.str("user"),
+			"email" => "#{Factory.str("user")}@example.com",
 			"ecdhPublicKey" => Base.encode64("ecdh_public_key"),
 			"eddsaPublicKey" => Base.encode64("eddsa_public_key"),
 			"ethereumAddress" => Base.encode64("ethereum_address"),
 			"reflowPublicKey" => Base.encode64("reflow_public_key"),
 			"schnorrPublicKey" => Base.encode64("schnorr_public_key"),
 		},
-		per: Factory.insert!(:person),
+		inserted: Factory.insert!(:person),
 	}
 end
 
+@frag """
+fragment person on Person {
+	id
+	name
+	note
+	image
+	primaryLocation { id }
+	user
+	email
+	ecdhPublicKey
+	eddsaPublicKey
+	ethereumAddress
+	reflowPublicKey
+	schnorrPublicKey
+}
+"""
+
 describe "Query" do
-	test "person()", %{per: per} do
+	test "person", %{inserted: new} do
 		assert %{data: %{"person" => data}} =
 			run!("""
+				#{@frag}
 				query ($id: ID!) {
-					person(id: $id) {
-						id
-						name
-						note
-						image
-						primaryLocation { id }
-						user
-						email
-						ecdhPublicKey
-						eddsaPublicKey
-						ethereumAddress
-						reflowPublicKey
-						schnorrPublicKey
-					}
+					person(id: $id) {...person}
 				}
-			""", variables: %{"id" => per.id})
+			""", variables: %{"id" => new.id})
 
-		assert data["id"] == per.id
-		assert data["name"] == per.name
-		assert data["note"] == per.note
-		assert data["image"] == per.image
-		assert data["primaryLocation"]["id"] == per.primary_location_id
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["image"] == new.image
+		assert data["primaryLocation"]["id"] == new.primary_location_id
 
-		assert data["user"] == per.user
-		assert data["email"] == per.email
-		assert data["ecdhPublicKey"] == per.ecdh_public_key
-		assert data["eddsaPublicKey"] == per.eddsa_public_key
-		assert data["ethereumAddress"] == per.ethereum_address
-		assert data["reflowPublicKey"] == per.reflow_public_key
-		assert data["schnorrPublicKey"] == per.schnorr_public_key
+		assert data["user"] == new.user
+		assert data["email"] == new.email
+		assert data["ecdhPublicKey"] == new.ecdh_public_key
+		assert data["eddsaPublicKey"] == new.eddsa_public_key
+		assert data["ethereumAddress"] == new.ethereum_address
+		assert data["reflowPublicKey"] == new.reflow_public_key
+		assert data["schnorrPublicKey"] == new.schnorr_public_key
 	end
 end
 
 describe "Mutation" do
-	test "createPerson() doesn't create a person without the admin key", %{params: params} do
+	test "createPerson: doesn't create a person without the admin key", %{params: params} do
 		assert %{data: nil, errors: [%{message: "you are not an admin", path: ["createPerson"]}]} =
 			run!("""
+				#{@frag}
 				mutation ($person: PersonCreateParams!) {
 					createPerson(person: $person) {
-						agent {
-							id
-							name
-							note
-							primaryLocation { id }
-							user
-							email
-							ecdhPublicKey
-							eddsaPublicKey
-							ethereumAddress
-							reflowPublicKey
-							schnorrPublicKey
-						}
+						agent {...person}
 					}
 				}
 			""", auth?: true, vars: %{"person" => params})
 	end
 
-	test "createPerson() creates a person with the admin key", %{params: params} do
+	test "createPerson: creates a person with the admin key", %{params: params} do
 		assert %{data: %{"createPerson" => %{"agent" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($person: PersonCreateParams!) {
 					createPerson(person: $person) {
-						agent {
-							id
-							name
-							note
-							primaryLocation { id }
-							user
-							email
-							image
-							ecdhPublicKey
-							eddsaPublicKey
-							ethereumAddress
-							reflowPublicKey
-							schnorrPublicKey
-						}
+						agent {...person}
 					}
 				}
-			""", vars: %{"person" => params})
+			""",
+			auth?: true,
+			ctx: %{gql_admin: admin_key()},
+			vars: %{"person" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
 		data = Map.delete(data, "id")
@@ -132,60 +117,44 @@ describe "Mutation" do
 		assert data == params
 	end
 
-	test "updatePerson()", %{params: params, per: per} do
+	test "updatePerson", %{params: params, inserted: old} do
 		assert %{data: %{"updatePerson" => %{"agent" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($person: PersonUpdateParams!) {
 					updatePerson(person: $person) {
-						agent {
-							id
-							name
-							note
-							primaryLocation { id }
-							user
-							email
-							image
-							ecdhPublicKey
-							eddsaPublicKey
-							ethereumAddress
-							reflowPublicKey
-							schnorrPublicKey
-						}
+						agent {...person}
 					}
 				}
 			""", vars: %{"person" =>
 				params
 				|> Map.take(~w[user name image note primaryLocation])
-				|> Map.put("id", per.id)
+				|> Map.put("id", old.id)
 			})
 
 		keys = ~w[user name image note]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["primaryLocation"]["id"] == params["primaryLocation"]
 
-		assert data["id"] == per.id
-		assert data["email"] == per.email
-		assert data["ecdhPublicKey"] == per.ecdh_public_key
-		assert data["eddsaPublicKey"] == per.eddsa_public_key
-		assert data["ethereumAddress"] == per.ethereum_address
-		assert data["reflowPublicKey"] == per.reflow_public_key
-		assert data["schnorrPublicKey"] == per.schnorr_public_key
+		assert data["id"] == old.id
+		assert data["email"] == old.email
+		assert data["ecdhPublicKey"] == old.ecdh_public_key
+		assert data["eddsaPublicKey"] == old.eddsa_public_key
+		assert data["ethereumAddress"] == old.ethereum_address
+		assert data["reflowPublicKey"] == old.reflow_public_key
+		assert data["schnorrPublicKey"] == old.schnorr_public_key
 	end
 
-	test "deletePerson() doesn't delete the person without the admin key", %{per: per} do
+	test "deletePerson: doesn't delete the person without the admin key", %{inserted: new} do
 		assert %{data: nil, errors: [%{message: "you are not an admin", path: ["deletePerson"]}]} =
 			run!("""
 				mutation ($id: ID!) {
 					deletePerson(id: $id)
 				}
-			""", auth?: true, vars: %{"id" => per.id})
+			""", auth?: true, vars: %{"id" => new.id})
 	end
 
-	test "deletePerson() deletes the person with the admin key", %{per: per} do
-		key =
-			Application.fetch_env!(:zenflows, Zenflows.Admin)[:admin_key]
-			|> Base.encode16(case: :lower)
-
+	test "deletePerson: deletes the person with the admin key", %{inserted: new} do
 		assert %{data: %{"deletePerson" => true}} =
 			run!(
 				"""
@@ -194,9 +163,13 @@ describe "Mutation" do
 					}
 				""",
 				auth?: true,
-				vars: %{"id" => per.id},
-				ctx: %{gql_admin: key}
-			)
+				ctx: %{gql_admin: admin_key()},
+				vars: %{"id" => new.id})
+	end
+
+	defp admin_key() do
+		Application.fetch_env!(:zenflows, Zenflows.Admin)[:admin_key]
+		|> Base.encode16(case: :lower)
 	end
 end
 end

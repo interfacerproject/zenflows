@@ -21,11 +21,22 @@ defmodule Zenflows.VF.Agent.Domain do
 alias Zenflows.DB.Repo
 alias Zenflows.VF.Agent
 
+@typep repo() :: Ecto.Repo.t()
 @typep id() :: Zenflows.DB.Schema.id()
 
-@spec by_id(id) :: Agent.t() | nil
-def by_id(id) do
-	Repo.get(Agent, id)
+@spec one(repo(), id() | map() | Keyword.t()) :: {:ok, Agent.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(Agent, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(Agent.t())
+def all(params) do
+	Paging.page(Agent, params)
 end
 
 @spec preload(Agent.t(), :primary_location) :: Agent.t()

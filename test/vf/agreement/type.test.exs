@@ -38,18 +38,18 @@ fragment agreement on Agreement {
 """
 
 describe "Query" do
-	test "agreement", %{inserted: agreem} do
+	test "agreement", %{inserted: new} do
 		assert %{data: %{"agreement" => data}} =
 			run!("""
 				#{@frag}
 				query ($id: ID!) {
 					agreement(id: $id) {...agreement}
 				}
-			""", vars: %{"id" => agreem.id})
+			""", vars: %{"id" => new.id})
 
-		assert data["id"] == agreem.id
-		assert data["name"] == agreem.name
-		assert data["note"] == agreem.note
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
 		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
 		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 	end

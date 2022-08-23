@@ -20,36 +20,40 @@ defmodule Zenflows.VF.Organization.Resolv do
 
 alias Zenflows.VF.{Agent, Organization, Organization.Domain}
 
-def organization(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def organization(params, _) do
+	Domain.one(params)
 end
 
-def create_organization(%{organization: params}, _info) do
+def organizations(params, _) do
+	Domain.all(params)
+end
+
+def create_organization(%{organization: params}, _) do
 	with {:ok, org} <- Domain.create(params) do
 		{:ok, %{agent: org}}
 	end
 end
 
-def update_organization(%{organization: %{id: id} = params}, _info) do
+def update_organization(%{organization: %{id: id} = params}, _) do
 	with {:ok, org} <- Domain.update(id, params) do
 		{:ok, %{agent: org}}
 	end
 end
 
-def delete_organization(%{id: id}, _info) do
+def delete_organization(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def primary_location(%Organization{} = org, _args, _info) do
+def primary_location(%Organization{} = org, _, _) do
 	org = Domain.preload(org, :primary_location)
 	{:ok, org.primary_location}
 end
 
 # For some reason, Absinthe calls this one instead of the one on
 # Zenflows.VF.Agent.Type for queries to Agent itself.
-def primary_location(%Agent{} = agent, args, info) do
-	Agent.Resolv.primary_location(agent, args, info)
+def primary_location(%Agent{} = agent, params, info) do
+	Agent.Resolv.primary_location(agent, params, info)
 end
 end

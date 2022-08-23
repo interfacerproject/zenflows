@@ -155,10 +155,6 @@ object :economic_resource do
 	field :unit_of_effort, :unit, resolve: &Resolv.unit_of_effort/3
 end
 
-object :economic_resource_response do
-	field :economic_resource, non_null(:economic_resource)
-end
-
 input_object :economic_resource_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -174,6 +170,20 @@ input_object :economic_resource_create_params do
 
 	@desc @lot_id
 	field :lot_id, :id, name: "lot"
+end
+
+object :economic_resource_response do
+	field :economic_resource, non_null(:economic_resource)
+end
+
+object :economic_resource_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:economic_resource)
+end
+
+object :economic_resource_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:economic_resource_edge)))
 end
 
 input_object :economic_resource_update_params do
@@ -192,7 +202,13 @@ object :query_economic_resource do
 		resolve &Resolv.economic_resource/2
 	end
 
-	#economicResources(start: ID, limit: Int): [EconomicResource!]
+	field :economic_resources, :economic_resource_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.economic_resources/2
+	end
 end
 
 object :mutation_economic_resource do

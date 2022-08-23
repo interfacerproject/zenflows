@@ -35,7 +35,9 @@ References a concept in a common taxonomy or other classification scheme
 for purposes of categorization or grouping.
 """
 @default_unit_of_resource "The default unit used for the resource itself."
+@default_unit_of_resource_id "(`Unit`) #{@default_unit_of_resource}"
 @default_unit_of_effort "The default unit used for use or work."
+@default_unit_of_effort_id "(`Unit`) #{@default_unit_of_effort}"
 @note "A textual description or comment."
 
 @desc """
@@ -67,10 +69,6 @@ object :resource_specification do
 		resolve: &Resolv.default_unit_of_effort/3
 end
 
-object :resource_specification_response do
-	field :resource_specification, non_null(:resource_specification)
-end
-
 input_object :resource_specification_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -84,13 +82,10 @@ input_object :resource_specification_create_params do
 	@desc @note
 	field :note, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc @default_unit_of_resource
+	@desc @default_unit_of_resource_id
 	field :default_unit_of_resource_id, :id, name: "default_unit_of_resource"
 
-	@desc @default_unit_of_effort
+	@desc @default_unit_of_effort_id
 	field :default_unit_of_effort_id, :id, name: "default_unit_of_effort"
 end
 
@@ -109,11 +104,25 @@ input_object :resource_specification_update_params do
 	@desc @note
 	field :note, :string
 
-	@desc @default_unit_of_resource
+	@desc @default_unit_of_resource_id
 	field :default_unit_of_resource_id, :id, name: "default_unit_of_resource"
 
-	@desc @default_unit_of_effort
+	@desc @default_unit_of_effort_id
 	field :default_unit_of_effort_id, :id, name: "default_unit_of_effort"
+end
+
+object :resource_specification_response do
+	field :resource_specification, non_null(:resource_specification)
+end
+
+object :resource_specification_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:resource_specification)
+end
+
+object :resource_specification_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:resource_specification_edge)))
 end
 
 object :query_resource_specification do
@@ -122,7 +131,13 @@ object :query_resource_specification do
 		resolve &Resolv.resource_specification/2
 	end
 
-	#resourceSpecifications(start: ID, limit: Int): [ResourceSpecification!]
+	field :resource_specifications, :resource_specification_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.resource_specifications/2
+	end
 end
 
 object :mutation_resource_specification do

@@ -21,104 +21,89 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
-			has_duration: Factory.build(:iduration),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
+			"hasDuration" => %{
+				"unitType" => Factory.build(:time_unit) |> to_string(),
+				"numericDuration" => Factory.float(),
+			},
 		},
 		inserted: Factory.insert!(:scenario_definition),
 	}
 end
 
-describe "Query" do
-	test "scenarioDefinition()", %{inserted: scen_def} do
-		assert %{data: %{"scenarioDefinition" => data}} =
-			query!("""
-				scenarioDefinition(id: "#{scen_def.id}") {
-					id
-					name
-					note
-					hasDuration {
-						unitType
-						numericDuration
-					}
-				}
-			""")
+@frag """
+fragment scenarioDefinition on ScenarioDefinition {
+	id
+	name
+	note
+	hasDuration {
+		unitType
+		numericDuration
+	}
+}
+"""
 
-		assert data["id"] == scen_def.id
-		assert data["name"] == scen_def.name
-		assert data["note"] == scen_def.note
-		assert data["hasDuration"]["unitType"] == to_string(scen_def.has_duration_unit_type)
-		assert data["hasDuration"]["numericDuration"] == scen_def.has_duration_numeric_duration
+describe "Query" do
+	test "scenarioDefinition", %{inserted: new} do
+		assert %{data: %{"scenarioDefinition" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					scenarioDefinition(id: $id) {...scenarioDefinition}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["hasDuration"]["unitType"] == to_string(new.has_duration_unit_type)
+		assert data["hasDuration"]["numericDuration"] == new.has_duration_numeric_duration
 	end
 end
 
 describe "Mutation" do
-	test "createScenarioDefinition()", %{params: params} do
+	test "createScenarioDefinition", %{params: params} do
 		assert %{data: %{"createScenarioDefinition" => %{"scenarioDefinition" => data}}} =
-			mutation!("""
-				createScenarioDefinition(scenarioDefinition: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-					hasDuration: {
-						unitType: #{params.has_duration.unit_type}
-						numericDuration: #{params.has_duration.numeric_duration}
-					}
-				}) {
-					scenarioDefinition {
-						id
-						name
-						note
-						hasDuration {
-							unitType
-							numericDuration
-						}
+			run!("""
+				#{@frag}
+				mutation ($scenarioDefinition: ScenarioDefinitionCreateParams!) {
+					createScenarioDefinition(scenarioDefinition: $scenarioDefinition) {
+						scenarioDefinition {...scenarioDefinition}
 					}
 				}
-			""")
+			""", vars: %{"scenarioDefinition" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["hasDuration"]["unitType"] == to_string(params.has_duration.unit_type)
-		assert data["hasDuration"]["numericDuration"] == params.has_duration.numeric_duration
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
+		assert data["hasDuration"] == params["hasDuration"]
 	end
 
-	test "updateScenarioDefinition()", %{params: params, inserted: scen_def} do
+	test "updateScenarioDefinition", %{params: params, inserted: old} do
 		assert %{data: %{"updateScenarioDefinition" => %{"scenarioDefinition" => data}}} =
-			mutation!("""
-				updateScenarioDefinition(scenarioDefinition: {
-					id: "#{scen_def.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-					hasDuration: {
-						unitType: #{params.has_duration.unit_type}
-						numericDuration: #{params.has_duration.numeric_duration}
-					}
-				}) {
-					scenarioDefinition {
-						id
-						name
-						note
-						hasDuration {
-							unitType
-							numericDuration
-						}
+			run!("""
+				#{@frag}
+				mutation ($scenarioDefinition: ScenarioDefinitionUpdateParams!) {
+					updateScenarioDefinition(scenarioDefinition: $scenarioDefinition) {
+						scenarioDefinition {...scenarioDefinition}
 					}
 				}
-			""")
+			""", vars: %{"scenarioDefinition" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == scen_def.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["hasDuration"]["unitType"] == to_string(params.has_duration.unit_type)
-		assert data["hasDuration"]["numericDuration"] == params.has_duration.numeric_duration
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
+		assert data["hasDuration"] == params["hasDuration"]
 	end
 
 	test "deleteScenarioDefinition()", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteScenarioDefinition" => true}} =
-			mutation!("""
-				deleteScenarioDefinition(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteScenarioDefinition(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

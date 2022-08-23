@@ -21,35 +21,48 @@ defmodule Zenflows.VF.SpatialThing.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.SpatialThing
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: SpatialThing.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(SpatialThing, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, SpatialThing.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(SpatialThing, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(SpatialThing.t())
+def all(params) do
+	Paging.page(SpatialThing, params)
 end
 
 @spec create(params()) :: {:ok, SpatialThing.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:spt_thg, SpatialThing.chgset(params))
+	|> Multi.insert(:insert, SpatialThing.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{spt_thg: st}} -> {:ok, st}
+		{:ok, %{insert: st}} -> {:ok, st}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, SpatialThing.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, SpatialThing.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &SpatialThing.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &SpatialThing.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: st}} -> {:ok, st}
@@ -57,27 +70,16 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, SpatialThing.t()} | {:error, chgset()}
+@spec delete(id()) :: {:ok, SpatialThing.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: st}} -> {:ok, st}
 		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
-	end
-end
-
-# Returns a SpatialThing in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, SpatialThing.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			st -> {:ok, st}
-		end
 	end
 end
 end

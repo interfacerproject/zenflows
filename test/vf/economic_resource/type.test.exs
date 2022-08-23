@@ -18,144 +18,123 @@
 defmodule ZenflowsTest.VF.EconomicResource.Type do
 use ZenflowsTest.Help.AbsinCase, async: true
 
-alias Zenflows.VF.EconomicResource.Domain
-
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
-			image: Factory.uri(),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
+			"image" => Factory.img(),
 		},
-		inserted:
-			Factory.insert!(:economic_resource)
-			|> Domain.preload(:accounting_quantity)
-			|> Domain.preload(:onhand_quantity)
+		inserted: Factory.insert!(:economic_resource),
 	}
 end
 
-describe "Query" do
-	@tag skip: "TODO: fix economic resource factory"
-	test "resource()", %{inserted: eco_res} do
-		assert %{data: %{"economicResource" => data}} =
-			query!("""
-				economicResource(id: "#{eco_res.id}") {
-					id
-					name
-					note
-					image
-					trackingIdentifier
-					classifiedAs
-					conformsTo {id}
-					accountingQuantity {
-						hasUnit { id }
-						hasNumericalValue
-					}
-					onhandQuantity {
-						hasUnit { id }
-						hasNumericalValue
-					}
-					primaryAccountable {id}
-					custodian {id}
-					stage {id}
-					state {id}
-					currentLocation {id}
-					lot {id}
-					containedIn {id}
-					unitOfEffort {id}
-				}
-			""")
+@frag """
+fragment economicResource on EconomicResource {
+	id
+	name
+	note
+	image
+	trackingIdentifier
+	classifiedAs
+	conformsTo {id}
+	accountingQuantity {
+		hasUnit { id }
+		hasNumericalValue
+	}
+	onhandQuantity {
+		hasUnit { id }
+		hasNumericalValue
+	}
+	primaryAccountable {id}
+	custodian {id}
+	stage {id}
+	state {id}
+	currentLocation {id}
+	lot {id}
+	containedIn {id}
+	unitOfEffort {id}
+}
+"""
 
-		assert data["id"] == eco_res.id
-		assert data["name"] == eco_res.name
-		assert data["note"] == eco_res.note
-		# virtual field atm
-		# assert data["image"] == eco_res.image
-		assert data["trackingIdentifier"] == eco_res.tracking_identifier
-		assert data["classifiedAs"] == eco_res.classified_as
-		assert data["conformsTo"]["id"] == eco_res.conforms_to_id
-		assert data["accountingQuantity"]["hasUnit"]["id"] == eco_res.accounting_quantity_has_unit_id
-		assert data["accountingQuantity"]["hasNumericalValue"] == eco_res.accounting_quantity_has_numerical_value
-		assert data["onhandQuantity"]["hasUnit"]["id"] == eco_res.onhand_quantity_has_unit_id
-		assert data["onhandQuantity"]["hasNumericalValue"] == eco_res.onhand_quantity_has_numerical_value
-		assert data["primaryAccountable"]["id"] == eco_res.primary_accountable_id
-		assert data["custodian"]["id"] == eco_res.custodian_id
-		assert data["stage"]["id"] == eco_res.stage_id
-		assert data["state"]["id"] == eco_res.state_id
-		assert data["currentLocation"]["id"] == eco_res.current_location_id
-		assert data["lot"]["id"] == eco_res.lot_id
-		assert data["containedIn"]["id"] == eco_res.contained_in_id
-		assert data["unitOfEffort"]["id"] == eco_res.unit_of_effort_id
+describe "Query" do
+	test "resource", %{inserted: new} do
+		assert %{data: %{"economicResource" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					economicResource(id: $id) {...economicResource}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["image"] == new.image
+		assert data["trackingIdentifier"] == new.tracking_identifier
+		assert data["classifiedAs"] == new.classified_as
+		assert data["conformsTo"]["id"] == new.conforms_to_id
+		assert data["accountingQuantity"]["hasUnit"]["id"] == new.accounting_quantity_has_unit_id
+		assert data["accountingQuantity"]["hasNumericalValue"] == new.accounting_quantity_has_numerical_value
+		assert data["onhandQuantity"]["hasUnit"]["id"] == new.onhand_quantity_has_unit_id
+		assert data["onhandQuantity"]["hasNumericalValue"] == new.onhand_quantity_has_numerical_value
+		assert data["primaryAccountable"]["id"] == new.primary_accountable_id
+		assert data["custodian"]["id"] == new.custodian_id
+		assert data["stage"]["id"] == new.stage_id
+		assert data["state"]["id"] == new.state_id
+		assert data["currentLocation"]["id"] == new.current_location_id
+		assert data["lot"]["id"] == new.lot_id
+		assert data["containedIn"]["id"] == new.contained_in_id
+		assert data["unitOfEffort"]["id"] == new.unit_of_effort_id
 	end
 end
 
 describe "Mutation" do
-	@tag skip: "TODO: fix economic resource factory"
-	test "updateEconomicResource()", %{params: params, inserted: eco_res} do
+	@tag skip: "TODO: fix factory"
+	test "updateEconomicResource", %{params: params, inserted: old} do
 		assert %{data: %{"updateEconomicResource" => %{"economicResource" => data}}} =
-			mutation!("""
-				updateEconomicResource(resource: {
-					id: "#{eco_res.id}"
-					note: "#{params.note}"
-					image: "#{params.image}"
-				}) {
-					economicResource {
-						id
-						name
-						note
-						image
-						trackingIdentifier
-						classifiedAs
-						conformsTo {id}
-						accountingQuantity {
-							hasUnit { id }
-							hasNumericalValue
-						}
-						onhandQuantity {
-							hasUnit { id }
-							hasNumericalValue
-						}
-						primaryAccountable {id}
-						custodian {id}
-						stage {id}
-						state {id}
-						currentLocation {id}
-						lot {id}
-						containedIn {id}
-						unitOfEffort {id}
+			run!("""
+				#{@frag}
+				mutation ($resource: EconomicResourceUpdateParams!) {
+					updateEconomicResource(resource: $resource) {
+						economicResource {...economicResource}
 					}
 				}
-			""")
+			""", vars: %{"resource" => %{
+				"id" => old.id,
+				"note" => params["note"],
+				"image" => params["image"],
+			}})
 
-		assert data["id"] == eco_res.id
-		assert data["id"] == eco_res.id
-		assert data["name"] == eco_res.name
-		assert data["note"] == params.note
-		# virtual field atm
-		# assert data["image"] == eco_res.image
-		assert data["trackingIdentifier"] == eco_res.tracking_identifier
-		assert data["classifiedAs"] == eco_res.classified_as
-		assert data["conformsTo"]["id"] == eco_res.conforms_to_id
-		assert data["accountingQuantity"]["hasUnit"]["id"] == eco_res.accounting_quantity_has_unit_id
-		assert data["accountingQuantity"]["hasNumericalValue"] == eco_res.accounting_quantity_has_numerical_value
-		assert data["onhandQuantity"]["hasUnit"]["id"] == eco_res.onhand_quantity_has_unit_id
-		assert data["onhandQuantity"]["hasNumericalValue"] == eco_res.onhand_quantity_has_numerical_value
-		assert data["primaryAccountable"]["id"] == eco_res.primary_accountable_id
-		assert data["custodian"]["id"] == eco_res.custodian_id
-		assert data["stage"]["id"] == eco_res.stage_id
-		assert data["state"]["id"] == eco_res.state_id
-		assert data["currentLocation"]["id"] == eco_res.current_location_id
-		assert data["lot"]["id"] == eco_res.lot_id
-		assert data["containedIn"]["id"] == eco_res.contained_in_id
-		assert data["unitOfEffort"]["id"] == eco_res.unit_of_effort_id
+		assert data["id"] == old.id
+		assert data["id"] == old.id
+		assert data["name"] == old.name
+		assert data["note"] == params["note"]
+		assert data["image"] == params["image"]
+		assert data["trackingIdentifier"] == old.tracking_identifier
+		assert data["classifiedAs"] == old.classified_as
+		assert data["conformsTo"]["id"] == old.conforms_to_id
+		assert data["accountingQuantity"]["hasUnit"]["id"] == old.accounting_quantity_has_unit_id
+		assert data["accountingQuantity"]["hasNumericalValue"] == old.accounting_quantity_has_numerical_value
+		assert data["onhandQuantity"]["hasUnit"]["id"] == old.onhand_quantity_has_unit_id
+		assert data["onhandQuantity"]["hasNumericalValue"] == old.onhand_quantity_has_numerical_value
+		assert data["primaryAccountable"]["id"] == old.primary_accountable_id
+		assert data["custodian"]["id"] == old.custodian_id
+		assert data["stage"]["id"] == old.stage_id
+		assert data["state"]["id"] == old.state_id
+		assert data["currentLocation"]["id"] == old.current_location_id
+		assert data["lot"]["id"] == old.lot_id
+		assert data["containedIn"]["id"] == old.contained_in_id
+		assert data["unitOfEffort"]["id"] == old.unit_of_effort_id
 	end
 
-	@tag skip: "TODO: fix economic resource factory"
 	test "deleteEconomicResource()", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteEconomicResource" => true}} =
-			mutation!("""
-				deleteEconomicResource(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteEconomicResource(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

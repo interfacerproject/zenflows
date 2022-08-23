@@ -22,23 +22,27 @@ use Absinthe.Schema.Notation
 
 alias Zenflows.VF.ProductBatch.Domain
 
-def product_batch(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def product_batch(params, _) do
+	Domain.one(params)
 end
 
-def create_product_batch(%{product_batch: params}, _info) do
+def product_batches(params, _) do
+	Domain.all(params)
+end
+
+def create_product_batch(%{product_batch: params}, _) do
 	with {:ok, batch} <- Domain.create(params) do
 		{:ok, %{product_batch: batch}}
 	end
 end
 
-def update_product_batch(%{product_batch: %{id: id} = params}, _info) do
+def update_product_batch(%{product_batch: %{id: id} = params}, _) do
 	with {:ok, batch} <- Domain.update(id, params) do
 		{:ok, %{product_batch: batch}}
 	end
 end
 
-def delete_product_batch(%{id: id}, _info) do
+def delete_product_batch(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end

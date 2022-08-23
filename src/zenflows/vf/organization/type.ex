@@ -33,6 +33,7 @@ occur and mail can be sent.	 This is usually a mappable geographic
 location.  It also could be a website address, as in the case of agents
 who have no physical location.
 """
+@primary_location_id "(`SpatialThing`) #{@primary_location}"
 @note "A textual description or comment."
 @classified_as """
 References one or more concepts in a common taxonomy or other
@@ -62,10 +63,6 @@ object :organization do
 	field :classified_as, list_of(non_null(:string))
 end
 
-object :organization_response do
-	field :agent, non_null(:organization)
-end
-
 input_object :organization_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -76,10 +73,7 @@ input_object :organization_create_params do
 	@desc @note
 	field :note, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`SpatialThing`) " <> @primary_location
+	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @classified_as
@@ -98,11 +92,25 @@ input_object :organization_update_params do
 	@desc @note
 	field :note, :string
 
-	@desc "(`SpatialThing`) " <> @primary_location
+	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:string))
+end
+
+object :organization_response do
+	field :agent, non_null(:organization)
+end
+
+object :organization_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:organization)
+end
+
+object :organization_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:organization_edge)))
 end
 
 object :query_organization do
@@ -112,8 +120,17 @@ object :query_organization do
 		resolve &Resolv.organization/2
 	end
 
-	#"Loads all organizations publicly registered within this collaboration space"
-	#organizations(start: ID, limit: Int): [Organization!]
+	@desc """
+	Loads all organizations publicly registered within this
+	collaboration space.
+	"""
+	field :organizations, :organization_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.organizations/2
+	end
 end
 
 object :mutation_organization do

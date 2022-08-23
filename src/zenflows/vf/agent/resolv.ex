@@ -20,15 +20,19 @@ defmodule Zenflows.VF.Agent.Resolv do
 
 alias Zenflows.VF.{Agent, Agent.Domain}
 
-def my_agent(_args, %{context: %{req_user: user}}) do
+def my_agent(_, %{context: %{req_user: user}}) do
 	{:ok, user}
 end
 
-def agent(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def agent(params, _) do
+	Domain.one(params)
 end
 
-def primary_location(%Agent{} = agent, _args, _info) do
+def agents(params, _) do
+	Domain.all(params)
+end
+
+def primary_location(%Agent{} = agent, _, _) do
 	agent = Domain.preload(agent, :primary_location)
 	{:ok, agent.primary_location}
 end

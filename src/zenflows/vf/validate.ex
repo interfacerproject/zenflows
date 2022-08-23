@@ -77,7 +77,7 @@ def uri(cset, field) do
 	end)
 end
 
-@mebibyte 1024**2
+@mebibyte 1024 * 1024
 
 @doc """
 Check if the given base64-encoded binary data is at least 1B, at most

@@ -32,16 +32,19 @@ The base64-encoded image binary relevant to the entity, such as a photo, diagram
 @unit_of_resource """
 The unit of inventory used for this resource in the recipe.
 """
+@unit_of_resource_id "(`Unit`) #{@unit_of_resource}"
 @unit_of_effort """
 The unit used for use action on this resource or work action in the
 recipe.
 """
+@unit_of_effort_id "(`Unit`) #{@unit_of_resource}"
 @note "A textual description or comment."
 @resource_conforms_to """
 The primary resource specification or definition of an existing or
 potential economic resource.  A resource will have only one, as this
 specifies exactly what the resource is.
 """
+@resource_conforms_to_id "(`ResourceSpecification`) #{@resource_conforms_to}"
 @resource_classified_as """
 References a concept in a common taxonomy or other classification scheme
 for purposes of categorization or grouping.
@@ -86,21 +89,14 @@ object :recipe_resource do
 	field :substitutable, non_null(:boolean)
 end
 
-object :recipe_resource_response do
-	field :recipe_resource, non_null(:recipe_resource)
-end
-
 input_object :recipe_resource_create_params do
 	@desc @name
 	field :name, non_null(:string)
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Unit`) " <> @unit_of_resource
+	@desc @unit_of_resource_id
 	field :unit_of_resource_id, :id, name: "unit_of_resource"
 
-	@desc "(`Unit`) " <> @unit_of_effort
+	@desc @unit_of_effort_id
 	field :unit_of_effort_id, :id, name: "unit_of_effort"
 
 	@desc @image
@@ -109,7 +105,7 @@ input_object :recipe_resource_create_params do
 	@desc @note
 	field :note, :string
 
-	@desc "(`ResourceSpecification`) " <> @resource_conforms_to
+	@desc @resource_conforms_to_id
 	field :resource_conforms_to_id, :id, name: "resource_conforms_to"
 
 	@desc @resource_classified_as
@@ -125,10 +121,10 @@ input_object :recipe_resource_update_params do
 	@desc @name
 	field :name, :string
 
-	@desc "(`Unit`) " <> @unit_of_resource
+	@desc @unit_of_resource_id
 	field :unit_of_resource_id, :id, name: "unit_of_resource"
 
-	@desc "(`Unit`) " <> @unit_of_effort
+	@desc @unit_of_effort_id
 	field :unit_of_effort_id, :id, name: "unit_of_effort"
 
 	@desc @image
@@ -137,7 +133,7 @@ input_object :recipe_resource_update_params do
 	@desc @note
 	field :note, :string
 
-	@desc "(`ResourceSpecification`) " <> @resource_conforms_to
+	@desc @resource_conforms_to_id
 	field :resource_conforms_to_id, :id, name: "resource_conforms_to"
 
 	@desc @resource_classified_as
@@ -147,13 +143,33 @@ input_object :recipe_resource_update_params do
 	field :substitutable, :boolean
 end
 
+object :recipe_resource_response do
+	field :recipe_resource, non_null(:recipe_resource)
+end
+
+object :recipe_resource_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:recipe_resource)
+end
+
+object :recipe_resource_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:recipe_resource_edge)))
+end
+
 object :query_recipe_resource do
 	field :recipe_resource, :recipe_resource do
 		arg :id, non_null(:id)
 		resolve &Resolv.recipe_resource/2
 	end
 
-	#recipeResources(start: ID, limit: Int): [RecipeResource!]
+	field :recipe_resources, :recipe_resource_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.recipe_resources/2
+	end
 end
 
 object :mutation_recipe_resource do

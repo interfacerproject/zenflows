@@ -24,48 +24,57 @@ alias Zenflows.VF.{RecipeExchange, RecipeExchange.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 		},
-		recipe_exchange: Factory.insert!(:recipe_exchange),
+		inserted: Factory.insert!(:recipe_exchange),
 	}
 end
 
-test "by_id/1 returns a RecipeExchange", %{recipe_exchange: rec_exch} do
-	assert %RecipeExchange{} = Domain.by_id(rec_exch.id)
+describe "one/1" do
+	test "with good id: finds the RecipeExchange", %{inserted: %{id: id}} do
+		assert {:ok, %RecipeExchange{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the RecipeExchange" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates a RecipeExchange with valid params", %{params: params} do
-		assert {:ok, %RecipeExchange{} = rec_exch} = Domain.create(params)
-
-		assert rec_exch.name == params.name
-		assert rec_exch.note == params.note
+	test "with good params: creates a RecipeExchange", %{params: params} do
+		assert {:ok, %RecipeExchange{} = new} = Domain.create(params)
+		assert new.name == params.name
+		assert new.note == params.note
 	end
 
-	test "doesn't create a RecipeExchange with invalid params" do
+	test "with bad params: doesn't create a Process" do
 		assert {:error, %Changeset{}} = Domain.create(%{})
 	end
 end
 
 describe "update/2" do
-	test "updates a RecipeExchange with valid params", %{params: params, recipe_exchange: old} do
+	test "with good params: updates the RecipeExchange", %{params: params, inserted: old} do
 		assert {:ok, %RecipeExchange{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.note == params.note
 	end
 
-	test "doesn't update a RecipeExchange", %{recipe_exchange: old} do
+	test "with bad params: doesn't update the RecipeExchange", %{inserted: old} do
 		assert {:ok, %RecipeExchange{} = new} = Domain.update(old.id, %{})
-
 		assert new.name == old.name
 		assert new.note == old.note
 	end
 end
 
-test "delete/1 deletes a RecipeExchange", %{recipe_exchange: %{id: id}} do
-	assert {:ok, %RecipeExchange{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the RecipeExchange", %{inserted: %{id: id}} do
+		assert {:ok, %RecipeExchange{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the RecipeExchange" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 end

@@ -22,43 +22,51 @@ import Ecto.Query
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.Organization
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: Organization.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get_by(Organization, id: id, type: :org)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, Organization.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	clauses = if(is_map(clauses),
+		do: Map.put(clauses, :type, :org),
+		else: Keyword.put(clauses, :type, :org))
+	case repo.get_by(Organization, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
 end
 
-@spec all() :: [Organization.t()]
-def all() do
-	Organization
-	|> from()
-	|> where(type: :org)
-	|> Repo.all()
+@spec all(Paging.params()) :: Paging.result(Organization.t())
+def all(params) do
+	Paging.page(where(Organization, type: :org), params)
 end
 
 @spec create(params()) :: {:ok, Organization.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:org, Organization.chgset(params))
+	|> Multi.insert(:insert, Organization.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{org: o}} -> {:ok, o}
+		{:ok, %{insert: o}} -> {:ok, o}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, Organization.t()} | {:error, String.t() | chgset()}
+@spec update(id(), params())
+	:: {:ok, Organization.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &Organization.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &Organization.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: o}} -> {:ok, o}
@@ -69,8 +77,9 @@ end
 @spec delete(id()) :: {:ok, Organization.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, &(&1.one))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: o}} -> {:ok, o}
@@ -81,17 +90,5 @@ end
 @spec preload(Organization.t(), :primary_location) :: Organization.t()
 def preload(org, :primary_location) do
 	Repo.preload(org, :primary_location)
-end
-
-# Returns an Organization in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, Organization.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			org -> {:ok, org}
-		end
-	end
 end
 end

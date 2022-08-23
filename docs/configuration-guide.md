@@ -47,6 +47,12 @@ also see the [Required Options](#required-options).
   `openssl rand -hex 64`.  It is automatically generated when you run
   `mann env.setup`.
 
+* `GQL_DEF_PAGE_SIZE`: A non-negative integer.  It is used for the
+  default GraphQL page size if the client doesn't provide one.
+* `GQL_MAX_PAGE_SIZE`: A non-negative integer.  It is used for the
+  maximum GraphQL page size if client provides a too-large value.
+  It must be greater than `GQL_DEF_PAGE_SIZE`.
+
 
 ## Required Options
 

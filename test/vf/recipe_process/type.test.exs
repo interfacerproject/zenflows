@@ -21,156 +21,123 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			has_duration: Factory.build(:iduration),
-			process_classified_as: Factory.uniq_list("uri"),
-			process_conforms_to_id: Factory.insert!(:process_specification).id,
-			note: Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"hasDuration" => %{
+				"unitType" => Factory.build(:time_unit) |> to_string(),
+				"numericDuration" => Factory.float(),
+			},
+			"processClassifiedAs" => Factory.str_list("uri"),
+			"processConformsTo" => Factory.insert!(:process_specification).id,
+			"note" => Factory.str("note"),
 		},
 		inserted: Factory.insert!(:recipe_process),
 	}
 end
 
-describe "Query" do
-	test "recipeProcess()", %{inserted: rec_proc} do
-		assert %{data: %{"recipeProcess" => data}} =
-			query!("""
-				recipeProcess(id: "#{rec_proc.id}") {
-					id
-					name
-					note
-					processClassifiedAs
-					processConformsTo { id }
-					hasDuration {
-						unitType
-						numericDuration
-					}
-				}
-			""")
+@frag """
+fragment recipeProcess on RecipeProcess {
+	id
+	name
+	note
+	processClassifiedAs
+	processConformsTo {id}
+	hasDuration {
+		unitType
+		numericDuration
+	}
+}
+"""
 
-		assert data["id"] == rec_proc.id
-		assert data["name"] == rec_proc.name
-		assert data["note"] == rec_proc.note
-		assert data["processClassifiedAs"] == rec_proc.process_classified_as
-		assert data["processConformsTo"]["id"] == rec_proc.process_conforms_to_id
-		assert data["hasDuration"]["unitType"] == to_string(rec_proc.has_duration_unit_type)
-		assert data["hasDuration"]["numericDuration"] == rec_proc.has_duration_numeric_duration
+describe "Query" do
+	test "recipeProcess", %{inserted: new} do
+		assert %{data: %{"recipeProcess" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					recipeProcess(id: $id) {...recipeProcess}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["processClassifiedAs"] == new.process_classified_as
+		assert data["processConformsTo"]["id"] == new.process_conforms_to_id
+		assert data["hasDuration"]["unitType"] == to_string(new.has_duration_unit_type)
+		assert data["hasDuration"]["numericDuration"] == new.has_duration_numeric_duration
 	end
 end
 
 describe "Mutation" do
-	test "createRecipeProcess()", %{params: params} do
+	test "createRecipeProcess", %{params: params} do
 		assert %{data: %{"createRecipeProcess" => %{"recipeProcess" => data}}} =
-			mutation!("""
-				createRecipeProcess(recipeProcess: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-					processClassifiedAs: #{inspect(params.process_classified_as)}
-					processConformsTo: "#{params.process_conforms_to_id}"
-					hasDuration: {
-						unitType: #{params.has_duration.unit_type}
-						numericDuration: #{params.has_duration.numeric_duration}
-					}
-				}) {
-					recipeProcess {
-						id
-						name
-						note
-						processClassifiedAs
-						processConformsTo { id }
-						hasDuration {
-							unitType
-							numericDuration
-						}
+			run!("""
+				#{@frag}
+				mutation ($recipeProcess: RecipeProcessCreateParams!) {
+					createRecipeProcess(recipeProcess: $recipeProcess) {
+						recipeProcess {...recipeProcess}
 					}
 				}
-			""")
+			""", vars: %{"recipeProcess" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["processClassifiedAs"] == params.process_classified_as
-		assert data["processConformsTo"]["id"] == params.process_conforms_to_id
-		assert data["hasDuration"]["unitType"] == to_string(params.has_duration.unit_type)
-		assert data["hasDuration"]["numericDuration"] == params.has_duration.numeric_duration
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
+		assert data["processClassifiedAs"] == params["processClassifiedAs"]
+		assert data["processConformsTo"]["id"] == params["processConformsTo"]
+		assert data["hasDuration"] == params["hasDuration"]
 	end
 
-	test "updateRecipeProcess()", %{params: params, inserted: rec_proc} do
+	test "updateRecipeProcess", %{params: params, inserted: old} do
 		assert %{data: %{"updateRecipeProcess" => %{"recipeProcess" => data}}} =
-			mutation!("""
-				updateRecipeProcess(recipeProcess: {
-					id: "#{rec_proc.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-					processClassifiedAs: #{inspect(params.process_classified_as)}
-					processConformsTo: "#{params.process_conforms_to_id}"
-					hasDuration: {
-						unitType: #{params.has_duration.unit_type}
-						numericDuration: #{params.has_duration.numeric_duration}
-					}
-				}) {
-					recipeProcess {
-						id
-						name
-						note
-						processClassifiedAs
-						processConformsTo { id }
-						hasDuration {
-							unitType
-							numericDuration
-						}
+			run!("""
+				#{@frag}
+				mutation ($recipeProcess: RecipeProcessUpdateParams!) {
+					updateRecipeProcess(recipeProcess: $recipeProcess) {
+						recipeProcess {...recipeProcess}
 					}
 				}
-			""")
+			""", vars: %{"recipeProcess" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == rec_proc.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["processClassifiedAs"] == params.process_classified_as
-		assert data["processConformsTo"]["id"] == params.process_conforms_to_id
-		assert data["hasDuration"]["unitType"] == to_string(params.has_duration.unit_type)
-		assert data["hasDuration"]["numericDuration"] == params.has_duration.numeric_duration
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
+		assert data["processClassifiedAs"] == params["processClassifiedAs"]
+		assert data["processConformsTo"]["id"] == params["processConformsTo"]
+		assert data["hasDuration"] == params["hasDuration"]
 	end
 
-	test "updateRecipeProcess(), set hasDuration to null", %{params: params, inserted: rec_proc} do
+	test "updateRecipeProcess: hasDuration set null", %{params: params, inserted: old} do
 		assert %{data: %{"updateRecipeProcess" => %{"recipeProcess" => data}}} =
-			mutation!("""
-				updateRecipeProcess(recipeProcess: {
-					id: "#{rec_proc.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-					processClassifiedAs: #{inspect(params.process_classified_as)}
-					processConformsTo: "#{params.process_conforms_to_id}"
-					hasDuration: null
-				}) {
-					recipeProcess {
-						id
-						name
-						note
-						processClassifiedAs
-						processConformsTo { id }
-						hasDuration {
-							unitType
-							numericDuration
-						}
+			run!("""
+				#{@frag}
+				mutation ($recipeProcess: RecipeProcessUpdateParams!) {
+					updateRecipeProcess(recipeProcess: $recipeProcess) {
+						recipeProcess {...recipeProcess}
 					}
 				}
-			""")
+			""", vars: %{
+				"recipeProcess" =>
+					params
+					|> Map.put("id", old.id)
+					|> Map.put("hasDuration", nil)
+			})
 
-		assert data["id"] == rec_proc.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
-		assert data["processClassifiedAs"] == params.process_classified_as
-		assert data["processConformsTo"]["id"] == params.process_conforms_to_id
-		assert data["hasDuration"]["unitType"] == nil
-		assert data["hasDuration"]["numericDuration"] == nil
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
+		assert data["processClassifiedAs"] == params["processClassifiedAs"]
+		assert data["processConformsTo"]["id"] == params["processConformsTo"]
+		assert data["hasDuration"] == nil
 	end
 
-	test "deleteRecipeProcess()", %{inserted: %{id: id}} do
+	test "deleteRecipeProcess", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteRecipeProcess" => true}} =
-			mutation!("""
-				deleteRecipeProcess(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteRecipeProcess(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

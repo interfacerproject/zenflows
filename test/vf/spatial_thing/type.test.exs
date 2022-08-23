@@ -21,113 +21,89 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			mappable_address: Factory.uniq("address"),
-			lat: Factory.float(),
-			long: Factory.float(),
-			alt: Factory.float(),
-			note: Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"mappableAddress" => Factory.str("address"),
+			"lat" => Factory.float(),
+			"long" => Factory.float(),
+			"alt" => Factory.float(),
+			"note" => Factory.str("note"),
 		},
-		spatial_thing: Factory.insert!(:spatial_thing),
+		inserted: Factory.insert!(:spatial_thing),
 	}
 end
 
-describe "Query" do
-	test "spatialThing()", %{spatial_thing: spt_thg} do
-		assert %{data: %{"spatialThing" => data}} =
-			query!("""
-				spatialThing(id: "#{spt_thg.id}") {
-					id
-					name
-					mappableAddress
-					lat
-					long
-					alt
-					note
-				}
-			""")
+@frag """
+fragment spatialThing on SpatialThing {
+	id
+	name
+	mappableAddress
+	lat
+	long
+	alt
+	note
+}
+"""
 
-		assert data["id"] == spt_thg.id
-		assert data["name"] == spt_thg.name
-		assert data["mappableAddress"] == spt_thg.mappable_address
-		assert data["lat"] == spt_thg.lat
-		assert data["long"] == spt_thg.long
-		assert data["alt"] == spt_thg.alt
-		assert data["note"] == spt_thg.note
+describe "Query" do
+	test "spatialThing", %{inserted: new} do
+		assert %{data: %{"spatialThing" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					spatialThing(id: $id) {...spatialThing}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["mappableAddress"] == new.mappable_address
+		assert data["lat"] == new.lat
+		assert data["long"] == new.long
+		assert data["alt"] == new.alt
+		assert data["note"] == new.note
 	end
 end
 
 describe "Mutation" do
-	test "createSpatialThing()", %{params: params} do
+	test "createSpatialThing", %{params: params} do
 		assert %{data: %{"createSpatialThing" => %{"spatialThing" => data}}} =
-			mutation!("""
-				createSpatialThing(spatialThing: {
-					name: "#{params.name}"
-					mappableAddress: "#{params.mappable_address}"
-					lat: #{params.lat}
-					long: #{params.long}
-					alt: #{params.alt}
-					note: "#{params.note}"
-				}) {
-					spatialThing {
-						id
-						name
-						mappableAddress
-						lat
-						long
-						alt
-						note
+			run!("""
+				#{@frag}
+				mutation ($spatialThing: SpatialThingCreateParams!) {
+					createSpatialThing(spatialThing: $spatialThing) {
+						spatialThing {...spatialThing}
 					}
 				}
-			""")
+			""", vars: %{"spatialThing" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["mappableAddress"] == params.mappable_address
-		assert data["lat"] == params.lat
-		assert data["long"] == params.long
-		assert data["alt"] == params.alt
-		assert data["note"] == params.note
+		data = Map.delete(data, "id")
+		assert data == params
 	end
 
-	test "updateSpatialThing()", %{params: params, spatial_thing: spt_thg} do
+	test "updateSpatialThing", %{params: params, inserted: old} do
 		assert %{data: %{"updateSpatialThing" => %{"spatialThing" => data}}} =
-			mutation!("""
-				updateSpatialThing(spatialThing: {
-					id: "#{spt_thg.id}"
-					name: "#{params.name}"
-					mappableAddress: "#{params.mappable_address}"
-					lat: #{params.lat}
-					long: #{params.long}
-					alt: #{params.alt}
-					note: "#{params.note}"
-				}) {
-					spatialThing {
-						id
-						name
-						mappableAddress
-						lat
-						long
-						alt
-						note
+			run!("""
+				#{@frag}
+				mutation ($spatialThing: SpatialThingUpdateParams!) {
+					updateSpatialThing(spatialThing: $spatialThing) {
+						spatialThing {...spatialThing}
 					}
 				}
-			""")
+			""", vars: %{"spatialThing" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == spt_thg.id
-		assert data["name"] == params.name
-		assert data["mappableAddress"] == params.mappable_address
-		assert data["lat"] == params.lat
-		assert data["long"] == params.long
-		assert data["alt"] == params.alt
-		assert data["note"] == params.note
+		assert data["id"] == old.id
+		data = Map.delete(data, "id")
+		assert data == params
 	end
 
-	test "deleteSpatialThing()", %{spatial_thing: %{id: id}} do
+	test "deleteSpatialThing", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteSpatialThing" => true}} =
-			mutation!("""
-				deleteSpatialThing(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteSpatialThing(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

@@ -20,23 +20,27 @@ defmodule Zenflows.VF.Unit.Resolv do
 
 alias Zenflows.VF.Unit.Domain
 
-def unit(%{id: id}, _info) do
-	Domain.one(id)
+def unit(params, _) do
+	Domain.one(params)
 end
 
-def create_unit(%{unit: params}, _info) do
+def units(params, _) do
+	Domain.all(params)
+end
+
+def create_unit(%{unit: params}, _) do
 	with {:ok, unit} <- Domain.create(params) do
 		{:ok, %{unit: unit}}
 	end
 end
 
-def update_unit(%{unit: %{id: id} = params}, _info) do
+def update_unit(%{unit: %{id: id} = params}, _) do
 	with {:ok, unit} <- Domain.update(id, params) do
 		{:ok, %{unit: unit}}
 	end
 end
 
-def delete_unit(%{id: id}, _info) do
+def delete_unit(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end

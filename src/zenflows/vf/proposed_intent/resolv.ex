@@ -20,16 +20,6 @@ defmodule Zenflows.VF.ProposedIntent.Resolv do
 
 alias Zenflows.VF.ProposedIntent.Domain
 
-def published_in(prop_int, _, _) do
-	prop_int = Domain.preload(prop_int, :published_in)
-	{:ok, prop_int.published_in}
-end
-
-def publishes(prop_int, _, _) do
-	prop_int = Domain.preload(prop_int, :publishes)
-	{:ok, prop_int.publishes}
-end
-
 def propose_intent(params, _) do
 	with {:ok, prop_int} <- Domain.create(params) do
 		{:ok, %{proposed_intent: prop_int}}
@@ -40,5 +30,15 @@ def delete_proposed_intent(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
+end
+
+def published_in(prop_int, _, _) do
+	prop_int = Domain.preload(prop_int, :published_in)
+	{:ok, prop_int.published_in}
+end
+
+def publishes(prop_int, _, _) do
+	prop_int = Domain.preload(prop_int, :publishes)
+	{:ok, prop_int.publishes}
 end
 end

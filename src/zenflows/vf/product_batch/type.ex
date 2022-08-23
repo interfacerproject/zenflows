@@ -47,10 +47,6 @@ object :product_batch do
 	field :production_date, :datetime
 end
 
-object :product_batch_response do
-	field :product_batch, non_null(:product_batch)
-end
-
 input_object :product_batch_create_params do
 	@desc @batch_number
 	field :batch_number, non_null(:string)
@@ -75,10 +71,32 @@ input_object :product_batch_update_params do
 	field :production_date, :datetime
 end
 
+object :product_batch_response do
+	field :product_batch, non_null(:product_batch)
+end
+
+object :product_batch_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:product_batch)
+end
+
+object :product_batch_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:product_batch_edge)))
+end
+
 object :query_product_batch do
 	field :product_batch, :product_batch do
 		arg :id, non_null(:id)
 		resolve &Resolv.product_batch/2
+	end
+
+	field :product_batches, :product_batch_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.product_batches/2
 	end
 end
 

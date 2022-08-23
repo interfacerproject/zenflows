@@ -20,23 +20,27 @@ defmodule Zenflows.VF.ProcessSpecification.Resolv do
 
 alias Zenflows.VF.ProcessSpecification.Domain
 
-def process_specification(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def process_specification(params, _) do
+	Domain.one(params)
 end
 
-def create_process_specification(%{process_specification: params}, _info) do
+def process_specifications(params, _) do
+	Domain.all(params)
+end
+
+def create_process_specification(%{process_specification: params}, _) do
 	with {:ok, proc_spec} <- Domain.create(params) do
 		{:ok, %{process_specification: proc_spec}}
 	end
 end
 
-def update_process_specification(%{process_specification: %{id: id} = params}, _info) do
+def update_process_specification(%{process_specification: %{id: id} = params}, _) do
 	with {:ok, proc_spec} <- Domain.update(id, params) do
 		{:ok, %{process_specification: proc_spec}}
 	end
 end
 
-def delete_process_specification(%{id: id}, _info) do
+def delete_process_specification(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end

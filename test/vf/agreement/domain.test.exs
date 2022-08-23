@@ -28,7 +28,6 @@ setup do
 			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:agreement),
-		id: Factory.id(),
 	}
 end
 
@@ -37,16 +36,16 @@ describe "one/1" do
 		assert {:ok, %Agreement{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the Agreement", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the Agreement" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
 describe "create/1" do
 	test "with good params: creates an Agreement", %{params: params} do
-		assert {:ok, %Agreement{} = agreem} = Domain.create(params)
-		assert agreem.name == params.name
-		assert agreem.note == params.note
+		assert {:ok, %Agreement{} = new} = Domain.create(params)
+		assert new.name == params.name
+		assert new.note == params.note
 	end
 
 	test "with bad params: doesn't create an Agreement" do
@@ -74,8 +73,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the Agreement", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the Agreement" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 end

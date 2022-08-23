@@ -20,6 +20,7 @@ defmodule Zenflows.VF.EconomicResource.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.{
 	Action,
 	EconomicResource,
@@ -28,20 +29,31 @@ alias Zenflows.VF.{
 
 @typep repo() :: Ecto.Repo.t()
 @typep error() :: Ecto.Changeset.t() | String.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: EconomicResource.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(EconomicResource, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, EconomicResource.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(EconomicResource, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
 end
 
-@spec update(id(), params()) :: {:ok, EconomicResource.t()} | {:error, error}
+@spec all(Paging.params()) :: Paging.result(EconomicResource.t())
+def all(params) do
+	Paging.page(EconomicResource, params)
+end
+
+@spec update(id(), params()) :: {:ok, EconomicResource.t()} | {:error, error()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &EconomicResource.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &EconomicResource.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: er}} -> {:ok, er}
@@ -49,11 +61,12 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, EconomicResource.t()} | {:error, error}
+@spec delete(id()) :: {:ok, EconomicResource.t()} | {:error, error()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: er}} -> {:ok, er}
@@ -108,17 +121,5 @@ end
 
 def preload(eco_res, :unit_of_effort) do
 	Repo.preload(eco_res, :unit_of_effort)
-end
-
-# Returns a EconomicResource in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, EconomicResource.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			er -> {:ok, er}
-		end
-	end
 end
 end

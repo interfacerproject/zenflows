@@ -23,8 +23,8 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
-			"note" => Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 			"due" => Factory.iso_now(),
 			"refinementOf" => Factory.insert!(:scenario).id,
 		},

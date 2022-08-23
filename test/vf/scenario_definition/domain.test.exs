@@ -25,53 +25,52 @@ alias Zenflows.VF.{
 	ScenarioDefinition.Domain,
 }
 
-setup ctx do
-	params = %{
-		name: Factory.uniq("name"),
-		note: Factory.uniq("note"),
-		has_duration: Factory.build(:iduration),
- 	}
-
-	if ctx[:no_insert] do
-		%{params: params}
-	else
-		%{params: params, inserted: Factory.insert!(:scenario_definition)}
-	end
+setup do
+	%{
+		params: %{
+			name: Factory.str("name"),
+			note: Factory.str("note"),
+			has_duration: Factory.build(:iduration),
+	 	},
+		inserted: Factory.insert!(:scenario_definition),
+	}
 end
 
-test "by_id/1 returns a ScenarioDefinition", %{inserted: scen_def} do
-	assert %ScenarioDefinition{} = Domain.by_id(scen_def.id)
+describe "one/1" do
+	test "with good id: finds the ScenarioDefinition", %{inserted: %{id: id}} do
+		assert {:ok, %ScenarioDefinition{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the ScenarioDefinition" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	@tag :no_insert
-	test "creates a ScenarioDefinition with valid params", %{params: params} do
-		assert {:ok, %ScenarioDefinition{} = scen_def} = Domain.create(params)
-
-		assert scen_def.name == params.name
-		assert scen_def.note == params.note
-		assert scen_def.has_duration_unit_type == params.has_duration.unit_type
-		assert scen_def.has_duration_numeric_duration == params.has_duration.numeric_duration
-	end
-
-	test "doesn't create a ScenarioDefinition with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates a ScenarioDefinition with valid params", %{params: params, inserted: old} do
-		assert {:ok, %ScenarioDefinition{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates a ScenarioDefinition", %{params: params} do
+		assert {:ok, %ScenarioDefinition{} = new} = Domain.create(params)
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.has_duration_unit_type == params.has_duration.unit_type
 		assert new.has_duration_numeric_duration == params.has_duration.numeric_duration
 	end
 
-	test "doesn't update a ScenarioDefinition", %{inserted: old} do
-		assert {:ok, %ScenarioDefinition{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create a ScenarioDefinition" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the ScenarioDefinition", %{params: params, inserted: old} do
+		assert {:ok, %ScenarioDefinition{} = new} = Domain.update(old.id, params)
+		assert new.name == params.name
+		assert new.note == params.note
+		assert new.has_duration_unit_type == params.has_duration.unit_type
+		assert new.has_duration_numeric_duration == params.has_duration.numeric_duration
+	end
+
+	test "with bad params: doesn't update the ScenarioDefinition", %{inserted: old} do
+		assert {:ok, %ScenarioDefinition{} = new} = Domain.update(old.id, %{})
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.has_duration_unit_type == old.has_duration_unit_type
@@ -79,9 +78,15 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a ScenarioDefinition", %{inserted: %{id: id}} do
-	assert {:ok, %ScenarioDefinition{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the ScenarioDefinition", %{inserted: %{id: id}} do
+		assert {:ok, %ScenarioDefinition{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the ScenarioDefinition" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 
 describe "preload/2" do

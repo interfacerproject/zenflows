@@ -39,10 +39,6 @@ object :recipe_exchange do
 	field :note, :string
 end
 
-object :recipe_exchange_response do
-	field :recipe_exchange, non_null(:recipe_exchange)
-end
-
 input_object :recipe_exchange_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -61,10 +57,32 @@ input_object :recipe_exchange_update_params do
 	field :note, :string
 end
 
+object :recipe_exchange_response do
+	field :recipe_exchange, non_null(:recipe_exchange)
+end
+
+object :recipe_exchange_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:recipe_exchange)
+end
+
+object :recipe_exchange_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:recipe_exchange_edge)))
+end
+
 object :query_recipe_exchange do
 	field :recipe_exchange, :recipe_exchange do
 		arg :id, non_null(:id)
 		resolve &Resolv.recipe_exchange/2
+	end
+
+	field :recipe_exchanges, :recipe_exchange_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.recipe_exchanges/2
 	end
 end
 

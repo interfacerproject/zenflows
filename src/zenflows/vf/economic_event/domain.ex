@@ -22,6 +22,7 @@ import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.{
 	Action,
 	EconomicEvent,
@@ -30,19 +31,29 @@ alias Zenflows.VF.{
 }
 
 @typep repo() :: Ecto.Repo.t()
-@typep error() :: Ecto.Changeset.t() | String.t()
-@typep changes() :: Ecto.Multi.changes()
+@typep chgset() :: Ecto.Changeset.t()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: EconomicEvent.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(EconomicEvent, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, EconomicEvent.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(EconomicEvent, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(EconomicEvent.t())
+def all(params) do
+	Paging.page(EconomicEvent, params)
 end
 
 @spec create(params(), params()) :: {:ok, EconomicEvent.t(), EconomicResource.t(), nil}
 	| {:ok, EconomicEvent.t(), nil, EconomicResource.t()}
-	| {:ok, EconomicEvent.t()} | {:error, error()}
+	| {:ok, EconomicEvent.t()} | {:error, String.t() | chgset()}
 def create(evt_params, res_params) do
 	Multi.new()
 	|> Multi.insert(:created_evt, EconomicEvent.chgset(evt_params))
@@ -976,11 +987,13 @@ defp handle_multi("move", evt, res_params) do
 	end)
 end
 
-@spec update(id(), params()) :: {:ok, EconomicEvent.t()} | {:error, error()}
+@spec update(id(), params())
+	:: {:ok, EconomicEvent.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &EconomicEvent.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &EconomicEvent.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: ee}} -> {:ok, ee}
@@ -1048,18 +1061,5 @@ end
 
 def preload(eco_evt, :triggered_by) do
 	Repo.preload(eco_evt, :triggered_by)
-end
-
-# Returns a EconomicEvent in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id())
-	:: (repo(), changes() -> {:ok, EconomicEvent.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			ee -> {:ok, ee}
-		end
-	end
 end
 end

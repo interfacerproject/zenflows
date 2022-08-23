@@ -21,98 +21,88 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			subject_id: Factory.insert!(:agent).id,
-			object_id: Factory.insert!(:agent).id,
-			relationship_id: Factory.insert!(:agent_relationship_role).id,
-			# in_scope_of:
-			note: Factory.uniq("note"),
+			"subject" => Factory.insert!(:agent).id,
+			"object" => Factory.insert!(:agent).id,
+			"relationship" => Factory.insert!(:agent_relationship_role).id,
+			# inScopeOf:
+			"note" => Factory.str("note"),
 		},
-		agent_relationship: Factory.insert!(:agent_relationship),
+		inserted: Factory.insert!(:agent_relationship),
 	}
 end
 
-describe "Query" do
-	test "agentRelationship()", %{agent_relationship: rel} do
-		assert %{data: %{"agentRelationship" => data}} =
-			query!("""
-				agentRelationship(id: "#{rel.id}") {
-					id
-					subject { id }
-					object { id }
-					relationship {
-						id
-					}
-					note
-				}
-			""")
+@frag """
+fragment agentRelationship on AgentRelationship {
+	id
+	subject { id }
+	object { id }
+	relationship { id }
+	note
+}
+"""
 
-		assert data["id"] == rel.id
-		assert data["subject"]["id"] == rel.subject_id
-		assert data["object"]["id"] == rel.object_id
-		assert data["relationship"]["id"] == rel.relationship_id
-		assert data["note"] == rel.note
+describe "Query" do
+	test "agentRelationship", %{inserted: new} do
+		assert %{data: %{"agentRelationship" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					agentRelationship(id: $id) {...agentRelationship}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["subject"]["id"] == new.subject_id
+		assert data["object"]["id"] == new.object_id
+		assert data["relationship"]["id"] == new.relationship_id
+		assert data["note"] == new.note
 	end
 end
 
 describe "Mutation" do
-	test "createAgentRelationship()", %{params: params} do
+	test "createAgentRelationship", %{params: params} do
 		assert %{data: %{"createAgentRelationship" => %{"agentRelationship" => data}}} =
-			mutation!("""
-				createAgentRelationship(relationship: {
-					subject: "#{params.subject_id}"
-					object: "#{params.object_id}"
-					relationship: "#{params.relationship_id}"
-					note: "#{params.note}"
-				}) {
-					agentRelationship {
-						id
-						subject { id }
-						object { id }
-						relationship { id }
-						note
+			run!("""
+				#{@frag}
+				mutation ($relationship: AgentRelationshipCreateParams!) {
+					createAgentRelationship(relationship: $relationship) {
+						agentRelationship {...agentRelationship}
 					}
 				}
-			""")
+			""", vars: %{"relationship" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["subject"]["id"] == params.subject_id
-		assert data["object"]["id"] == params.object_id
-		assert data["relationship"]["id"] == params.relationship_id
-		assert data["note"] == params.note
+		assert data["subject"]["id"] == params["subject"]
+		assert data["object"]["id"] == params["object"]
+		assert data["relationship"]["id"] == params["relationship"]
+		assert data["note"] == params["note"]
 	end
 
-	test "updateAgentRelationship()", %{params: params, agent_relationship: rel} do
+	test "updateAgentRelationship", %{params: params, inserted: old} do
 		assert %{data: %{"updateAgentRelationship" => %{"agentRelationship" => data}}} =
-			mutation!("""
-				updateAgentRelationship(relationship: {
-					id: "#{rel.id}"
-					subject: "#{params.subject_id}"
-					object: "#{params.object_id}"
-					relationship: "#{params.relationship_id}"
-					note: "#{params.note}"
-				}) {
-					agentRelationship {
-						id
-						subject { id }
-						object { id }
-						relationship { id }
-						note
+			run!("""
+				#{@frag}
+				mutation ($relationship: AgentRelationshipUpdateParams!) {
+					updateAgentRelationship(relationship: $relationship) {
+						agentRelationship {...agentRelationship}
 					}
 				}
-			""")
+			""", vars: %{"relationship" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == rel.id
-		assert data["subject"]["id"] == params.subject_id
-		assert data["object"]["id"] == params.object_id
-		assert data["relationship"]["id"] == params.relationship_id
-		assert data["note"] == params.note
+		assert data["id"] == old.id
+		assert data["subject"]["id"] == params["subject"]
+		assert data["object"]["id"] == params["object"]
+		assert data["relationship"]["id"] == params["relationship"]
+		assert data["note"] == params["note"]
 	end
 
-	test "deleteAgentRelationship()", %{agent_relationship: %{id: id}} do
+	test "deleteAgentRelationship", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteAgentRelationship" => true}} =
-			mutation!("""
-				deleteAgentRelationship(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteAgentRelationship(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

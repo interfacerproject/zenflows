@@ -20,8 +20,12 @@ defmodule Zenflows.VF.RoleBehavior.Resolv do
 
 alias Zenflows.VF.RoleBehavior.Domain
 
-def role_behavior(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def role_behavior(params, _info) do
+	Domain.one(params)
+end
+
+def role_behaviors(params, _info) do
+	Domain.all(params)
 end
 
 def create_role_behavior(%{role_behavior: params}, _info) do

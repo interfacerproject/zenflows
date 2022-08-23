@@ -39,10 +39,6 @@ object :unit do
 	field :symbol, non_null(:string)
 end
 
-object :unit_response do
-	field :unit, :unit
-end
-
 input_object :unit_create_params do
 	@desc @label
 	field :label, non_null(:string)
@@ -61,13 +57,33 @@ input_object :unit_update_params do
 	field :symbol, :string
 end
 
+object :unit_response do
+	field :unit, non_null(:unit)
+end
+
+object :unit_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:unit)
+end
+
+object :unit_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:unit_edge)))
+end
+
 object :query_unit do
 	field :unit, :unit do
 		arg :id, non_null(:id)
 		resolve &Resolv.unit/2
 	end
 
-	#units(start: ID, limit: Int): [Unit!]
+	field :units, :unit_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.units/2
+	end
 end
 
 object :mutation_unit do

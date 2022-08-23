@@ -20,35 +20,48 @@ defmodule Zenflows.VF.RecipeProcess.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.{Duration, RecipeProcess}
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: RecipeProcess.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(RecipeProcess, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, RecipeProcess.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(RecipeProcess, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(RecipeProcess.t())
+def all(params) do
+	Paging.page(RecipeProcess, params)
 end
 
 @spec create(params()) :: {:ok, RecipeProcess.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:rec_proc, RecipeProcess.chgset(params))
+	|> Multi.insert(:insert, RecipeProcess.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{rec_proc: rp}} -> {:ok, rp}
+		{:ok, %{insert: rp}} -> {:ok, rp}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, RecipeProcess.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, RecipeProcess.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &RecipeProcess.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &RecipeProcess.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: rp}} -> {:ok, rp}
@@ -56,11 +69,13 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, RecipeProcess.t()} | {:error, chgset()}
+@spec delete(id())
+	:: {:ok, RecipeProcess.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: rp}} -> {:ok, rp}
@@ -76,17 +91,5 @@ end
 
 def preload(rec_proc, :process_conforms_to) do
 	Repo.preload(rec_proc, :process_conforms_to)
-end
-
-# Returns a RecipeProcess in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, RecipeProcess.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			rp -> {:ok, rp}
-		end
-	end
 end
 end

@@ -25,7 +25,7 @@ setup do
 		action_id: Factory.build(:action_id),
 		provider_id: Factory.insert!(:agent).id,
 		receiver_id: Factory.insert!(:agent).id,
-		resource_classified_as: Factory.uniq_list("uri"),
+		resource_classified_as: Factory.str_list("uri"),
 		resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
@@ -38,8 +38,8 @@ setup do
 		triggered_by_id: Factory.insert!(:economic_event).id,
 		due: Factory.now(),
 		finished: Factory.bool(),
-		note: Factory.uniq("note"),
-		agreed_in: Factory.uniq("uri"),
+		note: Factory.str("note"),
+		agreed_in: Factory.str("uri"),
 		# in_scope_of_id:
 	}}
 end

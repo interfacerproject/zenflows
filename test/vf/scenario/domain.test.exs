@@ -25,49 +25,33 @@ alias Zenflows.VF.{
 	ScenarioDefinition,
 }
 
-setup ctx do
-	params = %{
-		name: Factory.uniq("name"),
-		note: Factory.uniq("note"),
-		has_beginning: DateTime.utc_now(),
-		has_end: DateTime.utc_now(),
-		defined_as_id: Factory.insert!(:scenario_definition).id,
-		refinement_of_id: Factory.insert!(:scenario).id,
- 	}
-
-	if ctx[:no_insert] do
-		%{params: params}
-	else
-		%{params: params, inserted: Factory.insert!(:scenario)}
-	end
+setup do
+	%{
+		params: %{
+			name: Factory.str("name"),
+			note: Factory.str("note"),
+			has_beginning: DateTime.utc_now(),
+			has_end: DateTime.utc_now(),
+			defined_as_id: Factory.insert!(:scenario_definition).id,
+			refinement_of_id: Factory.insert!(:scenario).id,
+	 	},
+		inserted: Factory.insert!(:scenario),
+	}
 end
 
-test "by_id/1 returns a Scenario", %{inserted: scen} do
-	assert %Scenario{} = Domain.by_id(scen.id)
+describe "one/1" do
+	test "with good id: finds the Scenario", %{inserted: %{id: id}} do
+		assert {:ok, %Scenario{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the Scenario" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	@tag :no_insert
-	test "creates a Scenario with valid params", %{params: params} do
-		assert {:ok, %Scenario{} = scen} = Domain.create(params)
-
-		assert scen.name == params.name
-		assert scen.note == params.note
-		assert scen.has_beginning == params.has_beginning
-		assert scen.has_end == params.has_end
-		assert scen.defined_as_id == params.defined_as_id
-		assert scen.refinement_of_id == params.refinement_of_id
-	end
-
-	test "doesn't create a Scenario with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates a Scenario with valid params", %{params: params, inserted: old} do
-		assert {:ok, %Scenario{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates a Scenario", %{params: params} do
+		assert {:ok, %Scenario{} = new} = Domain.create(params)
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.has_beginning == params.has_beginning
@@ -76,9 +60,24 @@ describe "update/2" do
 		assert new.refinement_of_id == params.refinement_of_id
 	end
 
-	test "doesn't update a Scenario", %{inserted: old} do
-		assert {:ok, %Scenario{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create a Scenario" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the Scenario", %{params: params, inserted: old} do
+		assert {:ok, %Scenario{} = new} = Domain.update(old.id, params)
+		assert new.name == params.name
+		assert new.note == params.note
+		assert new.has_beginning == params.has_beginning
+		assert new.has_end == params.has_end
+		assert new.defined_as_id == params.defined_as_id
+		assert new.refinement_of_id == params.refinement_of_id
+	end
+
+	test "with bad params: doesn't update the Scenario", %{inserted: old} do
+		assert {:ok, %Scenario{} = new} = Domain.update(old.id, %{})
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.has_beginning == old.has_beginning
@@ -88,9 +87,15 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a Scenario", %{inserted: %{id: id}} do
-	assert {:ok, %Scenario{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the Scenario", %{inserted: %{id: id}} do
+		assert {:ok, %Scenario{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the Scenario" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 
 describe "preload/2" do

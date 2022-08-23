@@ -20,6 +20,7 @@ defmodule Zenflows.VF.ProposedIntent.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.ProposedIntent
 
 @typep repo() :: Ecto.Repo.t()
@@ -27,18 +28,20 @@ alias Zenflows.VF.ProposedIntent
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec one(repo(), id()) :: {:ok, ProposedIntent.t()} | {:error, String.t()}
-def one(repo \\ Repo, id) do
-	one_by(repo, id: id)
-end
-
-@spec one_by(repo(), map() | Keyword.t())
+@spec one(repo(), id() | map() | Keyword.t())
 	:: {:ok, ProposedIntent.t()} | {:error, String.t()}
-def one_by(repo \\ Repo, clauses) do
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
 	case repo.get_by(ProposedIntent, clauses) do
 		nil -> {:error, "not found"}
 		found -> {:ok, found}
 	end
+end
+
+@spec all(Paging.params()) :: Paging.result(ProposedIntent.t())
+def all(params) do
+	Paging.page(ProposedIntent, params)
 end
 
 @spec create(params()) :: {:ok, ProposedIntent.t()} | {:error, chgset()}
@@ -57,8 +60,8 @@ end
 def delete(id) do
 	Multi.new()
 	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one_by/2)
-	|> Multi.delete(:delete, &(&1.one))
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: pi}} -> {:ok, pi}

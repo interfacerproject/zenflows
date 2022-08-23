@@ -22,7 +22,7 @@ alias Zenflows.VF.Fulfillment
 
 setup do
 	%{params: %{
-		note: Factory.uniq("note"),
+		note: Factory.str("note"),
 		fulfilled_by_id: Factory.insert!(:economic_event).id,
 		fulfills_id: Factory.insert!(:commitment).id,
 		resource_quantity: %{

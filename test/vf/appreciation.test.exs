@@ -24,7 +24,7 @@ setup do
 	%{params: %{
 		appreciation_of_id: Factory.insert!(:economic_event).id,
 		appreciation_with_id: Factory.insert!(:economic_event).id,
-		note: Factory.uniq("note"),
+		note: Factory.str("note"),
 	}}
 end
 

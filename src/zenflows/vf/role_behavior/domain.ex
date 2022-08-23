@@ -20,35 +20,48 @@ defmodule Zenflows.VF.RoleBehavior.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.RoleBehavior
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: RoleBehavior.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(RoleBehavior, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, RoleBehavior.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(RoleBehavior, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(RoleBehavior.t())
+def all(params) do
+	Paging.page(RoleBehavior, params)
 end
 
 @spec create(params()) :: {:ok, RoleBehavior.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:role_beh, RoleBehavior.chgset(params))
+	|> Multi.insert(:insert, RoleBehavior.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{role_beh: rb}} -> {:ok, rb}
+		{:ok, %{insert: rb}} -> {:ok, rb}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, RoleBehavior.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, RoleBehavior.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &RoleBehavior.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &RoleBehavior.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: rb}} -> {:ok, rb}
@@ -59,24 +72,13 @@ end
 @spec delete(id()) :: {:ok, RoleBehavior.t()} | {:error, chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: rb}} -> {:ok, rb}
 		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
-	end
-end
-
-# Returns a RoleBehavior in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id()) :: (repo(), changes() -> {:ok, RoleBehavior.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			rb -> {:ok, rb}
-		end
 	end
 end
 end

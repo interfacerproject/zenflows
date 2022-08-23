@@ -37,6 +37,7 @@ for purposes of categorization.
 @process_conforms_to """
 The standard specification or definition of a process.
 """
+@process_conforms_to_id "(`ProcesssSpecification`) #{@process_conforms_to}"
 @note "A textual description or comment."
 
 @desc "Specifies a process in a recipe for use in planning from recipe."
@@ -60,10 +61,6 @@ object :recipe_process do
 	field :note, :string
 end
 
-object :recipe_process_response do
-	field :recipe_process, non_null(:recipe_process)
-end
-
 input_object :recipe_process_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -74,10 +71,7 @@ input_object :recipe_process_create_params do
 	@desc @process_classified_as
 	field :process_classified_as, list_of(non_null(:uri))
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`ProcessSpecification`) " <> @process_conforms_to
+	@desc @process_conforms_to_id
 	field :process_conforms_to_id, non_null(:id), name: "process_conforms_to"
 
 	@desc @note
@@ -96,11 +90,25 @@ input_object :recipe_process_update_params do
 	@desc @process_classified_as
 	field :process_classified_as, list_of(non_null(:uri))
 
-	@desc "(`ProcessSpecification`) " <> @process_conforms_to
+	@desc @process_conforms_to_id
 	field :process_conforms_to_id, :id, name: "process_conforms_to"
 
 	@desc @note
 	field :note, :string
+end
+
+object :recipe_process_response do
+	field :recipe_process, non_null(:recipe_process)
+end
+
+object :recipe_process_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:recipe_process)
+end
+
+object :recipe_process_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:recipe_process_edge)))
 end
 
 object :query_recipe_process do
@@ -109,7 +117,13 @@ object :query_recipe_process do
 		resolve &Resolv.recipe_process/2
 	end
 
-	#recipeProcesses(start: ID, limit: Int): [RecipeProcess!]
+	field :recipe_processes, :recipe_process_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.recipe_processes/2
+	end
 end
 
 object :mutation_recipe_process do

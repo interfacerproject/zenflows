@@ -20,6 +20,7 @@ defmodule Zenflows.VF.Proposal.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.Proposal
 
 @typep repo() :: Ecto.Repo.t()
@@ -27,18 +28,20 @@ alias Zenflows.VF.Proposal
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec one(repo(), id()) :: {:ok, Proposal.t()} | {:error, String.t()}
-def one(repo \\ Repo, id) do
-	one_by(repo, id: id)
-end
-
-@spec one_by(repo(), map() | Keyword.t())
+@spec one(repo(), id() | map() | Keyword.t())
 	:: {:ok, Proposal.t()} | {:error, String.t()}
-def one_by(repo \\ Repo, clauses) do
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
 	case repo.get_by(Proposal, clauses) do
 		nil -> {:error, "not found"}
 		found -> {:ok, found}
 	end
+end
+
+@spec all(Paging.params()) :: Paging.result(Proposal.t())
+def all(params) do
+	Paging.page(Proposal, params)
 end
 
 @spec create(params()) :: {:ok, Proposal.t()} | {:error, chgset()}
@@ -57,7 +60,7 @@ end
 def update(id, params) do
 	Multi.new()
 	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one_by/2)
+	|> Multi.run(:one, &one/2)
 	|> Multi.update(:update, &Proposal.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
@@ -71,8 +74,8 @@ end
 def delete(id) do
 	Multi.new()
 	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one_by/2)
-	|> Multi.delete(:delete, &(&1.one))
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: pi}} -> {:ok, pi}

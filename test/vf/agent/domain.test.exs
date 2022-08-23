@@ -27,9 +27,9 @@ setup do
 		}
 end
 
-describe "by_id/1" do
-	test "returns a Person", %{per: per} do
-		agent = Domain.by_id(per.id)
+describe "one/1" do
+	test "with per's id: finds the Person", %{per: per} do
+		assert {:ok, agent} = Domain.one(per.id)
 
 		# common
 		assert agent.id == per.id
@@ -47,8 +47,8 @@ describe "by_id/1" do
 		assert agent.classified_as == nil
 	end
 
-	test "returns an Organization", %{org: org} do
-		agent = Domain.by_id(org.id)
+	test "with org's id: finds the Organization", %{org: org} do
+		assert {:ok, agent} = Domain.one(org.id)
 
 		# common
 		assert agent.id == org.id
@@ -69,20 +69,14 @@ end
 
 describe "preload/2" do
 	test "preloads :primary_location for a Person", %{per: per} do
-		agent =
-			per.id
-			|> Domain.by_id()
-			|> Domain.preload(:primary_location)
-
+		{:ok, agent} = Domain.one(per.id)
+		agent = Domain.preload(agent, :primary_location)
 		assert agent.primary_location.id == agent.primary_location_id
 	end
 
 	test "preloads :primary_location for an Organization", %{org: org} do
-		agent =
-			org.id
-			|> Domain.by_id()
-			|> Domain.preload(:primary_location)
-
+		{:ok, agent} = Domain.one(org.id)
+		agent = Domain.preload(agent, :primary_location)
 		assert agent.primary_location.id == agent.primary_location_id
 	end
 end

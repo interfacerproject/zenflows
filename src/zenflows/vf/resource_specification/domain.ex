@@ -20,6 +20,7 @@ defmodule Zenflows.VF.ResourceSpecification.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.ResourceSpecification
 
 @typep repo() :: Ecto.Repo.t()
@@ -27,21 +28,24 @@ alias Zenflows.VF.ResourceSpecification
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec one(repo(), id()) :: {:ok, ResourceSpecification.t()} | {:error, String.t()}
-def one(repo \\ Repo, id) do
-	one_by(repo, id: id)
-end
-
-@spec one_by(repo(), map() | Keyword.t())
+@spec one(repo(), id() | map() | Keyword.t())
 	:: {:ok, ResourceSpecification.t()} | {:error, String.t()}
-def one_by(repo \\ Repo, clauses) do
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
 	case repo.get_by(ResourceSpecification, clauses) do
 		nil -> {:error, "not found"}
 		found -> {:ok, found}
 	end
 end
 
-@spec create(repo(), params()) :: {:ok, ResourceSpecification.t()} | {:error, chgset()}
+@spec all(Paging.params()) :: Paging.result(ResourceSpecification.t())
+def all(params) do
+	Paging.page(ResourceSpecification, params)
+end
+
+@spec create(repo(), params())
+	:: {:ok, ResourceSpecification.t()} | {:error, chgset()}
 def create(repo \\ Repo, params) do
 	Multi.new()
 	|> Multi.insert(:insert, ResourceSpecification.chgset(params))
@@ -57,7 +61,7 @@ end
 def update(id, params) do
 	Multi.new()
 	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one_by/2)
+	|> Multi.run(:one, &one/2)
 	|> Multi.update(:update, &ResourceSpecification.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
@@ -71,8 +75,8 @@ end
 def delete(id) do
 	Multi.new()
 	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one_by/2)
-	|> Multi.delete(:delete, &(&1.one))
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: rs}} -> {:ok, rs}

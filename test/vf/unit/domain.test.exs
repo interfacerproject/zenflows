@@ -28,7 +28,6 @@ setup do
 			symbol: Factory.str("symbol"),
 		},
 		inserted: Factory.insert!(:unit),
-		id: Factory.id(),
 	}
 end
 
@@ -37,8 +36,8 @@ describe "one/1" do
 		assert {:ok, %Unit{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the Unit", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the Unit" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
@@ -74,8 +73,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the Unit", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the Unit" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 end

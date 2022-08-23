@@ -20,31 +20,35 @@ defmodule Zenflows.VF.ScenarioDefinition.Resolv do
 
 use Absinthe.Schema.Notation
 
-alias Zenflows.VF.{ScenarioDefinition, ScenarioDefinition.Domain}
+alias Zenflows.VF.ScenarioDefinition.Domain
 
-def scenario_definition(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def scenario_definition(params, _) do
+	Domain.one(params)
 end
 
-def create_scenario_definition(%{scenario_definition: params}, _info) do
+def scenario_definitions(params, _) do
+	Domain.all(params)
+end
+
+def create_scenario_definition(%{scenario_definition: params}, _) do
 	with {:ok, scen_def} <- Domain.create(params) do
 		{:ok, %{scenario_definition: scen_def}}
 	end
 end
 
-def update_scenario_definition(%{scenario_definition: %{id: id} = params}, _info) do
+def update_scenario_definition(%{scenario_definition: %{id: id} = params}, _) do
 	with {:ok, scen_def} <- Domain.update(id, params) do
 		{:ok, %{scenario_definition: scen_def}}
 	end
 end
 
-def delete_scenario_definition(%{id: id}, _info) do
+def delete_scenario_definition(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def has_duration(%ScenarioDefinition{} = scen_def, _args, _info) do
+def has_duration(scen_def, _, _) do
 	scen_def = Domain.preload(scen_def, :has_duration)
 	{:ok, scen_def.has_duration}
 end

@@ -20,36 +20,40 @@ defmodule Zenflows.VF.RecipeProcess.Resolv do
 
 use Absinthe.Schema.Notation
 
-alias Zenflows.VF.{RecipeProcess, RecipeProcess.Domain}
+alias Zenflows.VF.RecipeProcess.Domain
 
-def recipe_process(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def recipe_process(params, _) do
+	Domain.one(params)
 end
 
-def create_recipe_process(%{recipe_process: params}, _info) do
+def recipe_processes(params, _) do
+	Domain.all(params)
+end
+
+def create_recipe_process(%{recipe_process: params}, _) do
 	with {:ok, rec_proc} <- Domain.create(params) do
 		{:ok, %{recipe_process: rec_proc}}
 	end
 end
 
-def update_recipe_process(%{recipe_process: %{id: id} = params}, _info) do
+def update_recipe_process(%{recipe_process: %{id: id} = params}, _) do
 	with {:ok, rec_proc} <- Domain.update(id, params) do
 		{:ok, %{recipe_process: rec_proc}}
 	end
 end
 
-def delete_recipe_process(%{id: id}, _info) do
+def delete_recipe_process(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def has_duration(%RecipeProcess{} = rec_proc, _args, _info) do
+def has_duration(rec_proc, _, _) do
 	rec_proc = Domain.preload(rec_proc, :has_duration)
 	{:ok, rec_proc.has_duration}
 end
 
-def process_conforms_to(%RecipeProcess{} = rec_proc, _args, _info) do
+def process_conforms_to(rec_proc, _, _) do
 	rec_proc = Domain.preload(rec_proc, :process_conforms_to)
 	{:ok, rec_proc.process_conforms_to}
 end

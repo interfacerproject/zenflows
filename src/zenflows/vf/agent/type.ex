@@ -61,6 +61,16 @@ interface :agent do
 	end
 end
 
+object :agent_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:agent)
+end
+
+object :agent_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:agent_edge)))
+end
+
 object :query_agent do
 	@desc "Loads details of the currently authenticated agent."
 	field :my_agent, :agent do
@@ -73,8 +83,17 @@ object :query_agent do
 		resolve &Resolv.agent/2
 	end
 
-	#"Loads all agents publicly registered within this collaboration space."
-	#agents(start: ID, limit: Int): [Agent!]
+	@desc """
+	Loads all agents publicly registered within this collaboration
+	space.
+	"""
+	field :agents, :agent_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.agents/2
+	end
 end
 
 # object :mutation_agent

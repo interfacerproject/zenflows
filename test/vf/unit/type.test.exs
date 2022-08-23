@@ -21,8 +21,8 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"label" => Factory.uniq("label"),
-			"symbol" => Factory.uniq("symbol"),
+			"label" => Factory.str("label"),
+			"symbol" => Factory.str("symbol"),
 		},
 		inserted: Factory.insert!(:unit),
 	}

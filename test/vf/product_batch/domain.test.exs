@@ -24,7 +24,7 @@ alias Zenflows.VF.{ProductBatch, ProductBatch.Domain}
 setup do
 	%{
 		params: %{
-			batch_number: Factory.uniq("batch number"),
+			batch_number: Factory.str("batch number"),
 			expiry_date: DateTime.utc_now(),
 			production_date: DateTime.utc_now(),
 		},

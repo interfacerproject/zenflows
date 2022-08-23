@@ -30,7 +30,7 @@ setup do
 			"receiver" => Factory.insert!(:agent).id,
 			"resourceInventoriedAs" => Factory.insert!(:economic_resource).id,
 			"resourceConformsTo" => Factory.insert!(:resource_specification).id,
-			"resourceClassifiedAs" => Factory.uniq_list("uri"),
+			"resourceClassifiedAs" => Factory.str_list("uri"),
 			"resourceQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
 				"hasNumericalValue" => Factory.float(),
@@ -50,10 +50,10 @@ setup do
 			"finished" => Factory.bool(),
 			"atLocation" => Factory.insert!(:spatial_thing).id,
 			"image" => Factory.img(),
-			"name" => Factory.uniq("name"),
-			"note" => Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 			# inScopeOf:
-			"agreedIn" => Factory.uniq("uri"),
+			"agreedIn" => Factory.str("uri"),
 		},
 		inserted: Factory.insert!(:intent),
 		id: Factory.id(),

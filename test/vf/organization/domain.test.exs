@@ -24,10 +24,10 @@ alias Zenflows.VF.{Organization, Organization.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
+			name: Factory.str("name"),
 			image: Factory.img(),
-			classified_as: Factory.uniq_list("uri"),
-			note: Factory.uniq("note"),
+			classified_as: Factory.str_list("uri"),
+			note: Factory.str("note"),
 			primary_location_id: Factory.insert!(:spatial_thing).id,
 		},
 		inserted: Factory.insert!(:organization),

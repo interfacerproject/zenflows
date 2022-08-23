@@ -25,7 +25,7 @@ setup do
 			"object" => Factory.insert!(:agent).id,
 			"relationship" => Factory.insert!(:agent_relationship_role).id,
 			# inScopeOf:
-			"note" => Factory.uniq("note"),
+			"note" => Factory.str("note"),
 		},
 		inserted: Factory.insert!(:agent_relationship),
 	}

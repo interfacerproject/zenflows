@@ -24,8 +24,8 @@ alias Zenflows.VF.{RecipeExchange, RecipeExchange.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:recipe_exchange),
 	}

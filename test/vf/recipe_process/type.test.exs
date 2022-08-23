@@ -21,14 +21,14 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
+			"name" => Factory.str("name"),
 			"hasDuration" => %{
 				"unitType" => Factory.build(:time_unit) |> to_string(),
 				"numericDuration" => Factory.float(),
 			},
-			"processClassifiedAs" => Factory.uniq_list("uri"),
+			"processClassifiedAs" => Factory.str_list("uri"),
 			"processConformsTo" => Factory.insert!(:process_specification).id,
-			"note" => Factory.uniq("note"),
+			"note" => Factory.str("note"),
 		},
 		inserted: Factory.insert!(:recipe_process),
 	}

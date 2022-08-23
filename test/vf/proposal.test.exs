@@ -22,11 +22,11 @@ alias Zenflows.VF.Proposal
 
 setup do
 	%{params: %{
-		name: Factory.uniq("name"),
+		name: Factory.str("name"),
 		has_beginning: DateTime.utc_now(),
 		has_end: DateTime.utc_now(),
 		unit_based: Factory.bool(),
-		note: Factory.uniq("note"),
+		note: Factory.str("note"),
 		eligible_location_id: Factory.build(:spatial_thing).id,
 	}}
 end

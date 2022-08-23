@@ -45,7 +45,7 @@ setup do
 				has_numerical_value: Factory.float(),
 			},
 			recipe_clause_of_id: Factory.insert!(:recipe_exchange).id,
-			note: Factory.uniq("some note"),
+			note: Factory.str("some note"),
 	 	},
 	 	inserted: Factory.insert!(:recipe_flow),
 	 }

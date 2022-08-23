@@ -21,7 +21,7 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"batchNumber" => Factory.uniq("batch number"),
+			"batchNumber" => Factory.str("batch number"),
 			"expiryDate" => Factory.iso_now(),
 			"productionDate" => Factory.iso_now(),
 		},

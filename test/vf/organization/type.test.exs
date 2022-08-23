@@ -21,10 +21,10 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
+			"name" => Factory.str("name"),
 			"image" => Factory.img(),
-			"classifiedAs" => Factory.uniq_list("uri"),
-			"note" => Factory.uniq("note"),
+			"classifiedAs" => Factory.str_list("uri"),
+			"note" => Factory.str("note"),
 			"primaryLocation" => Factory.insert!(:spatial_thing).id,
 		},
 		inserted: Factory.insert!(:organization),

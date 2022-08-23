@@ -35,11 +35,11 @@ setup ctx do
 	%{id: unit_id} = Factory.insert!(:unit)
 	num_val = Factory.float()
 	params = %{
-		name: Factory.uniq("name"),
-		note: Factory.uniq("note"),
+		name: Factory.str("name"),
+		note: Factory.str("note"),
 		image: Factory.img(),
-		tracking_identifier: Factory.uniq("tracking identifier"),
-		classified_as: Factory.uniq_list("uri"),
+		tracking_identifier: Factory.str("tracking identifier"),
+		classified_as: Factory.str_list("uri"),
 		conforms_to_id: Factory.insert!(:resource_specification).id,
 		accounting_quantity: %{
 			has_unit_id: unit_id,

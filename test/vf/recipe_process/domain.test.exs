@@ -29,9 +29,9 @@ alias Zenflows.VF.{
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
-			process_classified_as: Factory.uniq_list("uri"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
+			process_classified_as: Factory.str_list("uri"),
 			process_conforms_to_id: Factory.insert!(:process_specification).id,
 			has_duration: Factory.build(:iduration),
 		},

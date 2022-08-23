@@ -41,7 +41,7 @@ setup do
 			receiver_id: Factory.insert!(:agent).id,
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
-			resource_classified_as: Factory.uniq_list("uri"),
+			resource_classified_as: Factory.str_list("uri"),
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
 				has_numerical_value: Factory.float(),
@@ -61,10 +61,10 @@ setup do
 			finished: Factory.bool(),
 			at_location_id: Factory.insert!(:spatial_thing).id,
 			image: Factory.img(),
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 			# in_scope_of_id:
-			agreed_in: Factory.uniq("uri"),
+			agreed_in: Factory.str("uri"),
 		},
 		inserted: Factory.insert!(:intent),
 	}

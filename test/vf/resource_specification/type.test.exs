@@ -21,9 +21,9 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
-			"resourceClassifiedAs" => Factory.uniq_list("uri"),
-			"note" => Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"resourceClassifiedAs" => Factory.str_list("uri"),
+			"note" => Factory.str("note"),
 			"image" => Factory.img(),
 			"defaultUnitOfEffort" => Factory.insert!(:unit).id,
 			"defaultUnitOfResource" => Factory.insert!(:unit).id,

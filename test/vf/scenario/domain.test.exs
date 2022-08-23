@@ -28,8 +28,8 @@ alias Zenflows.VF.{
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
 			defined_as_id: Factory.insert!(:scenario_definition).id,

@@ -28,7 +28,7 @@ setup do
 			object_id: Factory.insert!(:agent).id,
 			relationship_id: Factory.insert!(:agent_relationship_role).id,
 			# in_scope_of:
-			note: Factory.uniq("note"),
+			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:agent_relationship),
 	}

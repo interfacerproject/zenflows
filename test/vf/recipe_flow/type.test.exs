@@ -21,7 +21,7 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"note" => Factory.uniq("some note"),
+			"note" => Factory.str("some note"),
 			"action" => Factory.build(:action_id),
 			"recipeInputOf" => Factory.insert!(:recipe_process).id,
 			"recipeOutputOf" => Factory.insert!(:recipe_process).id,

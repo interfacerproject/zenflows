@@ -28,13 +28,13 @@ alias Zenflows.VF.{
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			resource_classified_as: Factory.uniq_list("uri"),
+			name: Factory.str("name"),
+			resource_classified_as: Factory.str_list("uri"),
 			unit_of_effort_id: Factory.insert!(:unit).id,
 			unit_of_resource_id: Factory.insert!(:unit).id,
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			substitutable: Factory.bool(),
-			note: Factory.uniq("note"),
+			note: Factory.str("note"),
 			image: Factory.img(),
 		},
 		inserted: Factory.insert!(:recipe_resource),

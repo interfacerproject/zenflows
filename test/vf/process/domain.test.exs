@@ -30,12 +30,12 @@ alias Zenflows.VF.{
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			note: Factory.str("note"),
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
 			finished: Factory.bool(),
-			classified_as: Factory.uniq_list("class"),
+			classified_as: Factory.str_list("class"),
 			based_on_id: Factory.insert!(:process_specification).id,
 			planned_within_id: Factory.insert!(:plan).id,
 			nested_in_id: Factory.insert!(:scenario).id,

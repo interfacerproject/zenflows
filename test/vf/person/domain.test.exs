@@ -24,12 +24,12 @@ alias Zenflows.VF.{Person, Person.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
+			name: Factory.str("name"),
 			image: Factory.img(),
-			note: Factory.uniq("note"),
+			note: Factory.str("note"),
 			primary_location_id: Factory.insert!(:spatial_thing).id,
-			user: Factory.uniq("user"),
-			email: "#{Factory.uniq("user")}@example.com",
+			user: Factory.str("user"),
+			email: "#{Factory.str("user")}@example.com",
 			ecdh_public_key: Base.encode64("ecdh_public_key"),
 			eddsa_public_key: Base.encode64("eddsa_public_key"),
 			ethereum_address: Base.encode64("ethereum_address"),

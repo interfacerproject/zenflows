@@ -28,9 +28,9 @@ alias Zenflows.VF.{
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			resource_classified_as: Factory.uniq_list("uri"),
-			note: Factory.uniq("note"),
+			name: Factory.str("name"),
+			resource_classified_as: Factory.str_list("uri"),
+			note: Factory.str("note"),
 			image: Factory.img(),
 			default_unit_of_effort_id: Factory.insert!(:unit).id,
 			default_unit_of_resource_id: Factory.insert!(:unit).id,

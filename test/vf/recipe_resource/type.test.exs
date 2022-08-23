@@ -21,13 +21,13 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
-			"resourceClassifiedAs" => Factory.uniq_list("uri"),
+			"name" => Factory.str("name"),
+			"resourceClassifiedAs" => Factory.str_list("uri"),
 			"unitOfEffort" => Factory.insert!(:unit).id,
 			"unitOfResource" => Factory.insert!(:unit).id,
 			"resourceConformsTo" => Factory.insert!(:resource_specification).id,
 			"substitutable" => Factory.bool(),
-			"note" => Factory.uniq("note"),
+			"note" => Factory.str("note"),
 			"image" => Factory.img(),
 		},
 		inserted: Factory.insert!(:recipe_resource),

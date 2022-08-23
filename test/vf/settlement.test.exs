@@ -22,7 +22,7 @@ alias Zenflows.VF.Settlement
 
 setup do
 	%{params: %{
-		note: Factory.uniq("note"),
+		note: Factory.str("note"),
 		settled_by_id: Factory.insert!(:economic_event).id,
 		settles_id: Factory.insert!(:claim).id,
 		resource_quantity: %{

@@ -21,12 +21,12 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
+			"name" => Factory.str("name"),
 			"image" => Factory.img(),
-			"note" => Factory.uniq("note"),
+			"note" => Factory.str("note"),
 			"primaryLocation" => Factory.insert!(:spatial_thing).id,
-			"user" => Factory.uniq("user"),
-			"email" => "#{Factory.uniq("user")}@example.com",
+			"user" => Factory.str("user"),
+			"email" => "#{Factory.str("user")}@example.com",
 			"ecdhPublicKey" => Base.encode64("ecdh_public_key"),
 			"eddsaPublicKey" => Base.encode64("eddsa_public_key"),
 			"ethereumAddress" => Base.encode64("ethereum_address"),

@@ -22,9 +22,9 @@ setup do
 	%{
 		params: %{
 			"roleBehavior" => Factory.insert!(:role_behavior).id,
-			"roleLabel" => Factory.uniq("role label"),
-			"inverseRoleLabel" => Factory.uniq("inverse role label"),
-			"note" => Factory.uniq("note"),
+			"roleLabel" => Factory.str("role label"),
+			"inverseRoleLabel" => Factory.str("inverse role label"),
+			"note" => Factory.str("note"),
 		},
 		inserted: Factory.insert!(:agent_relationship_role),
 	}

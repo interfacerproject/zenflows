@@ -21,8 +21,8 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
-			"note" => Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 			"image" => Factory.img(),
 		},
 		inserted: Factory.insert!(:economic_resource),

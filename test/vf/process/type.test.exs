@@ -21,12 +21,12 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			"name" => Factory.uniq("name"),
-			"note" => Factory.uniq("note"),
+			"name" => Factory.str("name"),
+			"note" => Factory.str("note"),
 			"hasBeginning" => Factory.iso_now(),
 			"hasEnd" => Factory.iso_now(),
 			"finished" => Factory.bool(),
-			"classifiedAs" => Factory.uniq_list("class"),
+			"classifiedAs" => Factory.str_list("class"),
 			"basedOn" => Factory.insert!(:process_specification).id,
 			"plannedWithin" => Factory.insert!(:plan).id,
 			"nestedIn" => Factory.insert!(:scenario).id,

@@ -20,23 +20,27 @@ defmodule Zenflows.VF.RecipeExchange.Resolv do
 
 alias Zenflows.VF.RecipeExchange.Domain
 
-def recipe_exchange(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def recipe_exchange(params, _) do
+	Domain.one(params)
 end
 
-def create_recipe_exchange(%{recipe_exchange: params}, _info) do
+def recipe_exchanges(params, _) do
+	Domain.all(params)
+end
+
+def create_recipe_exchange(%{recipe_exchange: params}, _) do
 	with {:ok, rec_exch} <- Domain.create(params) do
 		{:ok, %{recipe_exchange: rec_exch}}
 	end
 end
 
-def update_recipe_exchange(%{recipe_exchange: %{id: id} = params}, _info) do
+def update_recipe_exchange(%{recipe_exchange: %{id: id} = params}, _) do
 	with {:ok, rec_exch} <- Domain.update(id, params) do
 		{:ok, %{recipe_exchange: rec_exch}}
 	end
 end
 
-def delete_recipe_exchange(%{id: id}, _info) do
+def delete_recipe_exchange(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end

@@ -21,77 +21,77 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			"name" => Factory.uniq("name"),
+			"note" => Factory.uniq("note"),
 		},
-		recipe_exchange: Factory.insert!(:recipe_exchange),
+		inserted: Factory.insert!(:recipe_exchange),
 	}
 end
 
-describe "Query" do
-	test "recipeExchange()", %{recipe_exchange: rec_exch} do
-		assert %{data: %{"recipeExchange" => data}} =
-			query!("""
-				recipeExchange(id: "#{rec_exch.id}") {
-					id
-					name
-					note
-				}
-			""")
+@frag """
+fragment recipeExchange on RecipeExchange {
+	id
+	name
+	note
+}
+"""
 
-		assert data["id"] == rec_exch.id
-		assert data["name"] == rec_exch.name
-		assert data["note"] == rec_exch.note
+describe "Query" do
+	test "recipeExchange", %{inserted: new} do
+		assert %{data: %{"recipeExchange" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					recipeExchange(id: $id) {...recipeExchange}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
 	end
 end
 
 describe "Mutation" do
-	test "createRecipeExchange()", %{params: params} do
+	test "createRecipeExchange", %{params: params} do
 		assert %{data: %{"createRecipeExchange" => %{"recipeExchange" => data}}} =
-			mutation!("""
-				createRecipeExchange(recipeExchange: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					recipeExchange {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($recipeExchange: RecipeExchangeCreateParams!) {
+					createRecipeExchange(recipeExchange: $recipeExchange) {
+						recipeExchange {...recipeExchange}
 					}
 				}
-			""")
+			""", vars: %{"recipeExchange" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "updateRecipeExchange()", %{params: params, recipe_exchange: rec_exch} do
+	test "updateRecipeExchange", %{params: params, inserted: old} do
 		assert %{data: %{"updateRecipeExchange" => %{"recipeExchange" => data}}} =
-			mutation!("""
-				updateRecipeExchange(recipeExchange: {
-					id: "#{rec_exch.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					recipeExchange {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($recipeExchange: RecipeExchangeUpdateParams!) {
+					updateRecipeExchange(recipeExchange: $recipeExchange) {
+						recipeExchange {...recipeExchange}
 					}
 				}
-			""")
+			""", vars: %{"recipeExchange" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == rec_exch.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "deleteRecipeExchange()", %{recipe_exchange: %{id: id}} do
+	test "deleteRecipeExchange", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteRecipeExchange" => true}} =
-			mutation!("""
-				deleteRecipeExchange(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteRecipeExchange(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

@@ -20,38 +20,12 @@ defmodule Zenflows.VF.Proposal.Resolv do
 
 alias Zenflows.VF.Proposal.Domain
 
-def eligible_location(prop, _, _) do
-	prop = Domain.preload(prop, :eligible_location)
-	{:ok, prop.eligible_location}
+def proposal(params, _) do
+	Domain.one(params)
 end
 
-def publishes(prop, _, _) do
-	prop = Domain.preload(prop, :publishes)
-	{:ok, prop.publishes}
-end
-
-def primary_intents(prop, _, _) do
-	prop = Domain.preload(prop, :primary_intents)
-	{:ok, prop.primary_intents}
-end
-
-def reciprocal_intents(prop, _, _) do
-	prop = Domain.preload(prop, :reciprocal_intents)
-	{:ok, prop.reciprocal_intents}
-end
-
-def proposal(%{id: id}, _) do
-	Domain.one(id)
-end
-
-def proposals(_params, _) do
-	{:ok, %{
-		edges: [],
-		page_info: %{
-			has_previous_page: false,
-			has_next_page: false,
-		},
-	}}
+def proposals(params, _) do
+	Domain.all(params)
 end
 
 def offers(_params, _) do
@@ -90,5 +64,25 @@ def delete_proposal(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
+end
+
+def eligible_location(prop, _, _) do
+	prop = Domain.preload(prop, :eligible_location)
+	{:ok, prop.eligible_location}
+end
+
+def publishes(prop, _, _) do
+	prop = Domain.preload(prop, :publishes)
+	{:ok, prop.publishes}
+end
+
+def primary_intents(prop, _, _) do
+	prop = Domain.preload(prop, :primary_intents)
+	{:ok, prop.primary_intents}
+end
+
+def reciprocal_intents(prop, _, _) do
+	prop = Domain.preload(prop, :reciprocal_intents)
+	{:ok, prop.reciprocal_intents}
 end
 end

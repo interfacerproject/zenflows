@@ -35,7 +35,6 @@ setup do
 			eligible_location_id: Factory.insert!(:spatial_thing).id,
 		},
 		inserted: Factory.insert!(:proposal),
-		id: Factory.id(),
 	}
 end
 
@@ -44,37 +43,36 @@ describe "one/1" do
 		assert {:ok, %Proposal{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the Proposal", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the Proposal" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
 describe "create/1" do
 	test "with good params: creates a Proposal", %{params: params} do
-		assert {:ok, %Proposal{} = prop} = Domain.create(params)
-		assert prop.name == params.name
-		assert prop.note == params.note
-		assert prop.has_beginning == params.has_beginning
-		assert prop.has_end == params.has_end
-		assert prop.unit_based == params.unit_based
-		assert prop.eligible_location_id == params.eligible_location_id
+		assert {:ok, %Proposal{} = new} = Domain.create(params)
+		assert new.name == params.name
+		assert new.note == params.note
+		assert new.has_beginning == params.has_beginning
+		assert new.has_end == params.has_end
+		assert new.unit_based == params.unit_based
+		assert new.eligible_location_id == params.eligible_location_id
 	end
 
 	test "with empty params: creates a Proposal" do
-		assert {:ok, %Proposal{} = prop} = Domain.create(%{})
-		assert prop.name == nil
-		assert prop.note == nil
-		assert prop.has_beginning == nil
-		assert prop.has_end == nil
-		assert prop.unit_based == false # since it defaults
-		assert prop.eligible_location_id == nil
+		assert {:ok, %Proposal{} = new} = Domain.create(%{})
+		assert new.name == nil
+		assert new.note == nil
+		assert new.has_beginning == nil
+		assert new.has_end == nil
+		assert new.unit_based == false # since it defaults
+		assert new.eligible_location_id == nil
 	end
 end
 
 describe "update/2" do
 	test "with good params: updates the Proposal", %{params: params, inserted: old} do
 		assert {:ok, %Proposal{} = new} = Domain.update(old.id, params)
-
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.has_beginning == params.has_beginning
@@ -85,7 +83,6 @@ describe "update/2" do
 
 	test "with bad params: doesn't update the Proposal", %{inserted: old} do
 		assert {:ok, %Proposal{} = new} = Domain.update(old.id, %{})
-
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.has_beginning == old.has_beginning
@@ -101,8 +98,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the Proposal", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the Proposal" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 

@@ -43,59 +43,26 @@ fragment proposal on Proposal {
 	eligibleLocation {id}
 }
 """
+
 describe "Query" do
-	test "proposal", %{inserted: prop} do
+	test "proposal", %{inserted: new} do
 		assert %{data: %{"proposal" => data}} =
 			run!("""
 				#{@frag}
 				query ($id: ID!) {
 					proposal(id: $id) {...proposal}
 				}
-			""", vars: %{"id" => prop.id})
+			""", vars: %{"id" => new.id})
 
-		assert data["id"] == prop.id
-		assert data["name"] == prop.name
-		assert data["note"] == prop.note
-		assert data["unitBased"] == prop.unit_based
-		assert data["eligibleLocation"]["id"] == prop.eligible_location_id
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["unitBased"] == new.unit_based
+		assert data["eligibleLocation"]["id"] == new.eligible_location_id
 		assert {:ok, has_beginning, 0} = DateTime.from_iso8601(data["hasBeginning"])
 		assert DateTime.compare(DateTime.utc_now(), has_beginning) != :lt
 		assert {:ok, has_end, 0} = DateTime.from_iso8601(data["hasEnd"])
 		assert DateTime.compare(DateTime.utc_now(), has_end) != :lt
-	end
-
-	test "proposals" do
-		assert %{data: %{"proposals" => data}} =
-			run!("""
-				#{@frag}
-				query {
-					proposals {
-						pageInfo {
-							startCursor
-							endCursor
-							hasPreviousPage
-							hasNextPage
-							totalCount
-							pageLimit
-						}
-						edges {
-							cursor
-							node {...proposal}
-						}
-					}
-				}
-			""")
-		assert %{
-			"pageInfo" => %{
-				"startCursor" => nil,
-				"endCursor" => nil,
-				"hasPreviousPage" => false,
-				"hasNextPage" => false,
-				"totalCount" => nil,
-				"pageLimit" => nil,
-			},
-			"edges" => [],
-		} = data
 	end
 
 	test "offers" do
@@ -185,7 +152,7 @@ describe "Mutation" do
 		assert data["eligibleLocation"]["id"] == params["eligibleLocation"]
 	end
 
-	test "updateProposal", %{params: params, inserted: prop} do
+	test "updateProposal", %{params: params, inserted: old} do
 		assert %{data: %{"updateProposal" => %{"proposal" => data}}} =
 			run!("""
 				#{@frag}
@@ -194,9 +161,9 @@ describe "Mutation" do
 						proposal {...proposal}
 					}
 				}
-			""", vars: %{"proposal" => params |> Map.put("id", prop.id)})
+			""", vars: %{"proposal" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == prop.id
+		assert data["id"] == old.id
 		keys = ~w[name note unitBased hasBeginning hasEnd]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["eligibleLocation"]["id"] == params["eligibleLocation"]

@@ -33,13 +33,18 @@ or other measures of effort or usefulness.
 @recipe_flow_resource """
 The resource definition referenced by this flow in the recipe.
 """
+@recipe_flow_resource_id "(`RecipeResource`) #{@recipe_flow_resource}"
 @action """
 Relates a process input or output to a verb, such as consume, produce,
 work, modify, etc.
 """
+@action_id "(`Action`) #{@action}"
 @recipe_input_of "Relates an input flow to its process in a recipe."
+@recipe_input_of_id "(`RecipeProcess`) #{@recipe_input_of}"
 @recipe_output_of "Relates an output flow to its process in a recipe."
+@recipe_output_of_id "(`RecipeProcess`) #{@recipe_output_of}"
 @recipe_clause_of "Relates a flow to its exchange agreement in a recipe."
+@recipe_clause_of_id "(`RecipeExchange`) #{@recipe_clause_of}"
 @note "A textual description or comment."
 
 @desc """
@@ -80,10 +85,6 @@ object :recipe_flow do
 	field :note, :string
 end
 
-object :recipe_flow_response do
-	field :recipe_flow, non_null(:recipe_flow)
-end
-
 input_object :recipe_flow_create_params do
 	@desc @resource_quantity
 	field :resource_quantity, :imeasure
@@ -91,32 +92,20 @@ input_object :recipe_flow_create_params do
 	@desc @effort_quantity
 	field :effort_quantity, :imeasure
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeResource`) " <> @recipe_flow_resource
+	@desc @recipe_flow_resource_id
 	field :recipe_flow_resource_id, non_null(:id),
 		name: "recipe_flow_resource"
 
-	@desc "(`Action`) " <> @action
+	@desc @action_id
 	field :action_id, non_null(:string), name: "action"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeProcess`) " <> @recipe_input_of
+	@desc @recipe_input_of_id
 	field :recipe_input_of_id, :id, name: "recipe_input_of"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeProcess`) " <> @recipe_output_of
+	@desc @recipe_output_of_id
 	field :recipe_output_of_id, :id, name: "recipe_output_of"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeExchange`) " <> @recipe_clause_of
+	@desc @recipe_clause_of_id
 	field :recipe_clause_of_id, :id, name: "recipe_clause_of"
 
 	@desc @note
@@ -132,35 +121,37 @@ input_object :recipe_flow_update_params do
 	@desc @effort_quantity
 	field :effort_quantity, :imeasure
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeResource`) " <> @recipe_flow_resource
+	@desc @recipe_flow_resource_id
 	field :recipe_flow_resource_id, :id, name: "recipe_flow_resource"
 
-	@desc "(`Action`) " <> @action
+	@desc @action_id
 	field :action_id, :string, name: "action"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeProcess`) " <> @recipe_input_of
+	@desc @recipe_input_of_id
 	field :recipe_input_of_id, :id, name: "recipe_input_of"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeProcess`) " <> @recipe_output_of
+	@desc @recipe_output_of_id
 	field :recipe_output_of_id, :id, name: "recipe_output_of"
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`RecipeExchange`) " <> @recipe_clause_of
+	@desc @recipe_clause_of_id
 	field :recipe_clause_of_id, :id, name: "recipe_clause_of"
 
 	@desc @note
 	field :note, :string
+end
+
+object :recipe_flow_response do
+	field :recipe_flow, non_null(:recipe_flow)
+end
+
+object :recipe_flow_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:recipe_flow)
+end
+
+object :recipe_flow_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:recipe_flow_edge)))
 end
 
 object :query_recipe_flow do
@@ -169,7 +160,13 @@ object :query_recipe_flow do
 		resolve &Resolv.recipe_flow/2
 	end
 
-	#recipeFlow(start: ID, limit: Int): [RecipeFlow!]
+	field :recipe_flows, :recipe_flow_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.recipe_flows/2
+	end
 end
 
 object :mutation_recipe_flow do

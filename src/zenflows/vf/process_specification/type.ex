@@ -39,10 +39,6 @@ object :process_specification do
 	field :note, :string
 end
 
-object :process_specification_response do
-	field :process_specification, non_null(:process_specification)
-end
-
 input_object :process_specification_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -61,10 +57,32 @@ input_object :process_specification_update_params do
 	field :note, :string
 end
 
+object :process_specification_response do
+	field :process_specification, non_null(:process_specification)
+end
+
+object :process_specification_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:process_specification)
+end
+
+object :process_specification_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:process_specification_edge)))
+end
+
 object :query_process_specification do
 	field :process_specification, :process_specification do
 		arg :id, non_null(:id)
 		resolve &Resolv.process_specification/2
+	end
+
+	field :process_specifications, non_null(:process_specification_connection) do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.process_specifications/2
 	end
 end
 

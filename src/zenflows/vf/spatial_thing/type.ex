@@ -58,10 +58,6 @@ object :spatial_thing do
 	field :note, :string
 end
 
-object :spatial_thing_response do
-	field :spatial_thing, non_null(:spatial_thing)
-end
-
 input_object :spatial_thing_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -104,13 +100,33 @@ input_object :spatial_thing_update_params do
 	field :note, :string
 end
 
+object :spatial_thing_response do
+	field :spatial_thing, non_null(:spatial_thing)
+end
+
+object :spatial_thing_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:spatial_thing)
+end
+
+object :spatial_thing_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:spatial_thing_edge)))
+end
+
 object :query_spatial_thing do
 	field :spatial_thing, :spatial_thing do
 		arg :id, non_null(:id)
 		resolve &Resolv.spatial_thing/2
 	end
 
-	#spatialThings(start: ID, limit: Int): [SpatialThing!]
+	field :spatial_things, :spatial_thing_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.spatial_things/2
+	end
 end
 
 object :mutation_spatial_thing do

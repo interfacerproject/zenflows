@@ -21,23 +21,27 @@ defmodule Zenflows.VF.SpatialThing.Resolv do
 
 alias Zenflows.VF.SpatialThing.Domain
 
-def spatial_thing(%{id: id}, _info) do
-	{:ok, Domain.by_id(id)}
+def spatial_thing(params, _) do
+	Domain.one(params)
 end
 
-def create_spatial_thing(%{spatial_thing: params}, _info) do
+def spatial_things(params, _) do
+	Domain.all(params)
+end
+
+def create_spatial_thing(%{spatial_thing: params}, _) do
 	with {:ok, spt_thg} <- Domain.create(params) do
 		{:ok, %{spatial_thing: spt_thg}}
 	end
 end
 
-def update_spatial_thing(%{spatial_thing: %{id: id} = params}, _info) do
+def update_spatial_thing(%{spatial_thing: %{id: id} = params}, _) do
 	with {:ok, spt_thg} <- Domain.update(id, params) do
 		{:ok, %{spatial_thing: spt_thg}}
 	end
 end
 
-def delete_spatial_thing(%{id: id}, _info) do
+def delete_spatial_thing(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end

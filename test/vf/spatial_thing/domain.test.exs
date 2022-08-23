@@ -24,42 +24,30 @@ alias Zenflows.VF.{SpatialThing, SpatialThing.Domain}
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			mappable_address: Factory.uniq("address"),
+			name: Factory.str("name"),
+			mappable_address: Factory.str("address"),
 			lat: Factory.float(),
 			long: Factory.float(),
 			alt: Factory.float(),
-			note: Factory.uniq("note"),
+			note: Factory.str("note"),
 		},
-		spatial_thing: Factory.insert!(:spatial_thing),
+		inserted: Factory.insert!(:spatial_thing),
 	}
 end
 
-test "by_id/1 returns a SpatialThing", %{spatial_thing: spt_thg} do
-	assert %SpatialThing{} = Domain.by_id(spt_thg.id)
+describe "one/1" do
+	test "with good id: finds the SpatialThing", %{inserted: %{id: id}} do
+		assert {:ok, %SpatialThing{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the SpatialThing" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates a SpatialThing with valid params", %{params: params} do
-		assert {:ok, %SpatialThing{} = spt_thg} = Domain.create(params)
-
-		assert spt_thg.name == params.name
-		assert spt_thg.mappable_address == params.mappable_address
-		assert spt_thg.lat == params.lat
-		assert spt_thg.long == params.long
-		assert spt_thg.alt == params.alt
-		assert spt_thg.note == params.note
-	end
-
-	test "doesn't create a SpatialThing with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates a SpatialThing with valid params", %{params: params, spatial_thing: old} do
-		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates a SpatialThing", %{params: params} do
+		assert {:ok, %SpatialThing{} = new} = Domain.create(params)
 		assert new.name == params.name
 		assert new.mappable_address == params.mappable_address
 		assert new.lat == params.lat
@@ -68,9 +56,24 @@ describe "update/2" do
 		assert new.note == params.note
 	end
 
-	test "doesn't update a SpatialThing", %{spatial_thing: old} do
-		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create a SpatialThing" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the SpatialThing", %{params: params, inserted: old} do
+		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, params)
+		assert new.name == params.name
+		assert new.mappable_address == params.mappable_address
+		assert new.lat == params.lat
+		assert new.long == params.long
+		assert new.alt == params.alt
+		assert new.note == params.note
+	end
+
+	test "with bad params: doesn't update the SpatialThing", %{inserted: old} do
+		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, %{})
 		assert new.name == old.name
 		assert new.mappable_address == old.mappable_address
 		assert new.lat == old.lat
@@ -80,8 +83,14 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a SpatialThing", %{spatial_thing: %{id: id}} do
-	assert {:ok, %SpatialThing{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the SpatialThing", %{inserted: %{id: id}} do
+		assert {:ok, %SpatialThing{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the SpatialThing" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 end

@@ -21,77 +21,77 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			label: Factory.uniq("label"),
-			symbol: Factory.uniq("symbol"),
+			"label" => Factory.uniq("label"),
+			"symbol" => Factory.uniq("symbol"),
 		},
-		unit: Factory.insert!(:unit),
+		inserted: Factory.insert!(:unit),
 	}
 end
 
-describe "Query" do
-	test "unit()", %{unit: unit} do
-		assert %{data: %{"unit" => data}} =
-			query!("""
-				unit(id: "#{unit.id}") {
-					id
-					label
-					symbol
-				}
-			""")
+@frag """
+fragment unit on Unit {
+	id
+	label
+	symbol
+}
+"""
 
-		assert data["id"] == unit.id
-		assert data["label"] == unit.label
-		assert data["symbol"] == unit.symbol
+describe "Query" do
+	test "unit", %{inserted: new} do
+		assert %{data: %{"unit" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					unit(id: $id) {...unit}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["label"] == new.label
+		assert data["symbol"] == new.symbol
 	end
 end
 
 describe "Mutation" do
-	test "createUnit()", %{params: params} do
+	test "createUnit", %{params: params} do
 		assert %{data: %{"createUnit" => %{"unit" => data}}} =
-			mutation!("""
-				createUnit(unit: {
-					label: "#{params.label}"
-					symbol: "#{params.symbol}"
-				}) {
-					unit {
-						id
-						label
-						symbol
+			run!("""
+				#{@frag}
+				mutation ($unit: UnitCreateParams!) {
+					createUnit(unit: $unit) {
+						unit {...unit}
 					}
 				}
-			""")
+			""", vars: %{"unit" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["label"] == params.label
-		assert data["symbol"] == params.symbol
+		assert data["label"] == params["label"]
+		assert data["symbol"] == params["symbol"]
 	end
 
-	test "updateUnit()", %{params: params, unit: unit} do
+	test "updateUnit", %{params: params, inserted: old} do
 		assert %{data: %{"updateUnit" => %{"unit" => data}}} =
-			mutation!("""
-				updateUnit(unit: {
-					id: "#{unit.id}"
-					label: "#{params.label}"
-					symbol: "#{params.symbol}"
-				}) {
-					unit {
-						id
-						label
-						symbol
+			run!("""
+				#{@frag}
+				mutation ($unit: UnitUpdateParams!) {
+					updateUnit(unit: $unit) {
+						unit {...unit}
 					}
 				}
-			""")
+			""", vars: %{"unit" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == unit.id
-		assert data["label"] == params.label
-		assert data["symbol"] == params.symbol
+		assert data["id"] == old.id
+		assert data["label"] == params["label"]
+		assert data["symbol"] == params["symbol"]
 	end
 
-	test "deleteUnit()", %{unit: %{id: id}} do
+	test "deleteUnit", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteUnit" => true}} =
-			mutation!("""
-				deleteUnit(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteUnit(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

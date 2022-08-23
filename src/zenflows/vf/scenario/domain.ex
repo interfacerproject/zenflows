@@ -20,17 +20,28 @@ defmodule Zenflows.VF.Scenario.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.Scenario
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: Scenario.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(Scenario, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, Scenario.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(Scenario, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(Scenario.t())
+def all(params) do
+	Paging.page(Scenario, params)
 end
 
 @spec create(params()) :: {:ok, Scenario.t()} | {:error, chgset()}
@@ -44,11 +55,13 @@ def create(params) do
 	end
 end
 
-@spec update(id(), params()) :: {:ok, Scenario.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, Scenario.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &Scenario.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &Scenario.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: s}} -> {:ok, s}
@@ -56,11 +69,12 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, Scenario.t()} | {:error, chgset()}
+@spec delete(id()) :: {:ok, Scenario.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: s}} -> {:ok, s}
@@ -75,18 +89,5 @@ end
 
 def preload(scen, :refinement_of) do
 	Repo.preload(scen, :refinement_of)
-end
-
-# Returns a Scenario in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id())
-	:: (repo(), changes() -> {:ok, Scenario.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			s -> {:ok, s}
-		end
-	end
 end
 end

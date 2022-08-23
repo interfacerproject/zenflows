@@ -30,58 +30,54 @@ setup do
 			"note" => Factory.uniq("note"),
 			"image" => Factory.img(),
 		},
-		recipe_resource: Factory.insert!(:recipe_resource),
+		inserted: Factory.insert!(:recipe_resource),
 	}
 end
 
+@frag """
+fragment recipeResource on RecipeResource {
+	id
+	name
+	resourceClassifiedAs
+	unitOfResource {id}
+	unitOfEffort {id}
+	resourceConformsTo {id}
+	substitutable
+	image
+	note
+}
+"""
+
 describe "Query" do
-	test "recipeResource()", %{recipe_resource: rec_res} do
+	test "recipeResource", %{inserted: new} do
 		assert %{data: %{"recipeResource" => data}} =
 			run!("""
+				#{@frag}
 				query ($id: ID!) {
-					recipeResource(id: $id) {
-						id
-						name
-						resourceClassifiedAs
-						unitOfResource { id }
-						unitOfEffort { id }
-						resourceConformsTo { id }
-						substitutable
-						image
-						note
-					}
+					recipeResource(id: $id) {...recipeResource}
 				}
-			""", vars: %{"id" => rec_res.id})
+			""", vars: %{"id" => new.id})
 
-		assert data["id"] == rec_res.id
-		assert data["name"] == rec_res.name
-		assert data["resourceClassifiedAs"] == rec_res.resource_classified_as
-		assert data["unitOfResource"]["id"] == rec_res.unit_of_resource_id
-		assert data["unitOfEffort"]["id"] == rec_res.unit_of_effort_id
-		assert data["resourceConformsTo"]["id"] == rec_res.resource_conforms_to_id
-		assert data["note"] == rec_res.note
-		assert data["substitutable"] == rec_res.substitutable
-		assert data["image"] == rec_res.image
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["resourceClassifiedAs"] == new.resource_classified_as
+		assert data["unitOfResource"]["id"] == new.unit_of_resource_id
+		assert data["unitOfEffort"]["id"] == new.unit_of_effort_id
+		assert data["resourceConformsTo"]["id"] == new.resource_conforms_to_id
+		assert data["note"] == new.note
+		assert data["substitutable"] == new.substitutable
+		assert data["image"] == new.image
 	end
 end
 
 describe "Mutation" do
-	test "createRecipeResource()", %{params: params} do
+	test "createRecipeResource", %{params: params} do
 		assert %{data: %{"createRecipeResource" => %{"recipeResource" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($recipeResource: RecipeResourceCreateParams!) {
 					createRecipeResource(recipeResource: $recipeResource) {
-						recipeResource {
-							id
-							name
-							image
-							resourceClassifiedAs
-							unitOfResource { id }
-							unitOfEffort { id }
-							resourceConformsTo { id }
-							substitutable
-							note
-						}
+						recipeResource {...recipeResource}
 					}
 				}
 			""", vars: %{"recipeResource" => params})
@@ -94,27 +90,18 @@ describe "Mutation" do
 		assert data["resourceConformsTo"]["id"] == params["resourceConformsTo"]
 	end
 
-	test "updateRecipeResource()", %{params: params, recipe_resource: rec_res} do
+	test "updateRecipeResource()", %{params: params, inserted: old} do
 		assert %{data: %{"updateRecipeResource" => %{"recipeResource" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($recipeResource: RecipeResourceUpdateParams!) {
 					updateRecipeResource(recipeResource: $recipeResource) {
-						recipeResource {
-							id
-							name
-							resourceClassifiedAs
-							unitOfResource { id }
-							unitOfEffort { id }
-							resourceConformsTo { id }
-							substitutable
-							note
-							image
-						}
+						recipeResource {...recipeResource}
 					}
 				}
-			""", vars: %{"recipeResource" => Map.put(params, "id", rec_res.id)})
+			""", vars: %{"recipeResource" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == rec_res.id
+		assert data["id"] == old.id
 		keys = ~w[name note image resourceClassifiedAs substitutable]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["unitOfResource"]["id"] == params["unitOfResource"]
@@ -122,7 +109,7 @@ describe "Mutation" do
 		assert data["resourceConformsTo"]["id"] == params["resourceConformsTo"]
 	end
 
-	test "deleteRecipeResource()", %{recipe_resource: %{id: id}} do
+	test "deleteRecipeResource()", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteRecipeResource" => true}} =
 			run!("""
 				mutation ($id: ID!) {

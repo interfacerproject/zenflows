@@ -37,37 +37,23 @@ setup do
 			note: Factory.uniq("note"),
 			image: Factory.img(),
 		},
-		recipe_resource: Factory.insert!(:recipe_resource),
+		inserted: Factory.insert!(:recipe_resource),
 	}
 end
 
-test "by_id/1 returns a RecipeResource", %{recipe_resource: rec_res} do
-	assert %RecipeResource{} = Domain.by_id(rec_res.id)
+describe "one/1" do
+	test "with good id: finds the RecipeResource", %{inserted: %{id: id}} do
+		assert {:ok, %RecipeResource{}} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't find the RecipeResource" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
+	end
 end
 
 describe "create/1" do
-	test "creates a RecipeResource with valid params", %{params: params} do
-		assert {:ok, %RecipeResource{} = rec_res} = Domain.create(params)
-
-		assert rec_res.name == params.name
-		assert rec_res.resource_classified_as == params.resource_classified_as
-		assert rec_res.unit_of_resource_id == params.unit_of_resource_id
-		assert rec_res.unit_of_effort_id == params.unit_of_effort_id
-		assert rec_res.resource_conforms_to_id == params.resource_conforms_to_id
-		assert rec_res.substitutable == params.substitutable
-		assert rec_res.note == params.note
-		assert rec_res.image == params.image
-	end
-
-	test "doesn't create a RecipeResource with invalid params" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
-	end
-end
-
-describe "update/2" do
-	test "updates a RecipeResource with valid params", %{params: params, recipe_resource: old} do
-		assert {:ok, %RecipeResource{} = new} = Domain.update(old.id, params)
-
+	test "with good params: creates a RecipeResource", %{params: params} do
+		assert {:ok, %RecipeResource{} = new} = Domain.create(params)
 		assert new.name == params.name
 		assert new.resource_classified_as == params.resource_classified_as
 		assert new.unit_of_resource_id == params.unit_of_resource_id
@@ -78,9 +64,26 @@ describe "update/2" do
 		assert new.image == params.image
 	end
 
-	test "doesn't update a RecipeResource", %{recipe_resource: old} do
-		assert {:ok, %RecipeResource{} = new} = Domain.update(old.id, %{})
+	test "with bad params: doesn't create a Process" do
+		assert {:error, %Changeset{}} = Domain.create(%{})
+	end
+end
 
+describe "update/2" do
+	test "with good params: updates the RecipeResource", %{params: params, inserted: old} do
+		assert {:ok, %RecipeResource{} = new} = Domain.update(old.id, params)
+		assert new.name == params.name
+		assert new.resource_classified_as == params.resource_classified_as
+		assert new.unit_of_resource_id == params.unit_of_resource_id
+		assert new.unit_of_effort_id == params.unit_of_effort_id
+		assert new.resource_conforms_to_id == params.resource_conforms_to_id
+		assert new.substitutable == params.substitutable
+		assert new.note == params.note
+		assert new.image == params.image
+	end
+
+	test "with bad params: doesn't update the RecipeResource", %{inserted: old} do
+		assert {:ok, %RecipeResource{} = new} = Domain.update(old.id, %{})
 		assert new.name == old.name
 		assert new.resource_classified_as == old.resource_classified_as
 		assert new.unit_of_resource_id == old.unit_of_resource_id
@@ -92,19 +95,25 @@ describe "update/2" do
 	end
 end
 
-test "delete/1 deletes a RecipeResource", %{recipe_resource: %{id: id}} do
-	assert {:ok, %RecipeResource{id: ^id}} = Domain.delete(id)
-	assert Domain.by_id(id) == nil
+describe "delete/1" do
+	test "with good id: deletes the RecipeResource", %{inserted: %{id: id}} do
+		assert {:ok, %RecipeResource{id: ^id}} = Domain.delete(id)
+		assert {:error, "not found"} = Domain.one(id)
+	end
+
+	test "with bad id: doesn't delete the RecipeResource" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
+	end
 end
 
 describe "preload/2" do
-	test "preloads :unit_of_resource", %{recipe_resource: rec_res} do
+	test "preloads :unit_of_resource", %{inserted: rec_res} do
 		rec_res = Domain.preload(rec_res, :unit_of_resource)
 		assert unit_res = %Unit{} = rec_res.unit_of_resource
 		assert unit_res.id == rec_res.unit_of_resource_id
 	end
 
-	test "preloads :unit_of_effort", %{recipe_resource: rec_res} do
+	test "preloads :unit_of_effort", %{inserted: rec_res} do
 		rec_res = Domain.preload(rec_res, :unit_of_effort)
 		assert unit_eff = %Unit{} = rec_res.unit_of_effort
 		assert unit_eff.id == rec_res.unit_of_effort_id

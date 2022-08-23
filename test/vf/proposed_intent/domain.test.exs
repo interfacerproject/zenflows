@@ -34,7 +34,6 @@ setup do
 			published_in_id: Factory.insert!(:proposal).id,
 		},
 		inserted: Factory.insert!(:proposed_intent),
-		id: Factory.id(),
 	}
 end
 
@@ -43,17 +42,17 @@ describe "one/1" do
 		assert {:ok, %ProposedIntent{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the ProposedIntent", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the ProposedIntent" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
 describe "create/1" do
 	test "with good params: creates a ProposedIntent", %{params: params} do
-		assert {:ok, %ProposedIntent{} = prop_int} = Domain.create(params)
-		assert prop_int.reciprocal == params.reciprocal
-		assert prop_int.publishes_id == params.publishes_id
-		assert prop_int.published_in_id == params.published_in_id
+		assert {:ok, %ProposedIntent{} = new} = Domain.create(params)
+		assert new.reciprocal == params.reciprocal
+		assert new.publishes_id == params.publishes_id
+		assert new.published_in_id == params.published_in_id
 	end
 
 	test "with bad params: doesn't create a ProposedIntent" do
@@ -67,8 +66,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the ProposedIntent", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the ProposedIntent" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 

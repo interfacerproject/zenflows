@@ -69,7 +69,7 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, Process.t()} | {:error, String.t()  | chgset()}
+@spec delete(id()) :: {:ok, Process.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
 	|> Multi.put(:id, id)

@@ -28,52 +28,50 @@ setup do
 			"defaultUnitOfEffort" => Factory.insert!(:unit).id,
 			"defaultUnitOfResource" => Factory.insert!(:unit).id,
 		},
-		resource_specification: Factory.insert!(:resource_specification),
+		inserted: Factory.insert!(:resource_specification),
 	}
 end
 
+@frag """
+fragment resourceSpecification on ResourceSpecification {
+	id
+	name
+	resourceClassifiedAs
+	defaultUnitOfResource {id}
+	defaultUnitOfEffort {id}
+	note
+	image
+}
+"""
+
 describe "Query" do
-	test "resourceSpecification()", %{resource_specification: res_spec} do
+	test "resourceSpecification", %{inserted: new} do
 		assert %{data: %{"resourceSpecification" => data}} =
 			run!("""
+				#{@frag}
 				query ($id: ID!) {
-					resourceSpecification(id: $id) {
-						id
-						name
-						resourceClassifiedAs
-						defaultUnitOfResource { id }
-						defaultUnitOfEffort { id }
-						note
-						image
-					}
+					resourceSpecification(id: $id) {...resourceSpecification}
 				}
-			""", vars: %{"id" => res_spec.id})
+			""", vars: %{"id" => new.id})
 
-		assert data["id"] == res_spec.id
-		assert data["name"] == res_spec.name
-		assert data["resourceClassifiedAs"] == res_spec.resource_classified_as
-		assert data["defaultUnitOfResource"]["id"] == res_spec.default_unit_of_resource_id
-		assert data["defaultUnitOfEffort"]["id"] == res_spec.default_unit_of_effort_id
-		assert data["note"] == res_spec.note
-		assert data["image"] == res_spec.image
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["resourceClassifiedAs"] == new.resource_classified_as
+		assert data["defaultUnitOfResource"]["id"] == new.default_unit_of_resource_id
+		assert data["defaultUnitOfEffort"]["id"] == new.default_unit_of_effort_id
+		assert data["note"] == new.note
+		assert data["image"] == new.image
 	end
 end
 
 describe "Mutation" do
-	test "createResourceSpecification()", %{params: params} do
+	test "createResourceSpecification", %{params: params} do
 		assert %{data: %{"createResourceSpecification" => %{"resourceSpecification" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($resourceSpecification: ResourceSpecificationCreateParams!) {
 					createResourceSpecification(resourceSpecification: $resourceSpecification) {
-						resourceSpecification {
-							id
-							name
-							resourceClassifiedAs
-							defaultUnitOfResource { id }
-							defaultUnitOfEffort { id }
-							note
-							image
-						}
+						resourceSpecification {...resourceSpecification}
 					}
 				}
 			""", vars: %{"resourceSpecification" => params})
@@ -85,34 +83,25 @@ describe "Mutation" do
 		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]
 	end
 
-	test "updateResourceSpecification()", %{params: params, resource_specification: res_spec} do
+	test "updateResourceSpecification()", %{params: params, inserted: old} do
 		assert %{data: %{"updateResourceSpecification" => %{"resourceSpecification" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($resourceSpecification: ResourceSpecificationUpdateParams!) {
 					updateResourceSpecification(resourceSpecification: $resourceSpecification) {
-						resourceSpecification {
-							id
-							name
-							resourceClassifiedAs
-							defaultUnitOfResource { id }
-							defaultUnitOfEffort { id }
-							note
-							image
-						}
+						resourceSpecification {...resourceSpecification}
 					}
 				}
-			""", vars: %{"resourceSpecification" =>
-				Map.put(params, "id", res_spec.id),
-			})
+			""", vars: %{"resourceSpecification" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == res_spec.id
+		assert data["id"] == old.id
 		keys = ~w[name note resourceClassifiedAs note image]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["defaultUnitOfResource"]["id"] == params["defaultUnitOfResource"]
 		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]
 	end
 
-	test "deleteResourceSpecification()", %{resource_specification: %{id: id}} do
+	test "deleteResourceSpecification()", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteResourceSpecification" => true}} =
 			run!("""
 				mutation ($id: ID!) {

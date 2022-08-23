@@ -36,7 +36,6 @@ setup do
 			default_unit_of_resource_id: Factory.insert!(:unit).id,
 		},
 		inserted: Factory.insert!(:resource_specification),
-		id: Factory.id()
 	}
 end
 
@@ -45,20 +44,20 @@ describe "one/1" do
 		assert {:ok, %ResourceSpecification{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the ResourceSpecification", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the ResourceSpecification" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
 describe "create/1" do
 	test "with good params: creates a ResourceSpecification", %{params: params} do
-		assert {:ok, %ResourceSpecification{} = res_spec} = Domain.create(params)
-		assert res_spec.name == params.name
-		assert res_spec.resource_classified_as == params.resource_classified_as
-		assert res_spec.note == params.note
-		assert res_spec.image == params.image
-		assert res_spec.default_unit_of_resource_id == params.default_unit_of_resource_id
-		assert res_spec.default_unit_of_effort_id == params.default_unit_of_effort_id
+		assert {:ok, %ResourceSpecification{} = new} = Domain.create(params)
+		assert new.name == params.name
+		assert new.resource_classified_as == params.resource_classified_as
+		assert new.note == params.note
+		assert new.image == params.image
+		assert new.default_unit_of_resource_id == params.default_unit_of_resource_id
+		assert new.default_unit_of_effort_id == params.default_unit_of_effort_id
 	end
 
 	test "with bad params: doesn't create a ResourceSpecification" do
@@ -94,8 +93,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the ResourceSpecification", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the ResourceSpecification" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 

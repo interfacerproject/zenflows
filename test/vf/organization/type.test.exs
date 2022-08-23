@@ -27,32 +27,37 @@ setup do
 			"note" => Factory.uniq("note"),
 			"primaryLocation" => Factory.insert!(:spatial_thing).id,
 		},
-		org: Factory.insert!(:organization),
+		inserted: Factory.insert!(:organization),
 	}
 end
 
+@frag """
+fragment organization on Organization {
+	id
+	name
+	note
+	image
+	primaryLocation { id }
+	classifiedAs
+}
+"""
+
 describe "Query" do
-	test "organization()", %{org: org} do
+	test "organization()", %{inserted: new} do
 		assert %{data: %{"organization" => data}} =
 			run!("""
+				#{@frag}
 				query ($id: ID!) {
-					organization(id: $id) {
-						id
-						name
-						note
-						image
-						primaryLocation { id }
-						classifiedAs
-					}
+					organization(id: $id) {...organization}
 				}
-			""", vars: %{"id" => org.id})
+			""", vars: %{"id" => new.id})
 
-		assert data["id"] == org.id
-		assert data["name"] == org.name
-		assert data["note"] == org.note
-		assert data["image"] == org.image
-		assert data["primaryLocation"]["id"] == org.primary_location_id
-		assert data["classifiedAs"] == org.classified_as
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
+		assert data["image"] == new.image
+		assert data["primaryLocation"]["id"] == new.primary_location_id
+		assert data["classifiedAs"] == new.classified_as
 	end
 end
 
@@ -60,16 +65,10 @@ describe "Mutation" do
 	test "createOrganization", %{params: params} do
 		assert %{data: %{"createOrganization" => %{"agent" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($organization: OrganizationCreateParams!) {
 					createOrganization(organization: $organization) {
-						agent {
-							id
-							name
-							note
-							image
-							primaryLocation { id }
-							classifiedAs
-						}
+						agent {...organization}
 					}
 				}
 			""", vars: %{"organization" => params})
@@ -84,39 +83,34 @@ describe "Mutation" do
 		assert data == params
 	end
 
-	test "updateOrganization()", %{params: params, org: org} do
+	test "updateOrganization()", %{params: params, inserted: old} do
 		assert %{data: %{"updateOrganization" => %{"agent" => data}}} =
 			run!("""
+				#{@frag}
 				mutation ($organization: OrganizationUpdateParams!) {
 					updateOrganization(organization: $organization) {
-						agent {
-							id
-							name
-							note
-							image
-							primaryLocation { id }
-							classifiedAs
-						}
+						agent {...organization}
 					}
 				}
 			""", vars: %{"organization" =>
 				params
 				|> Map.take(~w[name note image primaryLocation classifiedAs])
-				|> Map.put("id", org.id)
+				|> Map.put("id", old.id)
 			})
 
+		assert data["id"] == old.id
 		keys = ~w[name image note classifiedAs]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["primaryLocation"]["id"] == params["primaryLocation"]
 	end
 
-	test "deleteOrganization", %{org: org} do
+	test "deleteOrganization", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteOrganization" => true}} =
 			run!("""
 				mutation ($id: ID!) {
 					deleteOrganization(id: $id)
 				}
-			""", vars: %{"id" => org.id})
+			""", vars: %{"id" => id})
 	end
 end
 end

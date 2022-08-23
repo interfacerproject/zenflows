@@ -29,6 +29,7 @@ alias Zenflows.VF.{SpatialThing, Validate}
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
 	classified_as: [String.t()] | nil,
+	updated_at: DateTime.t(),
 }
 
 schema "vf_agent" do

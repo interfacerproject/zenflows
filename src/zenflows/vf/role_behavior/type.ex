@@ -41,10 +41,6 @@ object :role_behavior do
 	field :note, :string
 end
 
-object :role_behavior_response do
-	field :role_behavior, non_null(:role_behavior)
-end
-
 input_object :role_behavior_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -63,10 +59,32 @@ input_object :role_behavior_update_params do
 	field :note, :string
 end
 
+object :role_behavior_response do
+	field :role_behavior, non_null(:role_behavior)
+end
+
+object :role_behavior_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:role_behavior)
+end
+
+object :role_behavior_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:role_behavior_edge)))
+end
+
 object :query_role_behavior do
 	field :role_behavior, :role_behavior do
 		arg :id, non_null(:id)
 		resolve &Resolv.role_behavior/2
+	end
+
+	field :role_behaviors, :role_behavior_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.role_behaviors/2
 	end
 end
 

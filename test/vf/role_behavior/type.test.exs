@@ -21,77 +21,77 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			name: Factory.uniq("name"),
-			note: Factory.uniq("note"),
+			"name" => Factory.uniq("name"),
+			"note" => Factory.uniq("note"),
 		},
-		role_behavior: Factory.insert!(:role_behavior),
+		inserted: Factory.insert!(:role_behavior),
 	}
 end
 
-describe "Query" do
-	test "roleBehavior()", %{role_behavior: role_beh} do
-		assert %{data: %{"roleBehavior" => data}} =
-			query!("""
-				roleBehavior(id: "#{role_beh.id}") {
-					id
-					name
-					note
-				}
-			""")
+@frag """
+fragment roleBehavior on RoleBehavior {
+	id
+	name
+	note
+}
+"""
 
-		assert data["id"] == role_beh.id
-		assert data["name"] == role_beh.name
-		assert data["note"] == role_beh.note
+describe "Query" do
+	test "roleBehavior", %{inserted: new} do
+		assert %{data: %{"roleBehavior" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					roleBehavior(id: $id) {...roleBehavior}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["name"] == new.name
+		assert data["note"] == new.note
 	end
 end
 
 describe "Mutation" do
-	test "createRoleBehavior()", %{params: params} do
+	test "createRoleBehavior", %{params: params} do
 		assert %{data: %{"createRoleBehavior" => %{"roleBehavior" => data}}} =
-			mutation!("""
-				createRoleBehavior(roleBehavior: {
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					roleBehavior {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($roleBehavior: RoleBehaviorCreateParams!) {
+					createRoleBehavior(roleBehavior: $roleBehavior) {
+						roleBehavior {...roleBehavior}
 					}
 				}
-			""")
+			""", vars: %{"roleBehavior" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "updateRoleBehavior()", %{params: params, role_behavior: role_beh} do
+	test "updateRoleBehavior", %{params: params, inserted: old} do
 		assert %{data: %{"updateRoleBehavior" => %{"roleBehavior" => data}}} =
-			mutation!("""
-				updateRoleBehavior(roleBehavior: {
-					id: "#{role_beh.id}"
-					name: "#{params.name}"
-					note: "#{params.note}"
-				}) {
-					roleBehavior {
-						id
-						name
-						note
+			run!("""
+				#{@frag}
+				mutation ($roleBehavior: RoleBehaviorUpdateParams!) {
+					updateRoleBehavior(roleBehavior: $roleBehavior) {
+						roleBehavior {...roleBehavior}
 					}
 				}
-			""")
+			""", vars: %{"roleBehavior" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == role_beh.id
-		assert data["name"] == params.name
-		assert data["note"] == params.note
+		assert data["id"] == old.id
+		assert data["name"] == params["name"]
+		assert data["note"] == params["note"]
 	end
 
-	test "deleteRoleBehavior()", %{role_behavior: %{id: id}} do
+	test "deleteRoleBehavior", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteRoleBehavior" => true}} =
-			mutation!("""
-				deleteRoleBehavior(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteRoleBehavior(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

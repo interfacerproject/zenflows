@@ -21,86 +21,80 @@ use ZenflowsTest.Help.AbsinCase, async: true
 setup do
 	%{
 		params: %{
-			batch_number: Factory.uniq("batch number"),
-			expiry_date: DateTime.utc_now(),
-			production_date: DateTime.utc_now(),
+			"batchNumber" => Factory.uniq("batch number"),
+			"expiryDate" => Factory.iso_now(),
+			"productionDate" => Factory.iso_now(),
 		},
 		inserted: Factory.insert!(:product_batch),
 	}
 end
 
-describe "Query" do
-	test "productBatch()", %{inserted: batch} do
-		assert %{data: %{"productBatch" => data}} =
-			query!("""
-				productBatch(id: "#{batch.id}") {
-					id
-					batchNumber
-					expiryDate
-					productionDate
-				}
-			""")
+@frag """
+fragment productBatch on ProductBatch {
+	id
+	batchNumber
+	expiryDate
+	productionDate
+}
+"""
 
-		assert data["id"] == batch.id
-		assert data["batchNumber"] == batch.batch_number
-		assert data["expiryDate"] == DateTime.to_iso8601(batch.expiry_date)
-		assert data["productionDate"] == DateTime.to_iso8601(batch.production_date)
+describe "Query" do
+	test "productBatch", %{inserted: new} do
+		assert %{data: %{"productBatch" => data}} =
+			run!("""
+				#{@frag}
+				query ($id: ID!) {
+					productBatch(id: $id) {...productBatch}
+				}
+			""", vars: %{"id" => new.id})
+
+		assert data["id"] == new.id
+		assert data["batchNumber"] == new.batch_number
+		assert data["expiryDate"] == DateTime.to_iso8601(new.expiry_date)
+		assert data["productionDate"] == DateTime.to_iso8601(new.production_date)
 	end
 end
 
 describe "Mutation" do
-	test "createProductBatch()", %{params: params} do
+	test "createProductBatch", %{params: params} do
 		assert %{data: %{"createProductBatch" => %{"productBatch" => data}}} =
-			mutation!("""
-				createProductBatch(productBatch: {
-					batchNumber: "#{params.batch_number}"
-					expiryDate: "#{params.expiry_date}"
-					productionDate: "#{params.production_date}"
-				}) {
-					productBatch {
-						id
-						batchNumber
-						expiryDate
-						productionDate
+			run!("""
+				#{@frag}
+				mutation ($productBatch: ProductBatchCreateParams!) {
+					createProductBatch(productBatch: $productBatch) {
+						productBatch {...productBatch}
 					}
 				}
-			""")
+			""", vars: %{"productBatch" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		assert data["batchNumber"] == params.batch_number
-		assert data["expiryDate"] == DateTime.to_iso8601(params.expiry_date)
-		assert data["productionDate"] == DateTime.to_iso8601(params.production_date)
+		data = Map.delete(data, "id")
+		assert data == params
 	end
 
-	test "updateProductBatch()", %{params: params, inserted: batch} do
+	test "updateProductBatch", %{params: params, inserted: old} do
 		assert %{data: %{"updateProductBatch" => %{"productBatch" => data}}} =
-			mutation!("""
-				updateProductBatch(productBatch: {
-					id: "#{batch.id}"
-					batchNumber: "#{params.batch_number}"
-					expiryDate: "#{params.expiry_date}"
-					productionDate: "#{params.production_date}"
-				}) {
-					productBatch {
-						id
-						batchNumber
-						expiryDate
-						productionDate
+			run!("""
+				#{@frag}
+				mutation ($productBatch: ProductBatchUpdateParams!) {
+					updateProductBatch(productBatch: $productBatch) {
+						productBatch {...productBatch}
 					}
 				}
-			""")
+			""", vars: %{"productBatch" => Map.put(params, "id", old.id)})
 
-		assert data["id"] == batch.id
-		assert data["batchNumber"] == params.batch_number
-		assert data["expiryDate"] == DateTime.to_iso8601(params.expiry_date)
-		assert data["productionDate"] == DateTime.to_iso8601(params.production_date)
+		assert data["id"] == old.id
+		data = Map.delete(data, "id")
+		assert data == params
 	end
 
 	test "deleteProductBatch()", %{inserted: %{id: id}} do
 		assert %{data: %{"deleteProductBatch" => true}} =
-			mutation!("""
-				deleteProductBatch(id: "#{id}")
-			""")
+			run!("""
+				mutation ($id: ID!) {
+					deleteProductBatch(id: $id)
+				}
+			""", vars: %{"id" => id})
 	end
 end
 end

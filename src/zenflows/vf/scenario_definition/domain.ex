@@ -20,35 +20,48 @@ defmodule Zenflows.VF.ScenarioDefinition.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.Repo
+alias Zenflows.GQL.Paging
 alias Zenflows.VF.{Duration, ScenarioDefinition}
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
-@typep changes() :: Ecto.Multi.changes()
 @typep id() :: Zenflows.DB.Schema.id()
 @typep params() :: Zenflows.DB.Schema.params()
 
-@spec by_id(repo(), id()) :: ScenarioDefinition.t() | nil
-def by_id(repo \\ Repo, id) do
-	repo.get(ScenarioDefinition, id)
+@spec one(repo(), id() | map() | Keyword.t())
+	:: {:ok, ScenarioDefinition.t()} | {:error, String.t()}
+def one(repo \\ Repo, _)
+def one(repo, id) when is_binary(id), do: one(repo, id: id)
+def one(repo, clauses) do
+	case repo.get_by(ScenarioDefinition, clauses) do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
+@spec all(Paging.params()) :: Paging.result(ScenarioDefinition.t())
+def all(params) do
+	Paging.page(ScenarioDefinition, params)
 end
 
 @spec create(params()) :: {:ok, ScenarioDefinition.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()
-	|> Multi.insert(:scen_def, ScenarioDefinition.chgset(params))
+	|> Multi.insert(:insert, ScenarioDefinition.chgset(params))
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{scen_def: sd}} -> {:ok, sd}
+		{:ok, %{insert: sd}} -> {:ok, sd}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) :: {:ok, ScenarioDefinition.t()} | {:error, chgset()}
+@spec update(id(), params())
+	:: {:ok, ScenarioDefinition.t()} | {:error, String.t() | chgset()}
 def update(id, params) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.update(:update, &ScenarioDefinition.chgset(&1.get, params))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.update(:update, &ScenarioDefinition.chgset(&1.one, params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{update: sd}} -> {:ok, sd}
@@ -56,11 +69,13 @@ def update(id, params) do
 	end
 end
 
-@spec delete(id()) :: {:ok, ScenarioDefinition.t()} | {:error, chgset()}
+@spec delete(id())
+	:: {:ok, ScenarioDefinition.t()} | {:error, String.t() | chgset()}
 def delete(id) do
 	Multi.new()
-	|> Multi.run(:get, multi_get(id))
-	|> Multi.delete(:delete, &(&1.get))
+	|> Multi.put(:id, id)
+	|> Multi.run(:one, &one/2)
+	|> Multi.delete(:delete, & &1.one)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{delete: sd}} -> {:ok, sd}
@@ -71,18 +86,5 @@ end
 @spec preload(ScenarioDefinition.t(), :has_duration) :: ScenarioDefinition.t()
 def preload(scen_def, :has_duration) do
 	Duration.preload(scen_def, :has_duration)
-end
-
-# Returns a ScenarioDefinition in ok-err tuple from given ID.  Used inside
-# Ecto.Multi.run/5 to get a record in transaction.
-@spec multi_get(id())
-	:: (repo(), changes() -> {:ok, ScenarioDefinition.t()} | {:error, String.t()})
-defp multi_get(id) do
-	fn repo, _ ->
-		case by_id(repo, id) do
-			nil -> {:error, "not found"}
-			sd -> {:ok, sd}
-		end
-	end
 end
 end

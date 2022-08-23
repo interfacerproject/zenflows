@@ -31,6 +31,7 @@ uniqueness.
 @due "The time the plan is expected to be complete."
 @deletable "The plan is able to be deleted or not."
 @refinement_of "This plan refines a scenario, making it operational."
+@refinement_of_id "(`Scenario`) #{@refinement_of}"
 
 @desc """
 A logical collection of processes that constitute a body of planned work
@@ -58,10 +59,6 @@ object :plan do
 	field :refinement_of, :scenario, resolve: &Resolv.refinement_of/3
 end
 
-object :plan_response do
-	field :plan, non_null(:plan)
-end
-
 input_object :plan_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -72,10 +69,7 @@ input_object :plan_create_params do
 	@desc @due
 	field :due, :datetime
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @refinement_of
+	@desc @refinement_of_id
 	field :refinement_of_id, :id, name: "refinement_of"
 end
 
@@ -91,11 +85,22 @@ input_object :plan_update_params do
 	@desc @due
 	field :due, :datetime
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
-	@desc "(`Scenario`) " <> @refinement_of
+	@desc @refinement_of_id
 	field :refinement_of_id, :id, name: "refinement_of"
+end
+
+object :plan_response do
+	field :plan, non_null(:plan)
+end
+
+object :plan_edge do
+	field :cursor, non_null(:id)
+	field :node, non_null(:plan)
+end
+
+object :plan_connection do
+	field :page_info, non_null(:page_info)
+	field :edges, non_null(list_of(non_null(:plan_edge)))
 end
 
 object :query_plan do
@@ -104,7 +109,13 @@ object :query_plan do
 		resolve &Resolv.plan/2
 	end
 
-	#plans(start: ID, limit: Int): [Plan!]
+	field :plans, :plan_connection do
+		arg :first, :integer
+		arg :after, :id
+		arg :last, :integer
+		arg :before, :id
+		resolve &Resolv.plans/2
+	end
 end
 
 object :mutation_plan do

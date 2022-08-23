@@ -30,7 +30,6 @@ setup do
 			refinement_of_id: Factory.insert!(:scenario).id,
 	 	},
 		inserted: Factory.insert!(:plan),
-		id: Factory.id(),
 	 }
 end
 
@@ -39,18 +38,18 @@ describe "one/1" do
 		assert {:ok, %Plan{}} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't find the Plan", %{id: id} do
-		assert {:error, "not found"} = Domain.one(id)
+	test "with bad id: doesn't find the Plan" do
+		assert {:error, "not found"} = Domain.one(Factory.id())
 	end
 end
 
 describe "create/1" do
 	test "with good params: creates a Plan", %{params: params} do
-		assert {:ok, %Plan{} = plan} = Domain.create(params)
-		assert plan.name == params.name
-		assert plan.note == params.note
-		assert plan.due == params.due
-		assert plan.refinement_of_id == params.refinement_of_id
+		assert {:ok, %Plan{} = new} = Domain.create(params)
+		assert new.name == params.name
+		assert new.note == params.note
+		assert new.due == params.due
+		assert new.refinement_of_id == params.refinement_of_id
 	end
 
 	test "with bad params: doesn't create an" do
@@ -82,8 +81,8 @@ describe "delete/1" do
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
-	test "with bad id: doesn't delete the Plan", %{id: id} do
-		assert {:error, "not found"} = Domain.delete(id)
+	test "with bad id: doesn't delete the Plan" do
+		assert {:error, "not found"} = Domain.delete(Factory.id())
 	end
 end
 

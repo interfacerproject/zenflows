@@ -41,7 +41,6 @@ def change() do
 		add :has_point_in_time, :timestamptz
 		add :due, :timestamptz
 		add :finished, :boolean, default: false, null: false
-		add :image, :text
 		add :note, :text
 		# add :in_scope_of
 		add :agreed_in, :text

@@ -19,8 +19,7 @@ defmodule Zenflows.VF.Agreement.Domain do
 @moduledoc "Domain logic of Agreements."
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.Agreement
 
 @typep repo() :: Ecto.Repo.t()
@@ -39,7 +38,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(Agreement.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(Agreement, params)
 end

@@ -18,7 +18,7 @@
 defmodule Zenflows.VF.Agent.Domain do
 @moduledoc "Domain logic of Agents."
 
-alias Zenflows.DB.Repo
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.Agent
 
 @typep repo() :: Ecto.Repo.t()
@@ -34,7 +34,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(Agent.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(Agent, params)
 end

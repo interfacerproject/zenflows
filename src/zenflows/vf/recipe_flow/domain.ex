@@ -19,8 +19,7 @@ defmodule Zenflows.VF.RecipeFlow.Domain do
 @moduledoc "Domain logic of RecipeFlows."
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.{
 	Action,
 	Measure,
@@ -43,7 +42,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(RecipeFlow.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(RecipeFlow, params)
 end

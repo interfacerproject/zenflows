@@ -20,8 +20,7 @@ defmodule Zenflows.VF.SpatialThing.Domain do
 # Basically, a fancy name for (geo)location.  :P
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.SpatialThing
 
 @typep repo() :: Ecto.Repo.t()
@@ -40,7 +39,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(SpatialThing.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(SpatialThing, params)
 end

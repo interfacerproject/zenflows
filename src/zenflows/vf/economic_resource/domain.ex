@@ -19,8 +19,7 @@ defmodule Zenflows.VF.EconomicResource.Domain do
 @moduledoc "Domain logic of EconomicResources."
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.{
 	Action,
 	EconomicResource,
@@ -43,7 +42,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(EconomicResource.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(EconomicResource, params)
 end

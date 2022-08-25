@@ -19,8 +19,7 @@ defmodule Zenflows.VF.Unit.Domain do
 @moduledoc "Domain logic of Units."
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.Unit
 
 @typep repo() :: Ecto.Repo.t()
@@ -39,11 +38,10 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(Unit.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(Unit, params)
 end
-
 
 # `repo` is needed since we use that in a migration script.
 @spec create(repo(), params()) :: {:ok, Unit.t()} | {:error, chgset()}

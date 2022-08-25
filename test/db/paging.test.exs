@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule ZenflowsTest.GQL.Paging do
+defmodule ZenflowsTest.DB.Paging do
 use ZenflowsTest.Help.EctoCase, async: true
 
 # What we are testing here is a bit interesting.  Because, you see,

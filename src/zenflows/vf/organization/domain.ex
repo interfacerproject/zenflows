@@ -21,8 +21,7 @@ defmodule Zenflows.VF.Organization.Domain do
 import Ecto.Query
 
 alias Ecto.Multi
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.Organization
 
 @typep repo() :: Ecto.Repo.t()
@@ -44,7 +43,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(Organization.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(where(Organization, type: :org), params)
 end

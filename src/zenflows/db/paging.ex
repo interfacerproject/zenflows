@@ -15,18 +15,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.GQL.Paging do
-@moduledoc "Paging helpers for Resolv modules."
+defmodule Zenflows.DB.Paging do
+@moduledoc "Paging helpers for Domain modules."
 
 import Ecto.Query
 
-alias Zenflows.DB.{ID, Repo, Schema}
+alias Zenflows.DB.{ID, Repo}
 
-@type result(schema) :: {:ok, t(schema)} | {:error, String.t()}
+@type result() :: {:ok, t()} | {:error, String.t()}
 
-@type t(schema) :: %{
+@type t() :: %{
 	page_info: page_info(),
-	edges: [edges(schema)],
+	edges: [edges()],
 }
 
 @type page_info() :: %{
@@ -38,9 +38,9 @@ alias Zenflows.DB.{ID, Repo, Schema}
 	page_limit: non_neg_integer(),
 }
 
-@type edges(schema) :: %{
+@type edges() :: %{
 	cursor: ID.t(),
-	node: schema,
+	node: struct(),
 }
 
 @type params() :: %{first: non_neg_integer(), after: ID.t()}
@@ -51,7 +51,7 @@ def def_page_size() do
 	conf()[:def_page_size]
 end
 
-@spec def_page_size() :: non_neg_integer()
+@spec max_page_size() :: non_neg_integer()
 def max_page_size() do
 	conf()[:max_page_size]
 end
@@ -95,21 +95,19 @@ Page Ecto schemas.
 
 Only supports forward or backward paging with or without cursors.
 """
-@spec page(Schema.t() | Ecto.Query.t(), params()) :: result(Schema.t())
+@spec page(atom() | Ecto.Query.t(), params()) :: result()
 def page(schema_or_query, params) do
 	with {:ok, {dir, cur, num}} <- parse(params) do
 		{page_fun, order_by} =
 			case dir do
 				:forw -> {&forw/3, [asc: :id]}
 				:back -> {&back/3, [desc: :id]}
-				_ -> raise ArgumentError # impossible
 			end
 		where =
 			case {dir, cur} do
 				{_, nil} -> []
 				{:forw, cur} -> dynamic([s], s.id > ^cur)
 				{:back, cur} -> dynamic([s], s.id < ^cur)
-				_ -> raise ArgumentError # impossible
 			end
 		{:ok,
 			from(s in schema_or_query,
@@ -122,7 +120,7 @@ def page(schema_or_query, params) do
 	end
 end
 
-@spec forw(edges(Schema.t()), ID.t() | nil, non_neg_integer()) :: t(Schema.t())
+@spec forw(edges(), ID.t() | nil, non_neg_integer()) :: t()
 def forw(edges, cur, num) do
 	{edges, count} =
 		Enum.reduce(edges, {[], 0}, fn e, {edges, count} ->
@@ -160,7 +158,7 @@ def forw(edges, cur, num) do
 	}
 end
 
-@spec back(edges(Schema.t()), ID.t() | nil, non_neg_integer()) :: t(Schema.t())
+@spec back(edges(), ID.t() | nil, non_neg_integer()) :: t()
 def back(edges, cur, num) do
 	# Currently, this part of the algorithm doesn't care about
 	# whether we do forward or backward paging.

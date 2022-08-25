@@ -21,8 +21,7 @@ defmodule Zenflows.VF.EconomicEvent.Domain do
 import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
-alias Zenflows.DB.Repo
-alias Zenflows.GQL.Paging
+alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.{
 	Action,
 	EconomicEvent,
@@ -46,7 +45,7 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result(EconomicEvent.t())
+@spec all(Paging.params()) :: Paging.result()
 def all(params) do
 	Paging.page(EconomicEvent, params)
 end

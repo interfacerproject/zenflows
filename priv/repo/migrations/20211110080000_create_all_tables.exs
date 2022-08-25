@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.SQL.Repo.Migrations.Create_vf_tables do
+defmodule Zenflows.SQL.Repo.Migrations.Create_all_tables do
 # New tables can be added on top of these as anoter migration files.
 # The point of this migration is to just prevent circular references.
 use Ecto.Migration

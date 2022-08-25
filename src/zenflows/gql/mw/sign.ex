@@ -29,7 +29,7 @@ alias Zenflows.VF.Person
 def call(res, _opts) do
 	if res.context.authenticate_calls? do
 		with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
-				per when not is_nil(per) <- Person.Domain.one(user: user),
+				{:ok, per} <- Person.Domain.one(user: user),
 				true <- Restroom.verify_graphql?(body, sign, per.eddsa_public_key) do
 			put_in(res.context[:req_user], per)
 		else _ ->

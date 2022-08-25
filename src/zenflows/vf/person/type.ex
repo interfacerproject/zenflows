@@ -94,9 +94,6 @@ input_object :person_create_params do
 	@desc @note
 	field :note, :string
 
-	# TODO: When
-	# https://github.com/absinthe-graphql/absinthe/issues/1126 results,
-	# apply the correct changes if any.
 	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 

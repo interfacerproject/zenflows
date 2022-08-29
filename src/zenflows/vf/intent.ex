@@ -22,6 +22,7 @@ to economic events (sometimes through commitments).
 """
 use Zenflows.DB.Schema
 
+alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -54,7 +55,7 @@ alias Zenflows.VF.{
 	has_point_in_time: DateTime.t() | nil,
 	due: DateTime.t() | nil,
 	finished: boolean(),
-	image: String.t() | nil,
+	images: [File.t()],
 	note: String.t() | nil,
 	# in_scope_of:
 	agreed_in: String.t() | nil,
@@ -88,7 +89,7 @@ schema "vf_intent" do
 	field :has_point_in_time, :utc_datetime_usec
 	field :due, :utc_datetime_usec
 	field :finished, :boolean, default: false
-	field :image, :string
+	has_many :images, File
 	field :note, :string
 	# field :in_scope_of
 	field :agreed_in, :string
@@ -103,7 +104,7 @@ end
 	resource_classified_as resource_conforms_to_id resource_inventoried_as_id
 	resource_quantity effort_quantity available_quantity
 	at_location_id has_beginning has_end has_point_in_time due
-	finished note image agreed_in
+	finished note agreed_in
 ]a # in_scope_of_id
 
 @doc false
@@ -115,7 +116,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> mutex_check()
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.img(:image)
+	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Validate.class(:resource_classified_as)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)

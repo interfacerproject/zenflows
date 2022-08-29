@@ -28,7 +28,6 @@ setup do
 			"resourceConformsTo" => Factory.insert!(:resource_specification).id,
 			"substitutable" => Factory.bool(),
 			"note" => Factory.str("note"),
-			"image" => Factory.img(),
 		},
 		inserted: Factory.insert!(:recipe_resource),
 	}
@@ -43,7 +42,6 @@ fragment recipeResource on RecipeResource {
 	unitOfEffort {id}
 	resourceConformsTo {id}
 	substitutable
-	image
 	note
 }
 """
@@ -66,7 +64,6 @@ describe "Query" do
 		assert data["resourceConformsTo"]["id"] == new.resource_conforms_to_id
 		assert data["note"] == new.note
 		assert data["substitutable"] == new.substitutable
-		assert data["image"] == new.image
 	end
 end
 
@@ -83,7 +80,7 @@ describe "Mutation" do
 			""", vars: %{"recipeResource" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		keys = ~w[name note image resourceClassifiedAs substitutable]
+		keys = ~w[name note resourceClassifiedAs substitutable]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["unitOfResource"]["id"] == params["unitOfResource"]
 		assert data["unitOfEffort"]["id"] == params["unitOfEffort"]
@@ -102,7 +99,7 @@ describe "Mutation" do
 			""", vars: %{"recipeResource" => Map.put(params, "id", old.id)})
 
 		assert data["id"] == old.id
-		keys = ~w[name note image resourceClassifiedAs substitutable]
+		keys = ~w[name note resourceClassifiedAs substitutable]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["unitOfResource"]["id"] == params["unitOfResource"]
 		assert data["unitOfEffort"]["id"] == params["unitOfEffort"]

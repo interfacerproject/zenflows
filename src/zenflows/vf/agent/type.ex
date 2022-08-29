@@ -25,9 +25,8 @@ alias Zenflows.VF.{Agent, Agent.Resolv}
 An informal or formal textual identifier for an agent.  Does not imply
 uniqueness.
 """
-@image """
-The base64-encoded image binary relevant to the agent, such as a logo,
-avatar, photo, etc.
+@images """
+The image files relevant to the agent, such as a logo, avatar, photo, etc.
 """
 @note "A textual description or comment."
 @primary_location """
@@ -44,8 +43,8 @@ interface :agent do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file)), resolve: &Resolv.images/3
 
 	@desc @note
 	field :note, :string

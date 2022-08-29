@@ -24,11 +24,12 @@ classification when more information is needed, particularly for recipes.
 
 use Zenflows.DB.Schema
 
+alias Zenflows.File
 alias Zenflows.VF.{Unit, Validate}
 
 @type t() :: %__MODULE__{
 	name: String.t(),
-	image: String.t() | nil,
+	images: [File.t()],
 	resource_classified_as: [String.t()] | nil,
 	note: String.t() | nil,
 	default_unit_of_effort: Unit.t() | nil,
@@ -37,7 +38,7 @@ alias Zenflows.VF.{Unit, Validate}
 
 schema "vf_resource_specification" do
 	field :name, :string
-	field :image, :string
+	has_many :images, File
 	field :resource_classified_as, {:array, :string}
 	field :note, :string
 	belongs_to :default_unit_of_resource, Unit
@@ -47,7 +48,7 @@ end
 
 @reqr [:name]
 @cast @reqr ++ ~w[
-	resource_classified_as image note
+	resource_classified_as note
 	default_unit_of_effort_id
 	default_unit_of_resource_id
 ]a
@@ -60,7 +61,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.img(:image)
+	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Validate.class(:resource_classified_as)
 	|> Changeset.assoc_constraint(:default_unit_of_resource)
 	|> Changeset.assoc_constraint(:default_unit_of_effort)

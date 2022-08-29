@@ -18,7 +18,7 @@
 defmodule Zenflows.VF.Organization.Resolv do
 @moduledoc "Resolvers of Organizations."
 
-alias Zenflows.VF.{Agent, Organization, Organization.Domain}
+alias Zenflows.VF.Organization.Domain
 
 def organization(params, _) do
 	Domain.one(params)
@@ -46,14 +46,13 @@ def delete_organization(%{id: id}, _) do
 	end
 end
 
-def primary_location(%Organization{} = org, _, _) do
-	org = Domain.preload(org, :primary_location)
-	{:ok, org.primary_location}
+def images(org, _, _) do
+	org = Domain.preload(org, :images)
+	{:ok, org.images}
 end
 
-# For some reason, Absinthe calls this one instead of the one on
-# Zenflows.VF.Agent.Type for queries to Agent itself.
-def primary_location(%Agent{} = agent, params, info) do
-	Agent.Resolv.primary_location(agent, params, info)
+def primary_location(org, _, _) do
+	org = Domain.preload(org, :primary_location)
+	{:ok, org.primary_location}
 end
 end

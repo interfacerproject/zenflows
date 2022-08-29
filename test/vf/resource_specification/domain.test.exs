@@ -31,7 +31,6 @@ setup do
 			name: Factory.str("name"),
 			resource_classified_as: Factory.str_list("uri"),
 			note: Factory.str("note"),
-			image: Factory.img(),
 			default_unit_of_effort_id: Factory.insert!(:unit).id,
 			default_unit_of_resource_id: Factory.insert!(:unit).id,
 		},
@@ -55,7 +54,6 @@ describe "create/1" do
 		assert new.name == params.name
 		assert new.resource_classified_as == params.resource_classified_as
 		assert new.note == params.note
-		assert new.image == params.image
 		assert new.default_unit_of_resource_id == params.default_unit_of_resource_id
 		assert new.default_unit_of_effort_id == params.default_unit_of_effort_id
 	end
@@ -71,7 +69,6 @@ describe "update/2" do
 		assert new.name == params.name
 		assert new.resource_classified_as == params.resource_classified_as
 		assert new.note == params.note
-		assert new.image == params.image
 		assert new.default_unit_of_resource_id == params.default_unit_of_resource_id
 		assert new.default_unit_of_effort_id == params.default_unit_of_effort_id
 	end
@@ -81,7 +78,6 @@ describe "update/2" do
 		assert new.name == old.name
 		assert new.resource_classified_as == old.resource_classified_as
 		assert new.note == old.note
-		assert new.image == old.image
 		assert new.default_unit_of_resource_id == old.default_unit_of_resource_id
 		assert new.default_unit_of_effort_id == old.default_unit_of_effort_id
 	end

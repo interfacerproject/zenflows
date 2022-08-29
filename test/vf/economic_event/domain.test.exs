@@ -119,7 +119,7 @@ describe "`create/2` with raise:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -128,7 +128,7 @@ describe "`create/2` with raise:" do
 
 		assert res.name == res_params.name
 		assert res.note == res_params.note
-		assert res.image == res_params.image
+		#assert res.image == res_params.image
 		assert res.tracking_identifier == res_params.tracking_identifier
 		assert res.lot_id == res_params.lot_id
 
@@ -219,7 +219,7 @@ describe "`create/2` with produce:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -228,7 +228,7 @@ describe "`create/2` with produce:" do
 
 		assert res.name == res_params.name
 		assert res.note == res_params.note
-		assert res.image == res_params.image
+		#assert res.image == res_params.image
 		assert res.tracking_identifier == res_params.tracking_identifier
 		assert res.lot_id == res_params.lot_id
 
@@ -783,7 +783,7 @@ describe "`create/2` with transferCustody:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -797,7 +797,7 @@ describe "`create/2` with transferCustody:" do
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
-		assert to_res.image == res_params.image
+		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
 
@@ -1031,7 +1031,7 @@ describe "`create/2` with transferAllRights:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -1045,7 +1045,7 @@ describe "`create/2` with transferAllRights:" do
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
-		assert to_res.image == res_params.image
+		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
 
@@ -1278,7 +1278,7 @@ describe "`create/2` with transfer:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -1292,7 +1292,7 @@ describe "`create/2` with transfer:" do
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
-		assert to_res.image == res_params.image
+		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
 
@@ -1562,7 +1562,7 @@ describe "`create/2` with move:" do
 		res_params = %{
 			name: Factory.str("name"),
 			note: Factory.str("note"),
-			image: Factory.img(),
+			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
 		}
@@ -1576,7 +1576,7 @@ describe "`create/2` with move:" do
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
-		assert to_res.image == res_params.image
+		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
 

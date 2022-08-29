@@ -60,7 +60,6 @@ setup do
 			due: Factory.now(),
 			finished: Factory.bool(),
 			at_location_id: Factory.insert!(:spatial_thing).id,
-			image: Factory.img(),
 			name: Factory.str("name"),
 			note: Factory.str("note"),
 			# in_scope_of_id:
@@ -91,7 +90,7 @@ describe "create/1" do
 			input_of_id output_of_id
 			resource_inventoried_as_id resource_conforms_to_id resource_classified_as
 			has_beginning has_end has_point_in_time due
-			finished image name note agreed_in at_location_id
+			finished name note agreed_in at_location_id
 		]a # in_scope_of_id
 		assert Map.take(int, keys) == Map.take(params, keys)
 
@@ -113,7 +112,7 @@ describe "create/1" do
 			input_of_id output_of_id
 			resource_inventoried_as_id resource_conforms_to_id resource_classified_as
 			has_beginning has_end has_point_in_time due
-			finished image name note agreed_in at_location_id
+			finished name note agreed_in at_location_id
 		]a # in_scope_of_id
 		assert Map.take(int, keys) == Map.take(params, keys)
 
@@ -148,7 +147,7 @@ describe "update/2" do
 			input_of_id output_of_id
 			resource_inventoried_as_id resource_conforms_to_id resource_classified_as
 			has_beginning has_end has_point_in_time due
-			finished image name note agreed_in at_location_id
+			finished name note agreed_in at_location_id
 		]a # in_scope_of_id
 		assert Map.take(new, keys) == Map.take(params, keys)
 
@@ -171,7 +170,7 @@ describe "update/2" do
 			input_of_id output_of_id
 			resource_inventoried_as_id resource_conforms_to_id resource_classified_as
 			has_beginning has_end has_point_in_time due
-			finished image name note agreed_in at_location_id
+			finished name note agreed_in at_location_id
 		]a # in_scope_of_id
 		assert Map.take(new, keys) == Map.take(params, keys)
 
@@ -210,7 +209,7 @@ describe "update/2" do
 			effort_quantity_has_unit_id effort_quantity_has_numerical_value
 			available_quantity_has_unit_id available_quantity_has_numerical_value
 			has_beginning has_end has_point_in_time due
-			finished image name note agreed_in at_location_id
+			finished name note agreed_in at_location_id
 		]a # in_scope_of_id
 		assert Map.take(new, keys) == Map.take(old, keys)
 	end

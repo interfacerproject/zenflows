@@ -39,7 +39,11 @@ def all(params) do
 	Paging.page(Agent, params)
 end
 
-@spec preload(Agent.t(), :primary_location) :: Agent.t()
+@spec preload(Agent.t(), :images | :primary_location) :: Agent.t()
+def preload(agent, :images) do
+	Repo.preload(agent, :images)
+end
+
 def preload(agent, :primary_location) do
 	Repo.preload(agent, :primary_location)
 end

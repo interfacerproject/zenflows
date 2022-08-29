@@ -33,7 +33,6 @@ test "Query myAgent" do
 				myAgent {
 					id
 					name
-					image
 					note
 				}
 			}
@@ -41,7 +40,6 @@ test "Query myAgent" do
 
 	assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
 	assert data["name"] == "hello"
-	assert data["image"] == "https://example.test/img.jpg"
 	assert data["note"] == "world"
 end
 
@@ -54,7 +52,6 @@ describe "Query agent()" do
 						id
 						name
 						note
-						image
 						primaryLocation { id }
 					}
 				}
@@ -63,7 +60,6 @@ describe "Query agent()" do
 		assert data["id"] == per.id
 		assert data["name"] == per.name
 		assert data["note"] == per.note
-		assert data["image"] == per.image
 		assert data["primaryLocation"]["id"] == per.primary_location_id
 	end
 
@@ -75,7 +71,6 @@ describe "Query agent()" do
 						id
 						name
 						note
-						image
 						primaryLocation { id }
 					}
 				}
@@ -84,7 +79,6 @@ describe "Query agent()" do
 		assert data["id"] == org.id
 		assert data["name"] == org.name
 		assert data["note"] == org.note
-		assert data["image"] == org.image
 		assert data["primaryLocation"]["id"] == org.primary_location_id
 	end
 
@@ -97,7 +91,6 @@ describe "Query agent()" do
 							id
 							name
 							note
-							image
 							primaryLocation { id }
 							user
 							email
@@ -114,7 +107,6 @@ describe "Query agent()" do
 		assert data["id"] == per.id
 		assert data["name"] == per.name
 		assert data["note"] == per.note
-		assert data["image"] == per.image
 		assert data["primaryLocation"]["id"] == per.primary_location_id
 
 		assert data["user"] == per.user
@@ -135,7 +127,6 @@ describe "Query agent()" do
 							id
 							name
 							note
-							image
 							primaryLocation { id }
 							classifiedAs
 						}
@@ -146,7 +137,6 @@ describe "Query agent()" do
 		assert data["id"] == org.id
 		assert data["name"] == org.name
 		assert data["note"] == org.note
-		assert data["image"] == org.image
 		assert data["primaryLocation"]["id"] == org.primary_location_id
 
 		assert data["classifiedAs"] == org.classified_as

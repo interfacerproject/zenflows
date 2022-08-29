@@ -18,7 +18,7 @@
 defmodule Zenflows.VF.Agent.Resolv do
 @moduledoc "Resolvers of Agents."
 
-alias Zenflows.VF.{Agent, Agent.Domain}
+alias Zenflows.VF.Agent.Domain
 
 def my_agent(_, %{context: %{req_user: user}}) do
 	{:ok, user}
@@ -32,7 +32,12 @@ def agents(params, _) do
 	Domain.all(params)
 end
 
-def primary_location(%Agent{} = agent, _, _) do
+def images(agent, _, _) do
+	agent = Domain.preload(agent, :images)
+	{:ok, agent.images}
+end
+
+def primary_location(agent, _, _) do
 	agent = Domain.preload(agent, :primary_location)
 	{:ok, agent.primary_location}
 end

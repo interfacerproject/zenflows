@@ -42,6 +42,11 @@ def delete_economic_resource(%{id: id}, _) do
 	end
 end
 
+def images(eco_res, _, _) do
+	eco_res = Domain.preload(eco_res, :images)
+	{:ok, eco_res.images}
+end
+
 def conforms_to(eco_res, _, _) do
 	eco_res = Domain.preload(eco_res, :conforms_to)
 	{:ok, eco_res.conforms_to}

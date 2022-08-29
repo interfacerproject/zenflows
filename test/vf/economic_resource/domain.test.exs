@@ -37,7 +37,7 @@ setup ctx do
 	params = %{
 		name: Factory.str("name"),
 		note: Factory.str("note"),
-		image: Factory.img(),
+		#image: Factory.img(),
 		tracking_identifier: Factory.str("tracking identifier"),
 		classified_as: Factory.str_list("uri"),
 		conforms_to_id: Factory.insert!(:resource_specification).id,
@@ -87,7 +87,7 @@ describe "update/2" do
 		assert new.onhand_quantity_has_numerical_value == old.onhand_quantity_has_numerical_value
 		assert new.current_location_id == old.current_location_id
 		assert new.note == old.note
-		assert new.image == old.image
+		#assert new.image == old.image
 		assert new.unit_of_effort_id == old.unit_of_effort_id
 		assert new.stage_id == old.stage_id
 		assert new.state_id == old.state_id
@@ -110,7 +110,7 @@ describe "update/2" do
 		assert new.onhand_quantity_has_numerical_value == params.onhand_quantity.has_numerical_value
 		assert new.current_location_id == params.current_location_id
 		assert new.note == params.note
-		assert new.image == params.image
+		#assert new.image == params.image
 		assert new.unit_of_effort_id == params.unit_of_effort_id
 		assert new.stage_id == params.stage_id
 		assert new.state_id == params.state_id

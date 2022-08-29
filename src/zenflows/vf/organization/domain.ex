@@ -86,7 +86,11 @@ def delete(id) do
 	end
 end
 
-@spec preload(Organization.t(), :primary_location) :: Organization.t()
+@spec preload(Organization.t(), :images | :primary_location) :: Organization.t()
+def preload(org, :images) do
+	Repo.preload(org, :images)
+end
+
 def preload(org, :primary_location) do
 	Repo.preload(org, :primary_location)
 end

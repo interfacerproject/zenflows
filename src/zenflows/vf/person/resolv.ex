@@ -18,7 +18,7 @@
 defmodule Zenflows.VF.Person.Resolv do
 @moduledoc "Resolvers of Persons."
 
-alias Zenflows.VF.{Agent, Person, Person.Domain}
+alias Zenflows.VF.Person.Domain
 
 def person(params, _) do
 	Domain.one(params)
@@ -50,14 +50,13 @@ def delete_person(%{id: id}, _) do
 	end
 end
 
-def primary_location(%Person{} = per, _, _) do
-	per = Domain.preload(per, :primary_location)
-	{:ok, per.primary_location}
+def images(per, _, _) do
+	per = Domain.preload(per, :images)
+	{:ok, per.images}
 end
 
-# For some reason, Absinthe calls this one instead of the one on
-# Zenflows.VF.Agent.Type for queries to Agent itself.
-def primary_location(%Agent{} = agent, params, info) do
-	Agent.Resolv.primary_location(agent, params, info)
+def primary_location(per, _, _) do
+	per = Domain.preload(per, :primary_location)
+	{:ok, per.primary_location}
 end
 end

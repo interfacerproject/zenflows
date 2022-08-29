@@ -25,7 +25,6 @@ setup do
 	%{
 		params: %{
 			name: Factory.str("name"),
-			image: Factory.img(),
 			note: Factory.str("note"),
 			primary_location_id: Factory.insert!(:spatial_thing).id,
 			user: Factory.str("user"),
@@ -61,7 +60,6 @@ describe "create/1" do
 		assert new.type == :per
 		assert new.name == params.name
 		assert new.note == params.note
-		assert new.image == params.image
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == params.email
@@ -82,7 +80,6 @@ describe "update/2" do
 		assert {:ok, %Person{} = new} = Domain.update(old.id, params)
 		assert new.name == params.name
 		assert new.note == params.note
-		assert new.image == params.image
 		assert new.primary_location_id == params.primary_location_id
 		assert new.user == params.user
 		assert new.email == old.email
@@ -97,7 +94,6 @@ describe "update/2" do
 		assert {:ok, %Person{} = new} = Domain.update(old.id, %{email: "can't change that yet"})
 		assert new.name == old.name
 		assert new.note == old.note
-		assert new.image == old.image
 		assert new.primary_location_id == old.primary_location_id
 		assert new.user == old.user
 		assert new.email == old.email

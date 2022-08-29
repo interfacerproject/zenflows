@@ -23,6 +23,8 @@ use Ecto.Migration
 def change() do
 	execute "CREATE EXTENSION citext", "DROP EXTENSION citext"
 
+	create table("zf_file")
+
 	create table("vf_unit")
 	create table("vf_spatial_thing")
 	create table("vf_process_specification")

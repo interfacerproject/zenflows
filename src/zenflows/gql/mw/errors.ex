@@ -32,7 +32,7 @@ end
 defp handle(%Chgset{} = cset) do
 	cset
 	|> Chgset.traverse_errors(&elem(&1, 0))
-	|> Enum.map(fn {k, v} -> "#{k}: #{v}" end)
+	|> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
 end
 
 defp handle(error) do

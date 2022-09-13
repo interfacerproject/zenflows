@@ -54,6 +54,12 @@ fragment economicResource on EconomicResource {
 	lot {id}
 	containedIn {id}
 	unitOfEffort {id}
+	okhv
+	repo
+	version
+	licensor
+	license
+	metadata
 }
 """
 
@@ -86,6 +92,12 @@ describe "Query" do
 		assert data["lot"]["id"] == new.lot_id
 		assert data["containedIn"]["id"] == new.contained_in_id
 		assert data["unitOfEffort"]["id"] == new.unit_of_effort_id
+		assert data["okhv"] == new.okhv
+		assert data["repo"] == new.repo
+		assert data["version"] == new.version
+		assert data["licensor"] == new.licensor
+		assert data["license"] == new.license
+		assert data["metadata"] == new.metadata
 	end
 end
 

@@ -56,6 +56,12 @@ alias Zenflows.VF.{
 	current_location: SpatialThing.t() | nil,
 	unit_of_effort: Unit.t() | nil,
 	contained_in: EconomicResource.t() | nil,
+	okhv: String.t() | nil,
+	repo: String.t() | nil,
+	version: String.t() | nil,
+	licensor: String.t() | nil,
+	license: String.t() | nil,
+	metadata: map() | nil,
 }
 
 schema "vf_economic_resource" do
@@ -80,6 +86,12 @@ schema "vf_economic_resource" do
 	belongs_to :lot, ProductBatch
 	belongs_to :contained_in, EconomicResource
 	belongs_to :unit_of_effort, Unit
+	field :okhv, :string
+	field :repo, :string
+	field :version, :string
+	field :licensor, :string
+	field :license, :string
+	field :metadata, :map
 	timestamps()
 end
 
@@ -95,6 +107,7 @@ end
 	classified_as
 	stage_id state_id current_location_id
 	lot_id contained_in_id unit_of_effort_id
+	okhv repo version licensor license metadata
 ]a
 
 @doc false
@@ -106,6 +119,11 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Validate.name(:name)
 	|> Validate.note(:note)
 	|> Validate.class(:classified_as)
+	|> Validate.name(:okhv)
+	|> Validate.uri(:repo)
+	|> Validate.name(:version)
+	|> Validate.name(:licensor)
+	|> Validate.name(:license)
 	|> require_quantity_units_same()
 	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Changeset.assoc_constraint(:conforms_to)

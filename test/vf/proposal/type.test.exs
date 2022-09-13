@@ -40,6 +40,7 @@ fragment proposal on Proposal {
 	hasBeginning
 	hasEnd
 	unitBased
+	created
 	eligibleLocation {id}
 }
 """
@@ -59,6 +60,8 @@ describe "Query" do
 		assert data["note"] == new.note
 		assert data["unitBased"] == new.unit_based
 		assert data["eligibleLocation"]["id"] == new.eligible_location_id
+		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
+		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 		assert {:ok, has_beginning, 0} = DateTime.from_iso8601(data["hasBeginning"])
 		assert DateTime.compare(DateTime.utc_now(), has_beginning) != :lt
 		assert {:ok, has_end, 0} = DateTime.from_iso8601(data["hasEnd"])
@@ -150,6 +153,8 @@ describe "Mutation" do
 		keys = ~w[name note unitBased hasBeginning hasEnd]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["eligibleLocation"]["id"] == params["eligibleLocation"]
+		assert {:ok, created, 0} = DateTime.from_iso8601(data["created"])
+		assert DateTime.compare(DateTime.utc_now(), created) != :lt
 	end
 
 	test "updateProposal", %{params: params, inserted: old} do

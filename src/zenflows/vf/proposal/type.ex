@@ -59,7 +59,7 @@ object :proposal do
 	field :unit_based, :boolean
 
 	@desc @created
-	field :inserted_at, :datetime, name: "created"
+	field :created, non_null(:datetime), resolve: &Resolv.created/3
 
 	@desc @eligible_location
 	field :eligible_location, :spatial_thing, resolve: &Resolv.eligible_location/3

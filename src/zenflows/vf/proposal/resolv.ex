@@ -66,6 +66,10 @@ def delete_proposal(%{id: id}, _) do
 	end
 end
 
+def created(%{id: id}, _, _) do
+	Zenflows.DB.ID.ts(id)
+end
+
 def eligible_location(prop, _, _) do
 	prop = Domain.preload(prop, :eligible_location)
 	{:ok, prop.eligible_location}

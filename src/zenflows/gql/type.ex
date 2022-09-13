@@ -41,6 +41,12 @@ scalar :url64, name: "Url64" do
 	serialize & &1
 end
 
+@desc "A JSON document encoded as string."
+scalar :json, name: "JSON" do
+	parse &Jason.decode/1
+	serialize & &1
+end
+
 @desc "Cursors for pagination"
 object :page_info do
 	@desc """

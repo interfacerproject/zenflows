@@ -37,6 +37,12 @@ def change() do
 		add :lot_id, references("vf_product_batch")
 		add :contained_in_id, references("vf_economic_resource")
 		add :unit_of_effort_id, references("vf_unit")
+		add :okhv, :text
+		add :repo, :text
+		add :version, :text
+		add :licensor, :text
+		add :license, :text
+		add :metadata, :jsonb
 		timestamps()
 	end
 end

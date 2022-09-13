@@ -25,7 +25,6 @@ setup do
 	%{
 		params: %{
 			name: Factory.str("name"),
-			image: Factory.img(),
 			classified_as: Factory.str_list("uri"),
 			note: Factory.str("note"),
 			primary_location_id: Factory.insert!(:spatial_thing).id,
@@ -54,7 +53,6 @@ describe "create/1" do
 		assert {:ok, %Organization{} = new} = Domain.create(params)
 		assert new.type == :org
 		assert new.name == params.name
-		assert new.image == params.image
 		assert new.classified_as == params.classified_as
 		assert new.note == params.note
 		assert new.primary_location_id == params.primary_location_id	end
@@ -70,7 +68,6 @@ describe "update/2" do
 		assert new.name == params.name
 		assert new.classified_as == params.classified_as
 		assert new.note == params.note
-		assert new.image == params.image
 		assert new.primary_location_id == params.primary_location_id
 	end
 
@@ -79,7 +76,6 @@ describe "update/2" do
 		assert new.name == old.name
 		assert new.classified_as == old.classified_as
 		assert new.note == old.note
-		assert new.image == old.image
 		assert new.primary_location_id == old.primary_location_id
 	end
 end

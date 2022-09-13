@@ -84,8 +84,12 @@ def delete(id) do
 end
 
 @spec preload(ResourceSpecification.t(),
-		:default_unit_of_resource | :default_unit_of_effort)
+		:images | :default_unit_of_resource | :default_unit_of_effort)
 	:: ResourceSpecification.t()
+def preload(res_spec, :images) do
+	Repo.preload(res_spec, :images)
+end
+
 def preload(res_spec, :default_unit_of_resource) do
 	Repo.preload(res_spec, :default_unit_of_resource)
 end

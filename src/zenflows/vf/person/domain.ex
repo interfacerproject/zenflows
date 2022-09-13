@@ -90,7 +90,11 @@ def delete(id) do
 	end
 end
 
-@spec preload(Person.t(), :primary_location) :: Person.t()
+@spec preload(Person.t(), :images | :primary_location) :: Person.t()
+def preload(per, :images) do
+	Repo.preload(per, :images)
+end
+
 def preload(per, :primary_location) do
 	Repo.preload(per, :primary_location)
 end

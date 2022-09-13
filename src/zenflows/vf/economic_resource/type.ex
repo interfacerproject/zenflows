@@ -27,8 +27,8 @@ An informal or formal textual identifier for an item.  Does not imply
 uniqueness.
 """
 @note "A textual description or comment."
-@image """
-The base64-encoded image binary relevant to the entity, such as a photo, diagram, etc.
+@images """
+The image files relevant to the entity, such as a photo, diagram, etc.
 """
 @tracking_identifier """
 Sometimes called serial number, used when each item must have a traceable
@@ -105,8 +105,8 @@ object :economic_resource do
 	@desc @note
 	field :note, :string
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file)), resolve: &Resolv.images/3
 
 	@desc @tracking_identifier
 	field :tracking_identifier, :string
@@ -162,14 +162,21 @@ input_object :economic_resource_create_params do
 	@desc @note
 	field :note, :string
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile))
 
 	@desc @tracking_identifier
 	field :tracking_identifier, :string
 
 	@desc @lot_id
 	field :lot_id, :id, name: "lot"
+end
+
+input_object :economic_resource_update_params do
+	field :id, non_null(:id)
+
+	@desc @note
+	field :note, :string
 end
 
 object :economic_resource_response do
@@ -184,16 +191,6 @@ end
 object :economic_resource_connection do
 	field :page_info, non_null(:page_info)
 	field :edges, non_null(list_of(non_null(:economic_resource_edge)))
-end
-
-input_object :economic_resource_update_params do
-	field :id, non_null(:id)
-
-	@desc @note
-	field :note, :string
-
-	@desc @image
-	field :image, :base64
 end
 
 object :query_economic_resource do

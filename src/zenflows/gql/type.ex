@@ -35,6 +35,12 @@ scalar :base64, name: "Base64" do
 	serialize & &1
 end
 
+@desc "A base64url-encoded (requires nonpadding and ignores whitespace) as String."
+scalar :url64, name: "Url64" do
+	parse &url64_parse/1
+	serialize & &1
+end
+
 @desc "Cursors for pagination"
 object :page_info do
 	@desc """
@@ -94,6 +100,16 @@ defp base64_parse(%Input.String{value: v}) do
 end
 defp base64_parse(%Input.Null{}), do: {:ok, nil}
 defp base64_parse(_), do: :error
+
+@spec url64_parse(Input.t()) :: {:ok, String.t() | nil} | :error
+defp url64_parse(%Input.String{value: v}) do
+	case Base.url_decode64(v, ignore: :whitespace, padding: false) do
+		{:ok, _} -> {:ok, v}
+		:error -> :error
+	end
+end
+defp url64_parse(%Input.Null{}), do: {:ok, nil}
+defp url64_parse(_), do: :error
 
 @spec id_parse(Input.t()) :: {:ok, ID.t() | nil} | :error
 def id_parse(%Input.String{value: v}), do: ID.cast(v)

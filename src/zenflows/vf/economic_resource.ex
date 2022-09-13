@@ -20,6 +20,7 @@ defmodule Zenflows.VF.EconomicResource do
 
 use Zenflows.DB.Schema
 
+alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -36,7 +37,7 @@ alias Zenflows.VF.{
 @type t() :: %__MODULE__{
 	name: String.t(),
 	note: String.t() | nil,
-	image: String.t() | nil,
+	images: [File.t()],
 	tracking_identifier: String.t() | nil,
 	classified_as: [String.t()] | nil,
 	conforms_to: ResourceSpecification.t(),
@@ -60,7 +61,7 @@ alias Zenflows.VF.{
 schema "vf_economic_resource" do
 	field :name, :string
 	field :note, :string
-	field :image, :string
+	has_many :images, File
 	field :tracking_identifier, :string
 	field :classified_as, {:array, :string}
 	belongs_to :conforms_to, ResourceSpecification
@@ -90,7 +91,7 @@ end
 	onhand_quantity_has_unit_id onhand_quantity_has_numerical_value
 ]a
 @cast @reqr ++ ~w[
-	note image tracking_identifier
+	note tracking_identifier
 	classified_as
 	stage_id state_id current_location_id
 	lot_id contained_in_id unit_of_effort_id
@@ -104,9 +105,9 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.img(:image)
 	|> Validate.class(:classified_as)
 	|> require_quantity_units_same()
+	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Changeset.assoc_constraint(:conforms_to)
 	|> Changeset.assoc_constraint(:accounting_quantity_has_unit)
 	|> Changeset.assoc_constraint(:onhand_quantity_has_unit)

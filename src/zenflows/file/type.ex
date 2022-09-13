@@ -15,36 +15,36 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.VF.Agent.Domain do
-@moduledoc "Domain logic of Agents."
+defmodule Zenflows.File.Type do
+@moduledoc "GraphQL types of Files."
 
-alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.Agent
+use Absinthe.Schema.Notation
 
-@typep repo() :: Ecto.Repo.t()
-@typep id() :: Zenflows.DB.Schema.id()
+alias Zenflows.File.Resolv
 
-@spec one(repo(), id() | map() | Keyword.t()) :: {:ok, Agent.t()} | {:error, String.t()}
-def one(repo \\ Repo, _)
-def one(repo, id) when is_binary(id), do: one(repo, id: id)
-def one(repo, clauses) do
-	case repo.get_by(Agent, clauses) do
-		nil -> {:error, "not found"}
-		found -> {:ok, found}
-	end
+object :file do
+	field :hash, non_null(:url64)
+	field :name, non_null(:string)
+	field :description, non_null(:string)
+	field :date, non_null(:datetime), resolve: &Resolv.date/3
+	field :mime_type, non_null(:string)
+	field :extension, non_null(:string)
+	field :size, non_null(:integer)
+	field :signature, non_null(:string)
+	field :width, :integer
+	field :height, :integer
+	field :bin, :base64
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(Agent, params)
-end
-
-@spec preload(Agent.t(), :images | :primary_location) :: Agent.t()
-def preload(agent, :images) do
-	Repo.preload(agent, :images)
-end
-
-def preload(agent, :primary_location) do
-	Repo.preload(agent, :primary_location)
+input_object :ifile, name: "IFile" do
+	field :hash, non_null(:url64)
+	field :name, non_null(:string)
+	field :description, non_null(:string)
+	field :mime_type, non_null(:string)
+	field :extension, non_null(:string)
+	field :size, non_null(:integer)
+	field :signature, non_null(:string)
+	field :width, :integer
+	field :height, :integer
 end
 end

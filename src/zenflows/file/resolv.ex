@@ -15,48 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.VF.Person.Resolv do
-@moduledoc "Resolvers of Persons."
+defmodule Zenflows.File.Resolv do
+@moduledoc "Resolvers of Files."
 
-alias Zenflows.VF.Person.Domain
-
-def person(params, _) do
-	Domain.one(params)
-end
-
-def people(params, _) do
-	Domain.all(params)
-end
-
-def person_exists(params, _) do
-	Domain.one(params)
-end
-
-def create_person(%{person: params}, _) do
-	with {:ok, per} <- Domain.create(params) do
-		{:ok, %{agent: per}}
-	end
-end
-
-def update_person(%{person: %{id: id} = params}, _) do
-	with {:ok, per} <- Domain.update(id, params) do
-		{:ok, %{agent: per}}
-	end
-end
-
-def delete_person(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
-		{:ok, true}
-	end
-end
-
-def images(per, _, _) do
-	per = Domain.preload(per, :images)
-	{:ok, per.images}
-end
-
-def primary_location(per, _, _) do
-	per = Domain.preload(per, :primary_location)
-	{:ok, per.primary_location}
+def date(%{id: id}, _, _) do
+	Zenflows.DB.ID.ts(id)
 end
 end

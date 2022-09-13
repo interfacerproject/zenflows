@@ -25,6 +25,7 @@ alias Zenflows.VF
 
 import_types Absinthe.Type.Custom
 import_types Zenflows.GQL.Type
+import_types Zenflows.File.Type
 import_types Zenflows.SWPass.Type
 import_types Zenflows.Keypairoom.Type
 import_types Zenflows.InstVars.Type

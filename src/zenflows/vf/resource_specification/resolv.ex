@@ -46,6 +46,11 @@ def delete_resource_specification(%{id: id}, _) do
 	end
 end
 
+def images(res_spec, _, _) do
+	res_spec = Domain.preload(res_spec, :images)
+	{:ok, res_spec.images}
+end
+
 def default_unit_of_resource(res_spec, _, _) do
 	res_spec = Domain.preload(res_spec, :default_unit_of_resource)
 	{:ok, res_spec.default_unit_of_resource}

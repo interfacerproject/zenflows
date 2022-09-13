@@ -26,9 +26,8 @@ alias Zenflows.VF.ResourceSpecification.Resolv
 An informal or formal textual identifier for a type of resource.
 Does not imply uniqueness.
 """
-@image """
-The base64-encoded image binary relevant to the entity, such as a photo,
-diagram, etc.
+@images """
+The image files relevant to the entity, such as a photo, diagram, etc.
 """
 @resource_classified_as """
 References a concept in a common taxonomy or other classification scheme
@@ -51,8 +50,8 @@ object :resource_specification do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file)), resolve: &Resolv.images/3
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))
@@ -73,8 +72,8 @@ input_object :resource_specification_create_params do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile))
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))
@@ -94,9 +93,6 @@ input_object :resource_specification_update_params do
 
 	@desc @name
 	field :name, :string
-
-	@desc @image
-	field :image, :base64
 
 	@desc @resource_classified_as
 	field :resource_classified_as, list_of(non_null(:uri))

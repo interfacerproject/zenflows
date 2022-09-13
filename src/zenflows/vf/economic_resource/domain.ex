@@ -73,11 +73,16 @@ def delete(id) do
 	end
 end
 
-@spec preload(EconomicResource.t(), :conforms_to | :accounting_quantity
+@spec preload(EconomicResource.t(), :images
+		| :conforms_to | :accounting_quantity
 		| :onhand_quantity | :primary_accountable | :custodian
 		| :stage | :state | :current_location | :lot | :contained_in
 		| :unit_of_effort)
 	:: EconomicResource.t()
+def preload(eco_res, :images) do
+	Repo.preload(eco_res, :images)
+end
+
 def preload(eco_res, :conforms_to) do
 	Repo.preload(eco_res, :conforms_to)
 end

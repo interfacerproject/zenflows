@@ -23,9 +23,8 @@ use Absinthe.Schema.Notation
 alias Zenflows.VF.Person.Resolv
 
 @name "The name that this agent will be referred to by."
-@image """
-The base64-encoded image binary relevant to the agent, such as a logo,
-avatar, photo, etc.
+@images """
+The image files relevant to the agent, such as a logo, avatar, photo, etc.
 """
 @note "A textual description or comment."
 @primary_location """
@@ -52,8 +51,8 @@ object :person do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file)), resolve: &Resolv.images/3
 
 	@desc @note
 	field :note, :string
@@ -88,8 +87,8 @@ input_object :person_create_params do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile))
 
 	@desc @note
 	field :note, :string
@@ -124,9 +123,6 @@ input_object :person_update_params do
 
 	@desc @name
 	field :name, :string
-
-	@desc @image
-	field :image, :base64
 
 	@desc @note
 	field :note, :string

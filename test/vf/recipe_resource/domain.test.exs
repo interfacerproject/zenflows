@@ -35,7 +35,6 @@ setup do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			substitutable: Factory.bool(),
 			note: Factory.str("note"),
-			image: Factory.img(),
 		},
 		inserted: Factory.insert!(:recipe_resource),
 	}
@@ -61,7 +60,6 @@ describe "create/1" do
 		assert new.resource_conforms_to_id == params.resource_conforms_to_id
 		assert new.substitutable == params.substitutable
 		assert new.note == params.note
-		assert new.image == params.image
 	end
 
 	test "with bad params: doesn't create a Process" do
@@ -79,7 +77,6 @@ describe "update/2" do
 		assert new.resource_conforms_to_id == params.resource_conforms_to_id
 		assert new.substitutable == params.substitutable
 		assert new.note == params.note
-		assert new.image == params.image
 	end
 
 	test "with bad params: doesn't update the RecipeResource", %{inserted: old} do
@@ -91,7 +88,6 @@ describe "update/2" do
 		assert new.resource_conforms_to_id == old.resource_conforms_to_id
 		assert new.substitutable == old.substitutable
 		assert new.note == old.note
-		assert new.image == old.image
 	end
 end
 

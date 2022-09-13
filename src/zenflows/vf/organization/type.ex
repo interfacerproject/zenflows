@@ -23,9 +23,8 @@ use Absinthe.Schema.Notation
 alias Zenflows.VF.Organization.Resolv
 
 @name "The name that this agent will be referred to by."
-@image """
-The base64-encoded image binary relevant to the agent, such as a logo,
-avatar, photo, etc.
+@images """
+The image files relevant to the agent, such as a logo, avatar, photo, etc.
 """
 @primary_location """
 The main place an agent is located, often an address where activities
@@ -49,8 +48,8 @@ object :organization do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file))
 
 	@desc @primary_location
 	field :primary_location, :spatial_thing,
@@ -67,8 +66,8 @@ input_object :organization_create_params do
 	@desc @name
 	field :name, non_null(:string)
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile)), resolve: &Resolv.images/3
 
 	@desc @note
 	field :note, :string
@@ -85,9 +84,6 @@ input_object :organization_update_params do
 
 	@desc @name
 	field :name, :string
-
-	@desc @image
-	field :image, :base64
 
 	@desc @note
 	field :note, :string

@@ -22,7 +22,6 @@ setup do
 	%{
 		params: %{
 			"name" => Factory.str("name"),
-			"image" => Factory.img(),
 			"note" => Factory.str("note"),
 			"primaryLocation" => Factory.insert!(:spatial_thing).id,
 			"user" => Factory.str("user"),
@@ -42,7 +41,6 @@ fragment person on Person {
 	id
 	name
 	note
-	image
 	primaryLocation { id }
 	user
 	email
@@ -67,7 +65,6 @@ describe "Query" do
 		assert data["id"] == new.id
 		assert data["name"] == new.name
 		assert data["note"] == new.note
-		assert data["image"] == new.image
 		assert data["primaryLocation"]["id"] == new.primary_location_id
 
 		assert data["user"] == new.user
@@ -128,11 +125,11 @@ describe "Mutation" do
 				}
 			""", vars: %{"person" =>
 				params
-				|> Map.take(~w[user name image note primaryLocation])
+				|> Map.take(~w[user name note primaryLocation])
 				|> Map.put("id", old.id)
 			})
 
-		keys = ~w[user name image note]
+		keys = ~w[user name note]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["primaryLocation"]["id"] == params["primaryLocation"]
 

@@ -23,7 +23,7 @@ setup do
 		params: %{
 			"name" => Factory.str("name"),
 			"note" => Factory.str("note"),
-			"image" => Factory.img(),
+			#"image" => Factory.img(),
 		},
 		inserted: Factory.insert!(:economic_resource),
 	}
@@ -34,7 +34,7 @@ fragment economicResource on EconomicResource {
 	id
 	name
 	note
-	image
+	#image
 	trackingIdentifier
 	classifiedAs
 	conformsTo {id}
@@ -70,7 +70,7 @@ describe "Query" do
 		assert data["id"] == new.id
 		assert data["name"] == new.name
 		assert data["note"] == new.note
-		assert data["image"] == new.image
+		#assert data["image"] == new.image
 		assert data["trackingIdentifier"] == new.tracking_identifier
 		assert data["classifiedAs"] == new.classified_as
 		assert data["conformsTo"]["id"] == new.conforms_to_id
@@ -103,14 +103,14 @@ describe "Mutation" do
 			""", vars: %{"resource" => %{
 				"id" => old.id,
 				"note" => params["note"],
-				"image" => params["image"],
+				#"image" => params["image"],
 			}})
 
 		assert data["id"] == old.id
 		assert data["id"] == old.id
 		assert data["name"] == old.name
 		assert data["note"] == params["note"]
-		assert data["image"] == params["image"]
+		#assert data["image"] == params["image"]
 		assert data["trackingIdentifier"] == old.tracking_identifier
 		assert data["classifiedAs"] == old.classified_as
 		assert data["conformsTo"]["id"] == old.conforms_to_id

@@ -22,7 +22,6 @@ def change() do
 	alter table("vf_economic_resource") do
 		add :name, :text, null: false
 		add :note, :text
-		add :image, :text
 		add :tracking_identifier, :text
 		add :classified_as, {:array, :text}
 		add :conforms_to_id, references("vf_resource_specification"), null: false

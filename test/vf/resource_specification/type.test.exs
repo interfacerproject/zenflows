@@ -24,7 +24,6 @@ setup do
 			"name" => Factory.str("name"),
 			"resourceClassifiedAs" => Factory.str_list("uri"),
 			"note" => Factory.str("note"),
-			"image" => Factory.img(),
 			"defaultUnitOfEffort" => Factory.insert!(:unit).id,
 			"defaultUnitOfResource" => Factory.insert!(:unit).id,
 		},
@@ -40,7 +39,6 @@ fragment resourceSpecification on ResourceSpecification {
 	defaultUnitOfResource {id}
 	defaultUnitOfEffort {id}
 	note
-	image
 }
 """
 
@@ -60,7 +58,6 @@ describe "Query" do
 		assert data["defaultUnitOfResource"]["id"] == new.default_unit_of_resource_id
 		assert data["defaultUnitOfEffort"]["id"] == new.default_unit_of_effort_id
 		assert data["note"] == new.note
-		assert data["image"] == new.image
 	end
 end
 
@@ -77,7 +74,7 @@ describe "Mutation" do
 			""", vars: %{"resourceSpecification" => params})
 
 		assert {:ok, _} = Zenflows.DB.ID.cast(data["id"])
-		keys = ~w[name note resourceClassifiedAs note image]
+		keys = ~w[name note resourceClassifiedAs note]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["defaultUnitOfResource"]["id"] == params["defaultUnitOfResource"]
 		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]
@@ -95,7 +92,7 @@ describe "Mutation" do
 			""", vars: %{"resourceSpecification" => Map.put(params, "id", old.id)})
 
 		assert data["id"] == old.id
-		keys = ~w[name note resourceClassifiedAs note image]
+		keys = ~w[name note resourceClassifiedAs note]
 		assert Map.take(data, keys) == Map.take(params, keys)
 		assert data["defaultUnitOfResource"]["id"] == params["defaultUnitOfResource"]
 		assert data["defaultUnitOfEffort"]["id"] == params["defaultUnitOfEffort"]

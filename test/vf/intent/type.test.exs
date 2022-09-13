@@ -49,7 +49,6 @@ setup do
 			"due" => Factory.iso_now(),
 			"finished" => Factory.bool(),
 			"atLocation" => Factory.insert!(:spatial_thing).id,
-			"image" => Factory.img(),
 			"name" => Factory.str("name"),
 			"note" => Factory.str("note"),
 			# inScopeOf:
@@ -85,7 +84,6 @@ fragment intent on Intent {
 	due
 	finished
 	atLocation {id}
-	image
 	name
 	note
 	agreedIn
@@ -123,7 +121,6 @@ describe "Query" do
 		assert data["due"] == DateTime.to_iso8601(int.due)
 		assert data["finished"] == int.finished
 		assert data["atLocation"]["id"] == int.at_location_id
-		assert data["image"] == int.image
 		assert data["name"] == int.name
 		assert data["note"] == int.note
 		assert data["agreedIn"] == int.agreed_in
@@ -163,7 +160,7 @@ describe "Mutation" do
 
 		Enum.each(~w[
 				hasBeginning hasEnd hasPointInTime due
-				finished image name note agreedIn
+				finished name note agreedIn
 			], fn x ->
 				assert data[x] == params[x]
 			end)
@@ -201,7 +198,7 @@ describe "Mutation" do
 
 		Enum.each(~w[
 				hasBeginning hasEnd hasPointInTime due
-				finished image name note agreedIn
+				finished name note agreedIn
 			], fn x ->
 				assert data[x] == params[x]
 			end)
@@ -241,7 +238,7 @@ describe "Mutation" do
 
 		Enum.each(~w[
 				hasBeginning hasEnd hasPointInTime due
-				finished image name note agreedIn
+				finished name note agreedIn
 			], fn x ->
 				assert data[x] == params[x]
 			end)
@@ -281,7 +278,7 @@ describe "Mutation" do
 
 		Enum.each(~w[
 				hasBeginning hasEnd hasPointInTime due
-				finished image name note agreedIn
+				finished name note agreedIn
 			], fn x ->
 				assert data[x] == params[x]
 			end)

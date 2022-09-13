@@ -20,12 +20,13 @@ defmodule Zenflows.VF.Person do
 
 use Zenflows.DB.Schema
 
+alias Zenflows.File
 alias Zenflows.VF.{SpatialThing, Validate}
 
 @type t() :: %__MODULE__{
 	type: :per,
 	name: String.t(),
-	image: String.t() | nil,
+	images: [File.t()],
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
 	user: String.t(),
@@ -40,7 +41,7 @@ alias Zenflows.VF.{SpatialThing, Validate}
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:per], default: :per
 	field :name, :string
-	field :image, :string
+	has_many :images, File, foreign_key: :agent_id
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
@@ -55,7 +56,7 @@ end
 
 @insert_reqr ~w[name user email]a
 @insert_cast @insert_reqr ++ ~w[
-	image note primary_location_id
+	note primary_location_id
 	ecdh_public_key
 	eddsa_public_key
 	ethereum_address
@@ -64,7 +65,7 @@ end
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
-@update_cast ~w[name image note primary_location_id user]a
+@update_cast ~w[name note primary_location_id user]a
 
 # insert changeset
 @doc false
@@ -76,7 +77,7 @@ def chgset(params) do
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.name(:email)
-	|> Validate.uri(:image)
+	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Validate.note(:note)
 	|> Validate.key(:ecdh_public_key)
 	|> Validate.key(:eddsa_public_key)
@@ -98,7 +99,6 @@ def chgset(schema, params) do
 	|> Changeset.cast(params, @update_cast)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
-	|> Validate.img(:image)
 	|> Validate.note(:note)
 	|> check_email()
 	|> Changeset.unique_constraint(:user)

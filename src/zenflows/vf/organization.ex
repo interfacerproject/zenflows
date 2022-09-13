@@ -20,12 +20,13 @@ defmodule Zenflows.VF.Organization do
 
 use Zenflows.DB.Schema
 
+alias Zenflows.File
 alias Zenflows.VF.{SpatialThing, Validate}
 
 @type t() :: %__MODULE__{
 	type: :org,
 	name: String.t(),
-	image: String.t() | nil,
+	images: [File.t()],
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
 	classified_as: [String.t()] | nil,
@@ -35,7 +36,7 @@ alias Zenflows.VF.{SpatialThing, Validate}
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:org], default: :org
 	field :name, :string
-	field :image, :string
+	has_many :images, File, foreign_key: :agent_id
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :classified_as, {:array, :string}
@@ -43,7 +44,7 @@ schema "vf_agent" do
 end
 
 @reqr [:name]
-@cast @reqr ++ ~w[classified_as image note primary_location_id]a
+@cast @reqr ++ ~w[classified_as note primary_location_id]a
 
 @doc false
 @spec chgset(Schema.t(), params()) :: Changeset.t()
@@ -53,7 +54,7 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Validate.img(:image)
+	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
 	|> Validate.class(:classified_as)
 	|> Changeset.assoc_constraint(:primary_location)
 end

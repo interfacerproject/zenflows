@@ -32,6 +32,7 @@ end
 
 def create_economic_event(%{event: evt_params} = params, _) do
 	res_params = params[:new_inventoried_resource]
+
 	case Domain.create(evt_params, res_params) do
 		{:ok, evt, res, nil} ->
 			evt = Map.put(evt, :resource_inventoried_as, res) # tiny optimization

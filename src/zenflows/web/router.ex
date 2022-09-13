@@ -37,6 +37,9 @@ plug :dispatch
 	context: %{authenticate_calls?: true},
 ]
 
+forward "/api/file",
+	to: Zenflows.Web.File
+
 forward "/api",
 	to: Absinthe.Plug,
 	init_opts: @init_opts

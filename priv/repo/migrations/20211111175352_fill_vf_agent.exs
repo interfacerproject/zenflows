@@ -44,7 +44,6 @@ def change() do
 
 		# common
 		add :name, :text, null: false
-		add :image, :text
 		add :note, :text
 		add :primary_location_id, references("vf_spatial_thing")
 		timestamps()

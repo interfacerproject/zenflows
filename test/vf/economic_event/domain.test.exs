@@ -122,6 +122,12 @@ describe "`create/2` with raise:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{}, %EconomicResource{} = res, _} =
 			Domain.create(evt_params, res_params)
@@ -131,6 +137,12 @@ describe "`create/2` with raise:" do
 		#assert res.image == res_params.image
 		assert res.tracking_identifier == res_params.tracking_identifier
 		assert res.lot_id == res_params.lot_id
+		assert res.okhv == res_params.okhv
+		assert res.repo == res_params.repo
+		assert res.version == res_params.version
+		assert res.licensor == res_params.licensor
+		assert res.license == res_params.license
+		assert res.metadata == res_params.metadata
 
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
@@ -222,6 +234,12 @@ describe "`create/2` with produce:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{}, %EconomicResource{} = res, _} =
 			Domain.create(evt_params, res_params)
@@ -231,6 +249,12 @@ describe "`create/2` with produce:" do
 		#assert res.image == res_params.image
 		assert res.tracking_identifier == res_params.tracking_identifier
 		assert res.lot_id == res_params.lot_id
+		assert res.okhv == res_params.okhv
+		assert res.repo == res_params.repo
+		assert res.version == res_params.version
+		assert res.licensor == res_params.licensor
+		assert res.license == res_params.license
+		assert res.metadata == res_params.metadata
 
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
@@ -786,6 +810,12 @@ describe "`create/2` with transferCustody:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
 		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
@@ -800,6 +830,12 @@ describe "`create/2` with transferCustody:" do
 		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
+		assert to_res.okhv == res_params.okhv
+		assert to_res.repo == res_params.repo
+		assert to_res.version == res_params.version
+		assert to_res.licensor == res_params.licensor
+		assert to_res.license == res_params.license
+		assert to_res.metadata == res_params.metadata
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
@@ -1034,6 +1070,12 @@ describe "`create/2` with transferAllRights:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
 		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
@@ -1048,6 +1090,12 @@ describe "`create/2` with transferAllRights:" do
 		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
+		assert to_res.okhv == res_params.okhv
+		assert to_res.repo == res_params.repo
+		assert to_res.version == res_params.version
+		assert to_res.licensor == res_params.licensor
+		assert to_res.license == res_params.license
+		assert to_res.metadata == res_params.metadata
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
@@ -1281,6 +1329,12 @@ describe "`create/2` with transfer:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
 		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
@@ -1295,6 +1349,12 @@ describe "`create/2` with transfer:" do
 		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
+		assert to_res.okhv == res_params.okhv
+		assert to_res.repo == res_params.repo
+		assert to_res.version == res_params.version
+		assert to_res.licensor == res_params.licensor
+		assert to_res.license == res_params.license
+		assert to_res.metadata == res_params.metadata
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
@@ -1565,6 +1625,12 @@ describe "`create/2` with move:" do
 			#image: Factory.img(),
 			tracking_identifier: Factory.str("tracking identifier"),
 			lot_id: Factory.insert!(:product_batch).id,
+			okhv: Factory.str("okhv"),
+			repo: Factory.uri(),
+			version: Factory.str("version"),
+			licensor: Factory.str("licensor"),
+			license: Factory.str("license"),
+			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt, _, %EconomicResource{} = to_res} = Domain.create(params, res_params)
 		{:ok, res_after} = EconomicResource.Domain.one(params.resource_inventoried_as_id)
@@ -1579,6 +1645,12 @@ describe "`create/2` with move:" do
 		#assert to_res.image == res_params.image
 		assert to_res.tracking_identifier == res_params.tracking_identifier
 		assert to_res.lot_id == res_params.lot_id
+		assert to_res.okhv == res_params.okhv
+		assert to_res.repo == res_params.repo
+		assert to_res.version == res_params.version
+		assert to_res.licensor == res_params.licensor
+		assert to_res.license == res_params.license
+		assert to_res.metadata == res_params.metadata
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id

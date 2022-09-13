@@ -57,6 +57,12 @@ setup ctx do
 		lot_id: Factory.insert!(:product_batch).id,
 		contained_in_id: Factory.insert!(:economic_resource).id,
 		unit_of_effort_id: Factory.insert!(:unit).id,
+		okhv: Factory.str("okhv"),
+		repo: Factory.uri(),
+		version: Factory.str("version"),
+		licensor: Factory.str("licensor"),
+		license: Factory.str("license"),
+		metadata: %{"something" => "something"},
  	}
 
 	if ctx[:no_insert] do

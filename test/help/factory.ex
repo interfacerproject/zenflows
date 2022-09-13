@@ -382,6 +382,12 @@ def build(:economic_resource) do
 		lot: build(:product_batch),
 		contained_in: if(recurse?, do: build(:economic_resource)),
 		unit_of_effort: build(:unit),
+		okhv: str("okhv"),
+		repo: uri(),
+		version: str("version"),
+		licensor: str("licensor"),
+		license: str("license"),
+		metadata: %{str("key") => str("val")},
 	}
 end
 

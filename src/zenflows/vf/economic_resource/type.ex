@@ -94,6 +94,12 @@ economic resources.
 @unit_of_effort """
 The unit used for use or work or cite actions for this resource.
 """
+@okhv "The okh version of the standard of the manifest."
+@licensor "States who is licensing the project."
+@license "States the licenses under which the project is made available."
+@repo "A URL to the repository of the project."
+@version "The version of the project."
+@metadata "Metadata of the project."
 
 @desc "A resource which is useful to people or the ecosystem."
 object :economic_resource do
@@ -153,6 +159,24 @@ object :economic_resource do
 
 	@desc @unit_of_effort
 	field :unit_of_effort, :unit, resolve: &Resolv.unit_of_effort/3
+
+	@desc @okhv
+	field :okhv, :string
+
+	@desc @repo
+	field :repo, :string
+
+	@desc @version
+	field :version, :string
+
+	@desc @licensor
+	field :licensor, :string
+
+	@desc @license
+	field :license, :string
+
+	@desc @metadata
+	field :metadata, :json
 end
 
 input_object :economic_resource_create_params do
@@ -170,6 +194,24 @@ input_object :economic_resource_create_params do
 
 	@desc @lot_id
 	field :lot_id, :id, name: "lot"
+
+	@desc @okhv
+	field :okhv, :string
+
+	@desc @repo
+	field :repo, :string
+
+	@desc @version
+	field :version, :string
+
+	@desc @licensor
+	field :licensor, :string
+
+	@desc @license
+	field :license, :string
+
+	@desc @metadata
+	field :metadata, :json
 end
 
 input_object :economic_resource_update_params do

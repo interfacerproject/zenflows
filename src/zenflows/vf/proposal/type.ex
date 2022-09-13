@@ -137,6 +137,7 @@ object :query_proposal do
 	end
 
 	field :proposals, non_null(:proposal_connection) do
+		meta only_guest?: true
 		arg :first, :integer
 		arg :after, :id
 		arg :last, :integer

@@ -18,6 +18,8 @@
 defmodule Zenflows.VF.EconomicResource.Domain do
 @moduledoc "Domain logic of EconomicResources."
 
+import Ecto.Query
+
 alias Ecto.Multi
 alias Zenflows.DB.{Paging, Repo}
 alias Zenflows.VF.{
@@ -44,8 +46,17 @@ end
 
 @spec all(Paging.params()) :: Paging.result()
 def all(params) do
-	Paging.page(EconomicResource, params)
+	Paging.page(filter(params[:filter]), params)
 end
+
+defp filter(params) do
+	Enum.reduce(params || %{}, EconomicResource, &filt(&2, &1))
+end
+
+defp filt(q, {:classified_as, v}),       do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
+defp filt(q, {:primary_accountable, v}), do: where(q, [x], x.primary_accountable_id in ^v)
+defp filt(q, {:custodian, v}),           do: where(q, [x], x.custodian_id in ^v)
+defp filt(q, {:conforms_to, v}),         do: where(q, [x], x.conforms_to_id in ^v)
 
 @spec update(id(), params()) :: {:ok, EconomicResource.t()} | {:error, error()}
 def update(id, params) do

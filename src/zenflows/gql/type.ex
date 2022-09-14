@@ -43,7 +43,7 @@ end
 
 @desc "A JSON document encoded as string."
 scalar :json, name: "JSON" do
-	parse &Jason.decode/1
+	parse &json_parse/1
 	serialize & &1
 end
 
@@ -116,6 +116,16 @@ defp url64_parse(%Input.String{value: v}) do
 end
 defp url64_parse(%Input.Null{}), do: {:ok, nil}
 defp url64_parse(_), do: :error
+
+@spec json_parse(Input.t()) :: {:ok, String.t() | nil} | :error
+defp json_parse(%Input.String{value: v}) do
+	case Jason.decode(v) do
+		{:ok, map} -> {:ok, map}
+		{:error, _} -> :error
+	end
+end
+defp json_parse(%Input.Null{}), do: {:ok, nil}
+defp json_parse(_), do: :error
 
 @spec id_parse(Input.t()) :: {:ok, ID.t() | nil} | :error
 def id_parse(%Input.String{value: v}), do: ID.cast(v)

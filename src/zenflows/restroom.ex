@@ -36,16 +36,16 @@ end
 Given the GraphQL `body`, its `signature`, and `pubkey` of the user who
 executes the query, verify that everything matches.
 """
-@spec verify_graphql?(binary(), String.t(), String.t()) :: boolean()
-def verify_graphql?(body, signature, pubkey) do
+@spec verify_graphql(binary(), String.t(), String.t()) :: boolean()
+def verify_graphql(body, signature, pubkey) do
 	data = %{
 		"gql" => Base.encode64(body),
 		"eddsa_signature" => signature,
 		"eddsa_public_key" => pubkey,
 	}
 	case exec("verify_graphql", data) do
-		{:ok, %{"output" => ["1"]}} -> true
-		_ -> false
+		{:ok, %{"output" => ["1"]}} -> :ok
+		{:error, reason} -> {:error, reason}
 	end
 end
 
@@ -75,10 +75,14 @@ defp exec(name, data) do
 		{:autoredirect, false},
 	]
 	with {:ok, data} <- Jason.encode(%{data: data}),
-			{:ok, {{_, 200, _}, _, body_charlist}} <-
+			{:ok, {{_, stat, _}, _, body_charlist}} when stat == 200 or stat == 500 <-
 				:httpc.request(:post, {url, hdrs, 'application/json', data}, http_opts, []),
-			{:ok, map} <- body_charlist |> to_string() |> Jason.decode() do
-		{:ok, map}
+			{:ok, map} <- Jason.decode(body_charlist) do
+		if stat == 200 do
+			{:ok, map}
+		else
+			{:error, map |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
+		end
 	else
 		{:ok, {{_, stat, _}, _, body_charlist}} ->
 			{:error, "the http call result in non-200 status code #{stat}: #{to_string(body_charlist)}"}

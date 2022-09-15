@@ -30,7 +30,7 @@ def call(res, _opts) do
 	if res.context.authenticate_calls? do
 		with {:ok, username, sign, body} <- fetch_ctx(res),
 				{:ok, per} <- fetch_user(username),
-				:ok <- Restroom.verify_graphql(body, sign, per.eddsa_public_key) do
+				:ok <- verify_gql(body, sign, per) do
 			put_in(res.context[:req_user], per)
 		else x ->
 			Absinthe.Resolution.put_result(res, x)
@@ -52,6 +52,21 @@ defp fetch_user(username) do
 	case Person.Domain.one(user: username) do
 		{:ok, user} -> {:ok, user}
 		_ -> {:error, "user not found"}
+	end
+end
+
+defp verify_gql(body, sign, per) do
+	case Restroom.verify_graphql(body, sign, per.eddsa_public_key) do
+		:ok -> :ok
+		{:error, reason} ->
+			{:error,
+			"""
+			authentication error.
+
+			details:
+
+			#{reason}
+			"""}
 	end
 end
 end

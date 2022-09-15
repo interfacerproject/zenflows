@@ -28,15 +28,30 @@ alias Zenflows.VF.Person
 @impl true
 def call(res, _opts) do
 	if res.context.authenticate_calls? do
-		with %{gql_user: user, gql_sign: sign, gql_body: body} <- res.context,
-				{:ok, per} <- Person.Domain.one(user: user),
-				true <- Restroom.verify_graphql?(body, sign, per.eddsa_public_key) do
+		with {:ok, username, sign, body} <- fetch_ctx(res),
+				{:ok, per} <- fetch_user(username),
+				:ok <- Restroom.verify_graphql(body, sign, per.eddsa_public_key) do
 			put_in(res.context[:req_user], per)
-		else _ ->
-			Absinthe.Resolution.put_result(res, {:error, "you are not authenticated"})
+		else x ->
+			Absinthe.Resolution.put_result(res, x)
 		end
 	else
 		res
+	end
+end
+
+defp fetch_ctx(res) do
+	case res.context do
+		%{gql_user: username, gql_sign: sign, gql_body: body} ->
+			{:ok, username, sign, body}
+		_ -> {:error, "some headers are missing"}
+	end
+end
+
+defp fetch_user(username) do
+	case Person.Domain.one(user: username) do
+		{:ok, user} -> {:ok, user}
+		_ -> {:error, "user not found"}
 	end
 end
 end

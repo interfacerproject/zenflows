@@ -36,9 +36,9 @@ also see the [Required Options](#required-options).
      This option should be used if extended configuration is desired (using the
      options mention in the link above).
 
-* `ROOM_HOST`: The hostname or IP address of the Restroom instance.
+* `ROOM_HOST`: The hostname or IP address of the Restroom instance.  Defaults to `localhost`.
 * `ROOM_PORT`: The port number of the Restroom instance. It must be an integer
-  between `0` and `65535`, inclusive.
+  between `0` and `65535`, inclusive.  Defaults to `3000`.
 * `ROOM_SALT`: The base64-encoded salt to be used with Restroom's
   keypairoomServer call.
 
@@ -59,8 +59,7 @@ also see the [Required Options](#required-options).
 Some of the options on how to connect to the database and the Restroom intance
 are required, along with `ADMIN_KEY` that is used authenticating admin calls.
 
-For the Restroom instance, you need the `ROOM_HOST`, `ROOM_PORT`, and `ROOM_SALT`
-options.
+For the Restroom instance, you only need the `ROOM_SALT` option.
 
 About the database, there are only 2 things you need to setup: how to connect to
 the database host, and what credentials to use.

@@ -20,6 +20,11 @@ defmodule Zenflows.Restroom do
 A module to interact with Restroom instances over (for now) HTTP.
 """
 
+def child_spec(_init_arg) do
+      	Supervisor.child_spec({Zenflows.HTTPC, name: __MODULE__,
+		scheme: :http, host: host(), port: port()}, id: __MODULE__)
+end
+
 @doc """
 Returns `true` when `left` and `right` are equal, `false` otherwise.
 """
@@ -66,22 +71,17 @@ end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, any()}
-defp exec(name, data) do
-	url = to_charlist("http://#{host()}/api/#{name}")
-	hdrs = [{'user-agent', useragent()}]
-	http_opts = [
-		{:timeout, 30_000}, # 30 seconds
-		{:connect_timeout, 5000}, # 5 seconds
-		{:autoredirect, false},
-	]
-	with {:ok, data} <- Jason.encode(%{data: data}),
-			{:ok, {{_, stat, _}, _, body_charlist}} when stat == 200 or stat == 500 <-
-				:httpc.request(:post, {url, hdrs, 'application/json', data}, http_opts, []),
-			{:ok, map} <- Jason.decode(body_charlist) do
+defp exec(name, post_data) do
+	hdrs = [{"content-type", "application/json"}]
+
+	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
+			{:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
+				request("POST", "/api/#{name}", hdrs, post_body),
+			{:ok, data} <- Jason.decode(body) do
 		if stat == 200 do
-			{:ok, map}
+			{:ok, data}
 		else
-			{:error, map |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
+			{:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
 		end
 	else
 		{:ok, {{_, stat, _}, _, body_charlist}} ->
@@ -91,24 +91,26 @@ defp exec(name, data) do
 	end
 end
 
-# Return the useragent to be used by the HTTP client, this module.
-@spec useragent() :: charlist()
-defp useragent() do
-	'zenflows/' ++ Application.spec(:zenflows, :vsn)
-end
-
-# Return the host string (hostname:port) of the Restroom instance.
-@spec host() :: String.t()
-defp host() do
-	conf = conf()
-	"#{conf[:room_host]}:#{conf[:room_port]}"
+defp request(method, path, headers, body) do
+	Zenflows.HTTPC.request(__MODULE__, method, path, headers, body)
 end
 
 # Return the salt from the configs.
 @spec salt() :: String.t()
 defp salt() do
-	conf = conf()
-	conf[:room_salt]
+	Keyword.fetch!(conf(), :room_salt)
+end
+
+# Return the hostname of restroom from the configs.
+@spec host() :: String.t()
+defp host() do
+	Keyword.fetch!(conf(), :room_host)
+end
+
+# Return the port of restroom from the configs.
+@spec port() :: non_neg_integer()
+defp port() do
+	Keyword.fetch!(conf(), :room_port)
 end
 
 # Return the application configurations of this module.

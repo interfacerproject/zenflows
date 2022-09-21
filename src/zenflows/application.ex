@@ -23,9 +23,11 @@ use Application
 def start(_type, _args) do
 	print_header()
 
+
 	children = [
 		Zenflows.DB.Repo,
 		Zenflows.InstVars.Domain,
+		Zenflows.Restroom,
 		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web.Router, options: [port: 8000]},
 	]
 

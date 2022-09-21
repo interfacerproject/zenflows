@@ -69,8 +69,8 @@ config :zenflows, Zenflows.DB.Repo, db_conf
 # restroom
 #
 config :zenflows, Zenflows.Restroom,
-	room_host: fetch_env!("ROOM_HOST"),
-	room_port: fetch_env!("ROOM_PORT"),
+	room_host: get_env("ROOM_HOST", "localhost"),
+	room_port: get_env_int.("ROOM_PORT", 3000),
 	room_salt: fetch_env!("ROOM_SALT")
 
 #

@@ -19,8 +19,8 @@ defmodule Zenflows.DB.Filter do
 @moduledoc "Filtering helpers for Filter modules."
 
 @type params() :: %{atom() => term()}
-@type error() :: {:error, Changeset.t()}
-@type result() :: {:ok, Query.t()} | error()
+@type error() :: {:error, Ecto.Changeset.t()}
+@type result() :: {:ok, Ecto.Query.t()} | error()
 
 def escape_like(v) do
 	Regex.replace(~r/\\|%|_/, v, &"\\#{&1}")

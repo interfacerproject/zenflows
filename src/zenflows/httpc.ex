@@ -24,7 +24,7 @@ def request(name, method, path, headers \\ [], body \\ nil, max \\ 5) do
 		  {"user-agent", _} -> headers
 		  false -> [{"user-agent", "zenflows/#{Application.spec(:zenflows, :vsn)}"} | headers]
 		end
-	Enum.reduce_while(1..max, nil, fn x,_ ->
+	Enum.reduce_while(1..max, nil, fn x, _ ->
 		case GenServer.call(name, {:request, method, path, headers, body}) do
 			{:ok, result} ->
 				{:halt, {:ok, result}}
@@ -93,7 +93,6 @@ def handle_info(message, state) do
 			{:noreply, state}
 	end
 end
-
 
 defp process_response({:status, request_ref, status}, state) do
 	put_in(state.requests[request_ref].response[:status], status)

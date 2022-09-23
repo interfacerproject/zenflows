@@ -20,9 +20,15 @@ defmodule Zenflows.Restroom do
 A module to interact with Restroom instances over (for now) HTTP.
 """
 
-def child_spec(_init_arg) do
-      	Supervisor.child_spec({Zenflows.HTTPC, name: __MODULE__,
-		scheme: :http, host: host(), port: port()}, id: __MODULE__)
+def child_spec(_) do
+		Supervisor.child_spec(
+			{Zenflows.HTTPC,
+				name: __MODULE__,
+				scheme: :http,
+				host: host(),
+				port: port(),
+			},
+			id: __MODULE__)
 end
 
 @doc """

@@ -23,7 +23,6 @@ use Application
 def start(_type, _args) do
 	print_header()
 
-
 	children = [
 		Zenflows.DB.Repo,
 		Zenflows.InstVars.Domain,

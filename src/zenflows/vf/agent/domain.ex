@@ -19,7 +19,7 @@ defmodule Zenflows.VF.Agent.Domain do
 @moduledoc "Domain logic of Agents."
 
 alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.Agent
+alias Zenflows.VF.{Agent, Agent.Filter}
 
 @typep repo() :: Ecto.Repo.t()
 @typep id() :: Zenflows.DB.Schema.id()
@@ -34,9 +34,11 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(Agent, params)
+@spec all(Paging.params()) :: Filter.error() | Paging.result()
+def all(params \\ %{}) do
+	with {:ok, q} <- Filter.filter(params[:filter] || %{}) do
+		Paging.page(q, params)
+	end
 end
 
 @spec preload(Agent.t(), :images | :primary_location) :: Agent.t()

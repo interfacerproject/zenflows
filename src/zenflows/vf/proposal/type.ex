@@ -130,6 +130,11 @@ object :proposal_connection do
 	field :edges, non_null(list_of(non_null(:proposal_edge)))
 end
 
+input_object :proposal_filter_params do
+	field :primary_intents_resource_inventoried_as_conforms_to, list_of(non_null(:id))
+	field :primary_intents_resource_inventoried_as_primary_accountable, list_of(non_null(:id))
+end
+
 object :query_proposal do
 	field :proposal, :proposal do
 		arg :id, non_null(:id)
@@ -142,6 +147,7 @@ object :query_proposal do
 		arg :after, :id
 		arg :last, :integer
 		arg :before, :id
+		arg :filter, :proposal_filter_params
 		resolve &Resolv.proposals/2
 	end
 

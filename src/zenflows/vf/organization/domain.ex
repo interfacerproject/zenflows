@@ -18,11 +18,9 @@
 defmodule Zenflows.VF.Organization.Domain do
 @moduledoc "Domain logic of Organizations."
 
-import Ecto.Query
-
 alias Ecto.Multi
 alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.Organization
+alias Zenflows.VF.{Organization, Organization.Filter}
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
@@ -43,9 +41,11 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(where(Organization, type: :org), params)
+@spec all(Paging.params()) :: Filter.error() | Paging.result()
+def all(params \\ %{}) do
+	with {:ok, q} <- Filter.filter(params[:filter] || %{}) do
+		Paging.page(q, params)
+	end
 end
 
 @spec create(params()) :: {:ok, Organization.t()} | {:error, chgset()}

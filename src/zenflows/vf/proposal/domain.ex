@@ -20,7 +20,7 @@ defmodule Zenflows.VF.Proposal.Domain do
 
 alias Ecto.Multi
 alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.Proposal
+alias Zenflows.VF.{Proposal, Proposal.Filter}
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
@@ -38,9 +38,11 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(Proposal, params)
+@spec all(Paging.params()) :: Filter.error() | Paging.result()
+def all(params \\ %{}) do
+	with {:ok, q} <- Filter.filter(params[:filter] || %{}) do
+		Paging.page(q, params)
+	end
 end
 
 @spec create(params()) :: {:ok, Proposal.t()} | {:error, chgset()}

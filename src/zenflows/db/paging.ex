@@ -43,8 +43,7 @@ alias Zenflows.DB.{ID, Repo}
 	node: struct(),
 }
 
-@type params() :: %{first: non_neg_integer(), after: ID.t()}
-	| %{last: non_neg_integer, before: ID.t()}
+@type params() :: %{atom() => term()}
 
 @spec def_page_size() :: non_neg_integer()
 def def_page_size() do

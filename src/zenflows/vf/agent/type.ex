@@ -70,6 +70,10 @@ object :agent_connection do
 	field :edges, non_null(list_of(non_null(:agent_edge)))
 end
 
+input_object :agent_filter_params do
+	field :name, :string
+end
+
 object :query_agent do
 	@desc "Loads details of the currently authenticated agent."
 	field :my_agent, :agent do
@@ -91,6 +95,7 @@ object :query_agent do
 		arg :after, :id
 		arg :last, :integer
 		arg :before, :id
+		arg :filter, :agent_filter_params
 		resolve &Resolv.agents/2
 	end
 end

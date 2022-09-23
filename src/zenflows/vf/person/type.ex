@@ -148,6 +148,12 @@ object :person_connection do
 	field :edges, non_null(list_of(non_null(:person_edge)))
 end
 
+input_object :person_filter_params do
+	field :name, :string
+	field :user, :string
+	field :user_or_name, :string
+end
+
 object :query_person do
 	@desc "Find a person by their ID."
 	field :person, :person do
@@ -164,6 +170,7 @@ object :query_person do
 		arg :after, :id
 		arg :last, :integer
 		arg :before, :id
+		arg :filter, :person_filter_params
 		resolve &Resolv.people/2
 	end
 

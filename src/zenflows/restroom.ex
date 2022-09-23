@@ -47,7 +47,7 @@ end
 Given the GraphQL `body`, its `signature`, and `pubkey` of the user who
 executes the query, verify that everything matches.
 """
-@spec verify_graphql(binary(), String.t(), String.t()) :: boolean()
+@spec verify_graphql(binary(), String.t(), String.t()) :: :ok | {:error, String.t()}
 def verify_graphql(body, signature, pubkey) do
 	data = %{
 		"gql" => Base.encode64(body),
@@ -76,7 +76,7 @@ def keypairoom_server(data) do
 end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
-@spec exec(String.t(), map()) :: {:ok, map()} | {:error, any()}
+@spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
 defp exec(name, post_data) do
 	hdrs = [{"content-type", "application/json"}]
 
@@ -90,8 +90,8 @@ defp exec(name, post_data) do
 			{:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
 		end
 	else
-		{:ok, {{_, stat, _}, _, body_charlist}} ->
-			{:error, "the http call result in non-200 status code #{stat}: #{to_string(body_charlist)}"}
+		{:ok, %{status: stat, data: body}} ->
+			{:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
 
 		other -> other
 	end

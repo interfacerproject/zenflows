@@ -109,6 +109,10 @@ object :organization_connection do
 	field :edges, non_null(list_of(non_null(:organization_edge)))
 end
 
+input_object :organization_filter_params do
+	field :name, :string
+end
+
 object :query_organization do
 	@desc "Find an organization (group) agent by its ID."
 	field :organization, :organization do
@@ -125,6 +129,7 @@ object :query_organization do
 		arg :after, :id
 		arg :last, :integer
 		arg :before, :id
+		arg :filter, :organization_filter_params
 		resolve &Resolv.organizations/2
 	end
 end

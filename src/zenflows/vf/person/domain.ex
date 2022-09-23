@@ -22,7 +22,7 @@ import Ecto.Query
 
 alias Ecto.Multi
 alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.Person
+alias Zenflows.VF.{Person, Person.Filter}
 
 @typep repo() :: Ecto.Repo.t()
 @typep chgset() :: Ecto.Changeset.t()
@@ -42,9 +42,11 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(where(Person, type: :per), params)
+@spec all(Paging.params()) :: Filter.error() | Paging.result()
+def all(params \\ %{}) do
+	with {:ok, q} <- Filter.filter(params[:filter] || %{}) do
+		Paging.page(q, params)
+	end
 end
 
 @spec exists?(Keyword.t()) :: boolean()

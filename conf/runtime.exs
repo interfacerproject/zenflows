@@ -91,6 +91,8 @@ if def_page_size < 1,
 max_page_size = get_env_int.("GQL_MAX_PAGE_SIZE", 100)
 if max_page_size < def_page_size,
 	do: raise "GQL_MAX_PAGE_SIZE can't be less than GQL_DEF_PAGE_SIZE"
+auth? = get_env("GQL_AUTH_CALLS", "true") != "false"
 config :zenflows, Zenflows.GQL,
 	def_page_size: def_page_size,
-	max_page_size: max_page_size
+	max_page_size: max_page_size,
+	authenticate_calls?: auth?

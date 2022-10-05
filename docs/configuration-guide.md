@@ -47,6 +47,8 @@ also see the [Required Options](#required-options).
   `openssl rand -hex 64`.  It is automatically generated when you run
   `mann env.setup`.
 
+* `GQL_AUTH_CALLS`: Boolean value. It enables the authentication with
+  restroom (each gql request has to be signed). Defaults to `true`.
 * `GQL_DEF_PAGE_SIZE`: A non-negative integer.  It is used for the
   default GraphQL page size if the client doesn't provide one.
 * `GQL_MAX_PAGE_SIZE`: A non-negative integer.  It is used for the

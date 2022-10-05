@@ -25,7 +25,7 @@ Absinthe middleware to verify GraphQL calls.
 alias Zenflows.Restroom
 alias Zenflows.VF.Person
 
-@missing_headers_auth_call "gql_user, gql_sign and gql_body headers are required for an authenticated call"
+@missing_headers_auth_call "couldn't aunthenticate: zenflows-user and/or zenflows-sign headers are missing"
 
 @impl true
 def call(res, _opts) do

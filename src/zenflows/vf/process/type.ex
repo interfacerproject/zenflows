@@ -141,7 +141,7 @@ input_object :process_update_params do
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
 
-	@desc :based_on_id
+	@desc @based_on_id
 	field :based_on_id, :id, name: "based_on"
 
 	@desc @planned_within_id

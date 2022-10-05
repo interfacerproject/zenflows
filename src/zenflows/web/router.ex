@@ -32,10 +32,7 @@ plug Plug.Parsers,
 plug MW.GQLContext
 plug :dispatch
 
-@init_opts [
-	schema: Zenflows.GQL.Schema,
-	context: %{authenticate_calls?: true},
-]
+@init_opts [schema: Zenflows.GQL.Schema]
 
 forward "/api/file",
 	to: Zenflows.Web.File

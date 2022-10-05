@@ -24,7 +24,7 @@ Absinthe middleware to verify GraphQL calls.
 
 @impl true
 def call(res, _opts) do
-	if res.context[:authenticate_calls?] do
+	if Map.has_key?(res.context, :authenticate_calls?) do
 		res
 	else
 		put_in(res.context[:authenticate_calls?], conf()[:authenticate_calls?])

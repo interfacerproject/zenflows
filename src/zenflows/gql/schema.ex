@@ -169,19 +169,21 @@ def middleware(mw, field, %{identifier: id})
 		when id in ~w[query mutation subscription]a do
 	alias Absinthe.Type
 
-	cond do
+	mw = cond do
 		# require nothing to be provided
 		Type.meta(field, :only_guest?) ->
-			mw ++ [MW.Errors]
+			mw
 
 		# require the admin key to be provided
 		Type.meta(field, :only_admin?) ->
-			[MW.Admin | mw] ++ [MW.Errors]
+			[MW.Admin | mw]
 
 		# require every call to be signed
 		true ->
-			[MW.Sign | mw] ++ [MW.Errors]
+			[MW.Sign | mw]
 	end
+	[MW.Debug | mw] ++ [MW.Errors]
+
 end
 def middleware(mw, _, _), do: mw
 

@@ -15,26 +15,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# See the Configuration Guide at https://blabla .
+defmodule Zenflows.GQL.MW.Debug do
+@moduledoc """
+Absinthe middleware to verify GraphQL calls.
+"""
 
-## database
-#export DB_NAME=zenflows
-#export DB_URI=
-#export DB_SOCK=
-#export DB_USER=
-#export DB_PASS=
-#export DB_HOST=localhost
-#export DB_PORT=5432
+@behaviour Absinthe.Middleware
 
-## restroom
-#export ROOM_HOST=
-#export ROOM_PORT=
-export ROOM_SALT=@ROOM_SALT
+@impl true
+def call(res, _opts) do
+	if Map.has_key?(res.context, :authenticate_calls?) do
+		res
+	else
+		put_in(res.context[:authenticate_calls?], conf()[:authenticate_calls?])
+	end
+end
 
-## admin
-export ADMIN_KEY=@ADMIN_KEY
-
-## gql
-export GQL_AUTH_CALLS=true
-export GQL_DEF_PAGE_SIZE=50
-export GQL_MAX_PAGE_SIZE=100
+@spec conf() :: Keyword.t()
+defp conf() do
+	Application.fetch_env!(:zenflows, Zenflows.GQL)
+end
+end

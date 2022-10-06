@@ -57,7 +57,7 @@ def create(evt_params, res_params) do
 	Multi.new()
 	|> Multi.insert(:created_evt, EconomicEvent.chgset(evt_params))
 	|> Multi.merge(fn %{created_evt: evt} ->
-		handle_multi(evt.action_id, evt, res_params)
+		handle_multi(evt.action_id, evt, res_params || %{}) # since it can be empty
 	end)
 	|> Repo.transaction()
 	|> case do
@@ -99,6 +99,7 @@ defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produ
 				|> Map.put(:onhand_quantity_has_unit_id, evt.resource_quantity_has_unit_id)
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
+				|> Map.put(:classified_as, evt.resource_classified_as)
 				|> EconomicResource.chgset()
 
 			Multi.new()
@@ -584,7 +585,7 @@ defp handle_multi("transferCustody", evt, res_params) do
 			])
 		else
 			cset =
-				(res_params || %{}) # since it can be empty
+				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -696,7 +697,7 @@ defp handle_multi("transferAllRights", evt, res_params) do
 			])
 		else
 			cset =
-				(res_params || %{}) # since it can be empty
+				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -819,7 +820,7 @@ defp handle_multi("transfer", evt, res_params) do
 			])
 		else
 			cset =
-				(res_params || %{}) # since it can be empty
+				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -951,7 +952,7 @@ defp handle_multi("move", evt, res_params) do
 			])
 		else
 			cset =
-				(res_params || %{}) # since it can be empty
+				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)

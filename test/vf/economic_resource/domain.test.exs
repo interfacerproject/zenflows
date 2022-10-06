@@ -76,6 +76,14 @@ test "by_id/1 returns a EconomicResource", %{inserted: eco_res} do
 	assert {:ok, %EconomicResource{}} = Domain.one(eco_res.id)
 end
 
+test "classifications/0 returns list of unique `classified_as` values" do
+	Enum.each(1..10, fn _ -> Factory.insert!(:economic_resource) end)
+	{:ok, %{edges: edges}} = Domain.all()
+	left = Enum.flat_map(edges, & &1.node.classified_as)
+	right = Domain.classifications()
+	assert [] = left -- right
+end
+
 describe "update/2" do
 	@tag skip: "TODO: fix economic resource factory"
 	test "doesn't update a EconomicResource", %{inserted: old} do

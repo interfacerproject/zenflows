@@ -50,6 +50,15 @@ def all(params \\ %{}) do
 	end
 end
 
+@spec classifications() :: [String.t()]
+def classifications() do
+	import Ecto.Query
+
+	from(r in EconomicResource,
+		select: fragment("distinct unnest(?)", r.classified_as))
+	|> Repo.all()
+end
+
 @spec update(id(), params()) :: {:ok, EconomicResource.t()} | {:error, error()}
 def update(id, params) do
 	Multi.new()

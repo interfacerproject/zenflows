@@ -256,6 +256,10 @@ object :query_economic_resource do
 		arg :filter, :economic_resource_filter_params
 		resolve &Resolv.economic_resources/2
 	end
+
+	field :economic_resource_classifications, list_of(non_null(:uri)) do
+		resolve &Resolv.economic_resource_classifications/2
+	end
 end
 
 object :mutation_economic_resource do

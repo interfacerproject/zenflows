@@ -30,6 +30,10 @@ def economic_resources(params, _) do
 	Domain.all(params)
 end
 
+def economic_resource_classifications(_, _) do
+	{:ok, Domain.classifications()}
+end
+
 def update_economic_resource(%{resource: %{id: id} = params}, _) do
 	with {:ok, eco_res} <- Domain.update(id, params) do
 		{:ok, %{economic_resource: eco_res}}

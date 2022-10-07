@@ -133,7 +133,7 @@ defp do_chgset("raise", schema, params) do
 	schema
 	|> Changeset.cast(params, ~w[
 		resource_conforms_to_id resource_inventoried_as_id
-		resource_quantity to_location_id
+		resource_classified_as resource_quantity to_location_id
 	]a)
 	|> Changeset.validate_required([:resource_quantity])
 	|> Measure.cast(:resource_quantity)
@@ -145,7 +145,7 @@ defp do_chgset("produce", schema, params) do
 	schema
 	|> Changeset.cast(params, ~w[
 		output_of_id resource_conforms_to_id resource_inventoried_as_id
-		resource_quantity to_location_id
+		resource_classified_as resource_quantity to_location_id
 	]a)
 	|> Changeset.validate_required(~w[output_of_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)

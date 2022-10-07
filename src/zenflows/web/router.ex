@@ -45,6 +45,11 @@ forward "/play",
 	to: Absinthe.Plug.GraphiQL,
 	init_opts: [{:interface, :advanced} | @init_opts]
 
+@sdl Absinthe.Schema.to_sdl(Zenflows.GQL.Schema)
+get "/schema" do
+	Plug.Conn.send_resp(conn, 200, @sdl)
+end
+
 match _ do
 	conn
 	|> put_resp_content_type("text/html")

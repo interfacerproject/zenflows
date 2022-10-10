@@ -40,32 +40,67 @@ end
 
 @spec f(Query.t(), {atom(), term()}) :: Query.t()
 defp f(q, {:primary_intents_resource_inventoried_as_conforms_to, v}) do
-	q = if has_named_binding?(q, :pi),
-		do: q,
-		else: join(q, :inner, [x], pi in assoc(x, :primary_intents), as: :pi)
-	q = if has_named_binding?(q, :r),
-		do: q,
-		else: join(q, :inner, [pi: pi], r in assoc(pi, :resource_inventoried_as), as: :r)
-	where(q, [r: r], r.conforms_to_id in ^v)
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], r.conforms_to_id in ^v)
+end
+defp f(q, {:or_primary_intents_resource_inventoried_as_conforms_to, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> or_where([primary_intents_resource_inventoried_as: r], r.conforms_to_id in ^v)
 end
 defp f(q, {:primary_intents_resource_inventoried_as_primary_accountable, v}) do
-	q = if has_named_binding?(q, :pi),
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], r.primary_accountable_id in ^v)
+end
+defp f(q, {:or_primary_intents_resource_inventoried_as_primary_accountable, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> or_where([primary_intents_resource_inventoried_as: r], r.primary_accountable_id in ^v)
+end
+defp f(q, {:primary_intents_resource_inventoried_as_classified_as, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
+end
+defp f(q, {:or_primary_intents_resource_inventoried_as_classified_as, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
+end
+
+# join primary_intents
+defp join(q, :primary_intents) do
+	if has_named_binding?(q, :primary_intents),
 		do: q,
-		else: join(q, :inner, [x], pi in assoc(x, :primary_intents), as: :pi)
-	q = if has_named_binding?(q, :r),
+		else: join(q, :inner, [x], pi in assoc(x, :primary_intents), as: :primary_intents)
+end
+# join resource_inventoried_as through primary_intents above
+defp join(q, :primary_intents_resource_inventoried_as) do
+	q = join(q, :primary_intents)
+	if has_named_binding?(q, :primary_intents_resource_inventoried_as),
 		do: q,
-		else: join(q, :inner, [pi: pi], r in assoc(pi, :resource_inventoried_as), as: :r)
-	where(q, [r: r], r.primary_accountable_id in ^v)
+		else: join(q, :inner, [primary_intents: pi], r in assoc(pi, :resource_inventoried_as),
+			as: :primary_intents_resource_inventoried_as)
 end
 
 embedded_schema do
 	field :primary_intents_resource_inventoried_as_conforms_to, {:array, ID}
+	field :or_primary_intents_resource_inventoried_as_conforms_to, {:array, ID}
 	field :primary_intents_resource_inventoried_as_primary_accountable, {:array, ID}
+	field :or_primary_intents_resource_inventoried_as_primary_accountable, {:array, ID}
+	field :primary_intents_resource_inventoried_as_classified_as, {:array, :string}
+	field :or_primary_intents_resource_inventoried_as_classified_as, {:array, :string}
 end
 
 @cast ~w[
 	primary_intents_resource_inventoried_as_conforms_to
+	or_primary_intents_resource_inventoried_as_conforms_to
 	primary_intents_resource_inventoried_as_primary_accountable
+	or_primary_intents_resource_inventoried_as_primary_accountable
+	primary_intents_resource_inventoried_as_classified_as
+	or_primary_intents_resource_inventoried_as_classified_as
 ]a
 
 @spec chgset(params()) :: Changeset.t()
@@ -73,6 +108,33 @@ defp chgset(params) do
 	%__MODULE__{}
 	|> Changeset.cast(params, @cast)
 	|> Validate.class(:primary_intents_resource_inventoried_as_conforms_to)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_conforms_to)
 	|> Validate.class(:primary_intents_resource_inventoried_as_primary_accountable)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_primary_accountable)
+	|> Validate.class(:primary_intents_resource_inventoried_as_classified_as)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
+	|> check_xor(:primary_intents_resource_inventoried_as_conforms_to,
+		:or_primary_intents_resource_inventoried_as_conforms_to)
+	|> check_xor(:primary_intents_resource_inventoried_as_primary_accountable,
+		:or_primary_intents_resource_inventoried_as_primary_accountable)
+	|> check_xor(:primary_intents_resource_inventoried_as_classified_as,
+		:or_primary_intents_resource_inventoried_as_classified_as)
+end
+
+# Check that `a` and `b` are not provided at the same time.
+@spec check_xor(Changeset.t(), atom(), atom()) :: Changeset.t()
+defp check_xor(cset, a, b) do
+	x = Changeset.get_change(cset, a)
+	y = Changeset.get_change(cset, b)
+
+	if x && y do
+		msg = "can't provide both"
+
+		cset
+		|> Changeset.add_error(a, msg)
+		|> Changeset.add_error(b, msg)
+	else
+		cset
+	end
 end
 end

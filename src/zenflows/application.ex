@@ -23,6 +23,8 @@ use Application
 def start(_type, _args) do
 	print_header()
 
+	migrate()
+
 	children = [
 		Zenflows.DB.Repo,
 		Zenflows.InstVars.Domain,
@@ -55,5 +57,10 @@ defp print_header() do
 		along with this program.  If not, see <https://www.gnu.org/licenses/>.
 		""")
 	end
+end
+
+defp migrate() do
+	unless System.get_env("NOMIGRATE"),
+		do: Zenflows.Reltask.migrate()
 end
 end

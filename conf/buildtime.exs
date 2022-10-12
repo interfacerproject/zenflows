@@ -24,7 +24,9 @@ config :zenflows, ecto_repos: [Repo]
 config :zenflows, Repo,
 	migration_primary_key: [type: :binary_id],
 	migration_foreign_key: [type: :binary_id],
-	migration_timestamps:  [type: :timestamptz, inserted_at: false]
+	migration_timestamps:  [type: :timestamptz, inserted_at: false],
+	queue_target: 60_000 # 1 min
+
 
 if config_env() == :test do
 	config :zenflows, Repo,

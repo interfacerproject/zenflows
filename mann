@@ -60,7 +60,6 @@ main() {
 	devop.setup)    shift ; cmd_devop_setup "$@" ;;
 	devop.serve)    shift ; cmd_devop_serve "$@" ;;
 	devop.comp)     shift ; cmd_devop_comp "$@" ;;
-	devop.db.setup) shift ; cmd_devop_db_setup "$@" ;;
 	devop.build)    shift ; cmd_devop_build "$@" ;;
 	devop.run)      shift ; cmd_devop_run "$@" ;;
 	devop.exec)     shift ; cmd_devop_exec "$@" ;;
@@ -184,7 +183,7 @@ cmd_env_setup() {
 		key=$(openssl rand -hex 64)
 		salt=$(openssl rand -hex 64)
 		sed 's,@ADMIN_KEY,'"$key"', ; s,@ROOM_SALT,'"$salt"',' conf/.env.templ >conf/env.sh
-		warn "the 'conf/env.sh' file is generated, please edit it to suit your needs"
+		warn "the 'conf/env.sh' file is generated; please edit it to suit your needs"
 	fi
 }
 
@@ -274,7 +273,7 @@ cmd_devop_setup() {
 		sed 's,@ADMIN_KEY,'"$admin_key"', ;
 		     s,@DB_PASS,'"$db_pass"', ;
 		     s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ >devop/docker-compose.yml
-		warn "the 'devop/docker-compose.yml' file is generated, please edit it to suit your needs"
+		warn "the 'devop/docker-compose.yml' file is generated; please edit it to suit your needs"
 	fi
 }
 
@@ -285,10 +284,6 @@ cmd_devop_serve() {
 cmd_devop_comp() {
 	cmd_devop_setup
 	docker-compose -p zenflows -f devop/docker-compose.yml "$@"
-}
-
-cmd_devop_db_setup() {
-	cmd_devop_comp run --service-ports --rm srv eval 'Zenflows.Reltask.migrate()'
 }
 
 cmd_devop_build() {

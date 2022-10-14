@@ -132,7 +132,11 @@ end
 
 input_object :proposal_filter_params do
 	field :primary_intents_resource_inventoried_as_conforms_to, list_of(non_null(:id))
+	field :or_primary_intents_resource_inventoried_as_conforms_to, list_of(non_null(:id))
 	field :primary_intents_resource_inventoried_as_primary_accountable, list_of(non_null(:id))
+	field :or_primary_intents_resource_inventoried_as_primary_accountable, list_of(non_null(:id))
+	field :primary_intents_resource_inventoried_as_classified_as, list_of(non_null(:uri))
+	field :or_primary_intents_resource_inventoried_as_classified_as, list_of(non_null(:uri))
 end
 
 object :query_proposal do

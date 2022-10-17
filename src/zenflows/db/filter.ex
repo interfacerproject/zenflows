@@ -18,11 +18,32 @@
 defmodule Zenflows.DB.Filter do
 @moduledoc "Filtering helpers for Filter modules."
 
+alias Ecto.Changeset
+
 @type params() :: %{atom() => term()}
-@type error() :: {:error, Ecto.Changeset.t()}
+@type error() :: {:error, Changeset.t()}
 @type result() :: {:ok, Ecto.Query.t()} | error()
 
 def escape_like(v) do
 	Regex.replace(~r/\\|%|_/, v, &"\\#{&1}")
+end
+
+@doc """
+Changeset helper to check that `a` and `b` are not provided at the same time.
+"""
+@spec check_xor(Changeset.t(), atom(), atom()) :: Changeset.t()
+def check_xor(cset, a, b) do
+	x = Changeset.get_change(cset, a)
+	y = Changeset.get_change(cset, b)
+
+	if x && y do
+		msg = "can't provide both"
+
+		cset
+		|> Changeset.add_error(a, msg)
+		|> Changeset.add_error(b, msg)
+	else
+		cset
+	end
 end
 end

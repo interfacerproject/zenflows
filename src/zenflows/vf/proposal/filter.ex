@@ -67,7 +67,17 @@ end
 defp f(q, {:or_primary_intents_resource_inventoried_as_classified_as, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
-	|> where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
+	|> or_where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
+end
+defp f(q, {:primary_intents_resource_inventoried_as_name, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{Filter.escape_like(v)}%"))
+end
+defp f(q, {:or_primary_intents_resource_inventoried_as_name, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{Filter.escape_like(v)}%"))
 end
 
 # join primary_intents
@@ -92,6 +102,8 @@ embedded_schema do
 	field :or_primary_intents_resource_inventoried_as_primary_accountable, {:array, ID}
 	field :primary_intents_resource_inventoried_as_classified_as, {:array, :string}
 	field :or_primary_intents_resource_inventoried_as_classified_as, {:array, :string}
+	field :primary_intents_resource_inventoried_as_name, :string
+	field :or_primary_intents_resource_inventoried_as_name, :string
 end
 
 @cast ~w[
@@ -101,6 +113,8 @@ end
 	or_primary_intents_resource_inventoried_as_primary_accountable
 	primary_intents_resource_inventoried_as_classified_as
 	or_primary_intents_resource_inventoried_as_classified_as
+	primary_intents_resource_inventoried_as_name
+	or_primary_intents_resource_inventoried_as_name
 ]a
 
 @spec chgset(params()) :: Changeset.t()
@@ -113,28 +127,15 @@ defp chgset(params) do
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_primary_accountable)
 	|> Validate.class(:primary_intents_resource_inventoried_as_classified_as)
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
-	|> check_xor(:primary_intents_resource_inventoried_as_conforms_to,
+	|> Validate.name(:primary_intents_resource_inventoried_name)
+	|> Validate.name(:or_primary_intents_resource_inventoried_name)
+	|> Filter.check_xor(:primary_intents_resource_inventoried_as_conforms_to,
 		:or_primary_intents_resource_inventoried_as_conforms_to)
-	|> check_xor(:primary_intents_resource_inventoried_as_primary_accountable,
+	|> Filter.check_xor(:primary_intents_resource_inventoried_as_primary_accountable,
 		:or_primary_intents_resource_inventoried_as_primary_accountable)
-	|> check_xor(:primary_intents_resource_inventoried_as_classified_as,
+	|> Filter.check_xor(:primary_intents_resource_inventoried_as_classified_as,
 		:or_primary_intents_resource_inventoried_as_classified_as)
-end
-
-# Check that `a` and `b` are not provided at the same time.
-@spec check_xor(Changeset.t(), atom(), atom()) :: Changeset.t()
-defp check_xor(cset, a, b) do
-	x = Changeset.get_change(cset, a)
-	y = Changeset.get_change(cset, b)
-
-	if x && y do
-		msg = "can't provide both"
-
-		cset
-		|> Changeset.add_error(a, msg)
-		|> Changeset.add_error(b, msg)
-	else
-		cset
-	end
+	|> Filter.check_xor(:primary_intents_resource_inventoried_as_name,
+		:or_primary_intents_resource_inventoried_as_name)
 end
 end

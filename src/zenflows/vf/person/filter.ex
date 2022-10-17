@@ -41,52 +41,31 @@ end
 @spec f(Query.t(), {atom(), term()}) :: Query.t()
 defp f(q, {:name, v}),
 	do: where(q, [x], ilike(x.name, ^"%#{Filter.escape_like(v)}%"))
+defp f(q, {:or_name, v}),
+	do: or_where(q, [x], ilike(x.name, ^"%#{Filter.escape_like(v)}%"))
 defp f(q, {:user, v}),
 	do: where(q, [x], ilike(x.user, ^"%#{Filter.escape_like(v)}%"))
-defp f(q, {:user_or_name, v}) do
-	v = "%#{Filter.escape_like(v)}%"
-	where(q, [x], ilike(x.user, ^v) or ilike(x.name, ^v))
-end
+defp f(q, {:or_user, v}),
+	do: or_where(q, [x], ilike(x.user, ^"%#{Filter.escape_like(v)}%"))
 
 embedded_schema do
 	field :name, :string
+	field :or_name, :string
 	field :user, :string
-	field :user_or_name, :string
+	field :or_user, :string
 end
+
+@cast ~w[name or_name user or_user]a
 
 @spec chgset(params()) :: Changeset.t()
 defp chgset(params) do
 	%__MODULE__{}
-	|> Changeset.cast(params, ~w[name user user_or_name]a)
+	|> Changeset.cast(params, @cast)
 	|> Validate.name(:name)
+	|> Validate.name(:or_name)
 	|> Validate.name(:user)
-	|> Validate.name(:user_or_name)
-	|> user_or_name_mutex()
-end
-
-# Validate that `user_or_name` is mutually exclusive with either `user`
-# or `name`.
-@spec user_or_name_mutex(Changeset.t()) :: Changeset.t()
-defp user_or_name_mutex(cset) do
-	name = Changeset.get_change(cset, :name)
-	user = Changeset.get_change(cset, :user)
-	user_or_name = Changeset.get_change(cset, :user_or_name)
-
-	cond do
-		user_or_name && user ->
-			msg = "user-or-name and user can't be used together"
-			cset
-			|> Changeset.add_error(:user_or_name, msg)
-			|> Changeset.add_error(:user, msg)
-
-		user_or_name && name ->
-			msg = "user-or-name and name can't be used together"
-			cset
-			|> Changeset.add_error(:user_or_name, msg)
-			|> Changeset.add_error(:name, msg)
-
-		true ->
-			cset
-	end
+	|> Validate.name(:or_user)
+	|> Filter.check_xor(:name, :or_name)
+	|> Filter.check_xor(:user, :or_user)
 end
 end

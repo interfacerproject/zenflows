@@ -219,6 +219,9 @@ input_object :economic_resource_update_params do
 
 	@desc @note
 	field :note, :string
+
+	@desc @metadata
+	field :metadata, :json
 end
 
 object :economic_resource_response do

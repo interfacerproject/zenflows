@@ -127,8 +127,8 @@ defp chgset(params) do
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_primary_accountable)
 	|> Validate.class(:primary_intents_resource_inventoried_as_classified_as)
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
-	|> Validate.name(:primary_intents_resource_inventoried_name)
-	|> Validate.name(:or_primary_intents_resource_inventoried_name)
+	|> Validate.name(:primary_intents_resource_inventoried_as_name)
+	|> Validate.name(:or_primary_intents_resource_inventoried_as_name)
 	|> Filter.check_xor(:primary_intents_resource_inventoried_as_conforms_to,
 		:or_primary_intents_resource_inventoried_as_conforms_to)
 	|> Filter.check_xor(:primary_intents_resource_inventoried_as_primary_accountable,

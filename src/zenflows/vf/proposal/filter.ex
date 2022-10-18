@@ -79,6 +79,16 @@ defp f(q, {:or_primary_intents_resource_inventoried_as_name, v}) do
 	|> join(:primary_intents_resource_inventoried_as)
 	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{Filter.escape_like(v)}%"))
 end
+defp f(q, {:primary_intents_resource_inventoried_as_id, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where([primary_intents_resource_inventoried_as: r], r.id in ^v)
+end
+defp f(q, {:or_primary_intents_resource_inventoried_as_id, v}) do
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> or_where([primary_intents_resource_inventoried_as: r], r.id in ^v)
+end
 
 # join primary_intents
 defp join(q, :primary_intents) do
@@ -104,6 +114,8 @@ embedded_schema do
 	field :or_primary_intents_resource_inventoried_as_classified_as, {:array, :string}
 	field :primary_intents_resource_inventoried_as_name, :string
 	field :or_primary_intents_resource_inventoried_as_name, :string
+	field :primary_intents_resource_inventoried_as_id, {:array, ID}
+	field :or_primary_intents_resource_inventoried_as_id, {:array, ID}
 end
 
 @cast ~w[
@@ -115,6 +127,8 @@ end
 	or_primary_intents_resource_inventoried_as_classified_as
 	primary_intents_resource_inventoried_as_name
 	or_primary_intents_resource_inventoried_as_name
+	primary_intents_resource_inventoried_as_id
+	or_primary_intents_resource_inventoried_as_id
 ]a
 
 @spec chgset(params()) :: Changeset.t()
@@ -137,5 +151,7 @@ defp chgset(params) do
 		:or_primary_intents_resource_inventoried_as_classified_as)
 	|> Filter.check_xor(:primary_intents_resource_inventoried_as_name,
 		:or_primary_intents_resource_inventoried_as_name)
+	|> Filter.check_xor(:primary_intents_resource_inventoried_as_id,
+		:or_primary_intents_resource_inventoried_as_id)
 end
 end

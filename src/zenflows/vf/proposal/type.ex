@@ -139,6 +139,8 @@ input_object :proposal_filter_params do
 	field :or_primary_intents_resource_inventoried_as_classified_as, list_of(non_null(:uri))
 	field :primary_intents_resource_inventoried_as_name, :string
 	field :or_primary_intents_resource_inventoried_as_name, :string
+	field :primary_intents_resource_inventoried_as_id, list_of(non_null(:id))
+	field :or_primary_intents_resource_inventoried_as_id, list_of(non_null(:id))
 end
 
 object :query_proposal do

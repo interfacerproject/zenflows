@@ -39,7 +39,7 @@ defmodule Ecto.Changeset do
 
   Some validations may happen against the database but
   they are inherently unsafe. Those validations start with a `unsafe_`
-  prefix, such as `unsafe_validate_unique/3`.
+  prefix, such as `unsafe_validate_unique/4`.
 
   On the other hand, constraints rely on the database and are always safe.
   As a consequence, validations are always checked before constraints.
@@ -109,10 +109,14 @@ defmodule Ecto.Changeset do
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value
-  on `cast/4`. Those values are stored in the changeset `empty_values` field
-  and default to `[""]`. You can also pass the `:empty_values` option to
+  those reasons, changesets include the concept of empty values.
+
+  When applying changes using `cast/4`, an empty value will be automatically
+  converted to the field's default value. If the field is an array type, any
+  empty value inside the array will be removed.
+
+  Empty values are stored in the changeset's `:empty_values` field and
+  default to `[""]`. You can also pass the `:empty_values` option to
   `cast/4` in case you want to change how a particular `cast/4` work.
 
   ## Associations, embeds and on replace
@@ -163,7 +167,7 @@ defmodule Ecto.Changeset do
       if the entry still exists
 
   The `:delete` and `:delete_if_exists` options must be used carefully as they allow
-  users to delete any associated data by simply not sending the associated data.
+  users to delete any associated data by simply setting it to `nil` or an empty list.
   If you need deletion, it is often preferred to add a separate boolean virtual field
   in the schema and manually mark the changeset for deletion if the `:delete` field is
   set in the params, as in the example below. Note that we don't call `cast/4` in this
@@ -238,7 +242,8 @@ defmodule Ecto.Changeset do
   This means that when working with changesets that are not meant to be
   persisted to the database, such as schemaless changesets, you may need
   to explicitly set the action to one specific value. Frameworks such as
-  Phoenix use the action value to define how HTML forms should act.
+  Phoenix [use the action value to define how HTML forms should
+  act](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#module-a-note-on-errors).
 
   Instead of setting the action manually, you may use `apply_action/2` that
   emulates operations such as `c:Ecto.Repo.insert`. `apply_action/2` will return
@@ -275,9 +280,11 @@ defmodule Ecto.Changeset do
   value `**redacted**`.
   """
 
+  require Logger
   require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
+  alias Ecto.Schema.Metadata
 
   @empty_values [""]
 
@@ -429,7 +436,9 @@ defmodule Ecto.Changeset do
   During casting, all `permitted` parameters whose values match the specified
   type information will have their key name converted to an atom and stored
   together with the value as a change in the `:changes` field of the changeset.
-  All parameters that are not explicitly permitted are ignored.
+  If the cast value matches the current value for the field, it will not be
+  included in `:changes` unless the `:force_changes: true` option is
+  provided. All parameters that are not explicitly permitted are ignored.
 
   If casting of all fields is successful, the changeset is returned as valid.
 
@@ -439,7 +448,10 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:empty_values` - a list of values to be considered as empty when casting.
-      Empty values are always replaced by the default value of the respective key. Defaults to `[""]`
+      Empty values are always replaced by the default value of the respective field.
+      If the field is an array type, any empty value inside of the array will be removed.
+      Defaults to `[""]`
+    * `:force_changes` - a boolean indicating whether to include values that don't alter the current data in `:changes`. Defaults to `false`
 
   ## Examples
 
@@ -447,6 +459,11 @@ defmodule Ecto.Changeset do
       iex> if changeset.valid? do
       ...>   Repo.update!(changeset)
       ...> end
+
+      iex> params = %{title: "", topics: [""]}
+      iex> changeset = cast(post, params, [:topics, :title], empty_values: ["", []])
+      iex> changeset.changes
+      %{title: nil, topics: nil}
 
   Passing a changeset as the first argument:
 
@@ -509,6 +526,7 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
     empty_values = Keyword.get(opts, :empty_values, @empty_values)
+    force? = Keyword.get(opts, :force_changes, false)
     params = convert_params(params)
 
     defaults = case data do
@@ -518,7 +536,7 @@ defmodule Ecto.Changeset do
 
     {changes, errors, valid?} =
       Enum.reduce(permitted, {changes, [], true},
-                  &process_param(&1, params, types, data, empty_values, defaults, &2))
+                  &process_param(&1, params, types, data, empty_values, defaults, force?, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, types: types}
@@ -529,7 +547,7 @@ defmodule Ecto.Changeset do
                           message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
-  defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
+  defp process_param(key, params, types, data, empty_values, defaults, force?, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = cast_type!(types, key)
 
@@ -539,7 +557,7 @@ defmodule Ecto.Changeset do
         _ -> Map.get(data, key)
       end
 
-    case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
+    case cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
       {:ok, value, valid?} ->
         {Map.put(changes, key, value), errors, valid?}
       :missing ->
@@ -571,16 +589,17 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_key(key),
-    do: raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect key}`"
+  defp cast_key(key) do
+    raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect key}`"
+  end
 
-  defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
+  defp cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
     case params do
       %{^param_key => value} ->
         value = filter_empty_values(type, value, empty_values, defaults, key)
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
-            if Ecto.Type.equal?(type, current, value) do
+            if not force? and Ecto.Type.equal?(type, current, value) do
               :missing
             else
               {:ok, value, valid?}
@@ -662,7 +681,7 @@ defmodule Ecto.Changeset do
   from `changeset.params`. Those parameters are expected to be
   a map with attributes, similar to the ones passed to `cast/4`.
   Once parameters are retrieved, `cast_assoc/3` will match those
-  parameters with the associations already in the changeset record.
+  parameters with the associations already in the changeset data.
 
   Once `cast_assoc/3` is called, Ecto will compare each parameter
   with the user's already preloaded addresses and act as follows:
@@ -683,9 +702,12 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
-  return a changeset. Once the parent changeset is given to an `Ecto.Repo`
-  function, all entries will be inserted/updated/deleted within the same
-  transaction.
+  return a changeset. This changeset will always be included under `changes`
+  of the parent changeset, even if there are no changes. This is done for
+  reflection purposes, allowing developers to introspect validations and
+  other metadata from the association. Once the parent changeset is given
+  to an `Ecto.Repo` function, all entries will be inserted/updated/deleted
+  within the same transaction.
 
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
@@ -1539,6 +1561,8 @@ defmodule Ecto.Changeset do
 
       iex> {:ok, data} = apply_action(changeset, :update)
 
+      iex> {:ok, data} = apply_action(changeset, :my_action)
+
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
   """
@@ -1838,11 +1862,6 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken".
 
-    * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
-      `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint.
-
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
       fields.
@@ -1867,16 +1886,33 @@ defmodule Ecto.Changeset do
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
-    fields = List.wrap(fields)
+  def unsafe_validate_unique(%Changeset{} = changeset, fields, repo, opts \\ []) when is_list(opts) do
     {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
-    {validations, schema} =
-      case changeset do
-        %Ecto.Changeset{validations: validations, data: %schema{}} ->
-          {validations, schema}
-        %Ecto.Changeset{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+    %{data: data, validations: validations} = changeset
+
+    unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
+      raise ArgumentError,
+            "unsafe_validate_unique/4 does not work with schemaless changesets, got #{inspect(data)}"
+    end
+
+    schema =
+      case {changeset.data, opts[:query]} do
+        # regular schema
+        {%schema{__meta__: %Metadata{}}, _} ->
+          schema
+
+        # embedded schema with base query
+        {%schema{}, base_query} when base_query != nil ->
+          schema
+
+        # embedded schema without base query
+        {data, _} ->
+          raise ArgumentError,
+                "unsafe_validate_unique/4 does not work with embedded schemas unless " <>
+                  "the `:query` option is specified, got: #{inspect(data)}"
       end
+
+    fields = List.wrap(fields)
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
@@ -1892,7 +1928,7 @@ defmodule Ecto.Changeset do
     # If we don't have values for all fields, we can't query for uniqueness
     any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
 
-    if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
+    if unrelated_changes? or any_nil_values_for_fields? or any_prior_errors_for_fields? do
       changeset
     else
       query =
@@ -2503,8 +2539,15 @@ defmodule Ecto.Changeset do
       put_in(changeset.changes[field], incrementer.(current))
     end)
 
-    changeset = put_in(changeset.filters[field], current)
-    changeset
+    if is_nil(current) do
+      Logger.warn """
+      the current value of `#{field}` is `nil` and will not be used as a filter for optimistic
+      locking. To ensure `#{field}` is never `nil`, consider setting a default value.
+      """
+      changeset
+    else
+      put_in(changeset.filters[field], current)
+    end
   end
 
   # increment_with_rollover expect to be used with lock_version set as :integer in db schema
@@ -2598,11 +2641,13 @@ defmodule Ecto.Changeset do
       cast(user, params, [:age])
       |> check_constraint(:age, name: :age_must_be_positive)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  age is not positive, it will be converted into an error and
-  `{:error, changeset}` returned by the repository. Note that the error
-  will occur only after hitting the database so it will not be visible
-  until all other validations pass.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the age is not positive, the underlying operation will fail
+  but Ecto will convert the database exception into a changeset error
+  and return an `{:error, changeset}` tuple. Note that the error will
+  occur only after hitting the database, so it will not be visible
+  until all other validations pass. If the constraint fails inside a
+  transaction, the transaction will be marked as aborted.
 
   ## Options
 
@@ -2642,11 +2687,13 @@ defmodule Ecto.Changeset do
       cast(user, params, [:email])
       |> unique_constraint(:email)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  email already exists, it will be converted into an error and
-  `{:error, changeset}` returned by the repository. Note that the error
-  will occur only after hitting the database so it will not be visible
-  until all other validations pass.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the email already exists, the underlying operation will fail but
+  Ecto will convert the database exception into a changeset error and
+  return an `{:error, changeset}` tuple. Note that the error will occur
+  only after hitting the database, so it will not be visible until all
+  other validations pass. If the constraint fails inside a transaction,
+  the transaction will be marked as aborted.
 
   ## Options
 
@@ -2784,9 +2831,13 @@ defmodule Ecto.Changeset do
       cast(comment, params, [:post_id])
       |> foreign_key_constraint(:post_id)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  associated post does not exist, it will be converted into an
-  error and `{:error, changeset}` returned by the repository.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the associated post does not exist, the underlying operation will
+  fail but Ecto will convert the database exception into a changeset
+  error and return an `{:error, changeset}` tuple. Note that the error
+  will occur only after hitting the database, so it will not be visible
+  until all other validations pass. If the constraint fails inside a
+  transaction, the transaction will be marked as aborted.
 
   ## Options
 
@@ -2977,10 +3028,14 @@ defmodule Ecto.Changeset do
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source
-  defp get_source(%{data: data}), do:
+
+  defp get_source(%{data: data}) do
     raise ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}"
-  defp get_source(item), do:
+  end
+
+  defp get_source(item) do
     raise ArgumentError, "cannot add constraint because a changeset was not supplied, got: #{inspect item}"
+  end
 
   defp get_assoc(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do

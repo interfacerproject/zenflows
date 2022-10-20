@@ -39,7 +39,7 @@ defmodule Ecto.Adapters.SQL do
 
   Generally speaking, you must invoke those functions directly from
   your repository, for example: `MyApp.Repo.query("SELECT true")`.
-  You can also invoke them direcltly from `Ecto.Adapters.SQL`, but
+  You can also invoke them directly from `Ecto.Adapters.SQL`, but
   keep in mind that in such cases features such as "dynamic repositories"
   won't be available.
 
@@ -192,14 +192,14 @@ defmodule Ecto.Adapters.SQL do
       @impl true
       def update(adapter_meta, %{source: source, prefix: prefix}, fields, params, returning, opts) do
         {fields, field_values} = :lists.unzip(fields)
-        filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
+        filter_values = Keyword.values(params)
         sql = @conn.update(prefix, source, fields, params, returning)
         Ecto.Adapters.SQL.struct(adapter_meta, @conn, sql, :update, source, params, field_values ++ filter_values, :raise, returning, opts)
       end
 
       @impl true
       def delete(adapter_meta, %{source: source, prefix: prefix}, params, opts) do
-        filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
+        filter_values = Keyword.values(params)
         sql = @conn.delete(prefix, source, params, [])
         Ecto.Adapters.SQL.struct(adapter_meta, @conn, sql, :delete, source, params, filter_values, :raise, [], opts)
       end
@@ -314,9 +314,6 @@ defmodule Ecto.Adapters.SQL do
 
   _Postgrex_: Check [PostgreSQL doc](https://www.postgresql.org/docs/current/sql-explain.html)
   for version compatibility.
-
-  _MyXQL_: `EXTENDED` and `PARTITIONS` opts were [deprecated](https://dev.mysql.com/doc/refman/5.7/en/explain.html)
-  and are enabled by default.
 
   Also note that:
 
@@ -634,31 +631,7 @@ defmodule Ecto.Adapters.SQL do
   ## Callbacks
 
   @doc false
-  def __before_compile__(driver, _env) do
-    case Application.get_env(:ecto, :json_library) do
-      nil ->
-        :ok
-
-      Jason ->
-        IO.warn """
-        Jason is the default :json_library in Ecto 3.0.
-        You no longer need to configure it explicitly,
-        please remove this line from your config files:
-
-            config :ecto, :json_library, Jason
-
-        """
-
-      value ->
-        IO.warn """
-        The :json_library configuration for the :ecto application is deprecated.
-        Please configure the :json_library in the driver instead:
-
-            config #{inspect driver}, :json_library, #{inspect value}
-
-        """
-    end
-
+  def __before_compile__(_driver, _env) do
     quote do
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
@@ -1071,12 +1044,6 @@ defmodule Ecto.Adapters.SQL do
     result = with {:ok, _query, res} <- result, do: {:ok, res}
     stacktrace = Keyword.get(opts, :stacktrace)
 
-    params =
-      Enum.map(params, fn
-        %Ecto.Query.Tagged{value: value} -> value
-        value -> value
-      end)
-
     acc =
       if idle_time, do: [idle_time: idle_time], else: []
 
@@ -1106,7 +1073,7 @@ defmodule Ecto.Adapters.SQL do
       true ->
         Logger.log(
           log,
-          fn -> log_iodata(measurements, repo, source, query, params, result, stacktrace) end,
+          fn -> log_iodata(measurements, repo, source, query, opts[:cast_params] || params, result, stacktrace) end,
           ansi_color: sql_color(query)
         )
 
@@ -1116,7 +1083,7 @@ defmodule Ecto.Adapters.SQL do
       level ->
         Logger.log(
           level,
-          fn -> log_iodata(measurements, repo, source, query, params, result, stacktrace) end,
+          fn -> log_iodata(measurements, repo, source, query, opts[:cast_params] || params, result, stacktrace) end,
           ansi_color: sql_color(query)
         )
     end
@@ -1178,11 +1145,12 @@ defmodule Ecto.Adapters.SQL do
     with [_ | _] <- stacktrace,
          {module, function, arity, info} <- last_non_ecto(Enum.reverse(stacktrace), repo, nil) do
       [
-        IO.ANSI.light_black(),
         ?\n,
+        IO.ANSI.light_black(),
         "↳ ",
         Exception.format_mfa(module, function, arity),
-        log_stacktrace_info(info)
+        log_stacktrace_info(info),
+        IO.ANSI.reset(),
       ]
     else
       _ -> []

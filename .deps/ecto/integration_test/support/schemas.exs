@@ -264,12 +264,15 @@ defmodule Ecto.Integration.Order do
 
     * Text columns
     * Embedding one schema
+    * Preloading items inside embeds_many
+    * Preloading items inside embeds_one
+    * Field source with json_extract_path
 
   """
   use Ecto.Integration.Schema
 
   schema "orders" do
-    field :meta, :map
+    field :metadata, :map, source: :meta
     embeds_one :item, Ecto.Integration.Item
     embeds_many :items, Ecto.Integration.Item
     belongs_to :permalink, Ecto.Integration.Permalink
@@ -341,5 +344,37 @@ defmodule Ecto.Integration.Usec do
   schema "usecs" do
     field :naive_datetime_usec, :naive_datetime_usec
     field :utc_datetime_usec, :utc_datetime_usec
+  end
+end
+
+defmodule Ecto.Integration.Logging do
+  @moduledoc """
+  This module is used to test:
+
+    * Logging the casted version of parameters without array types
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key {:bid, :binary_id, autogenerate: true}
+  schema "loggings" do
+    field :int, :integer
+    field :uuid, Ecto.Integration.TestRepo.uuid()
+    timestamps()
+  end
+end
+
+defmodule Ecto.Integration.ArrayLogging do
+  @moduledoc """
+  This module is used to test:
+
+    * Logging the casted version of parameters with array types
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "array_loggings" do
+    field :uuids, {:array, Ecto.Integration.TestRepo.uuid()}
+    timestamps()
   end
 end

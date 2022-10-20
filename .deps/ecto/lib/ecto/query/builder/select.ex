@@ -14,16 +14,16 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{}}}
+      {[1, 2], {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{take: map, subqueries: list}}}
   def escape(atom, _vars, _env)
       when is_atom(atom) and not is_boolean(atom) and atom != nil do
     Builder.error! """
@@ -34,7 +34,10 @@ defmodule Ecto.Query.Builder.Select do
   def escape(other, vars, env) do
     cond do
       take?(other) ->
-        {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, Macro.expand(other, env)}}}}
+        {
+          {:{}, [], [:&, [], [0]]},
+          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: [], aliases: %{}}}
+        }
 
       maybe_take?(other) ->
         Builder.error! """
@@ -42,91 +45,106 @@ defmodule Ecto.Query.Builder.Select do
         Instead interpolate all fields at once, such as: `select: ^[:foo, :bar, :baz]`. \
         Got: #{Macro.to_string(other)}.
         """
-    
+
       true ->
-        escape(other, {[], %{}}, vars, env)
+        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: [], aliases: %{}}}, vars, env)
+        acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
+        {expr, {params, acc}}
     end
   end
 
   # Tuple
-  defp escape({left, right}, params_take, vars, env) do
-    escape({:{}, [], [left, right]}, params_take, vars, env)
+  defp escape({left, right}, params_acc, vars, env) do
+    escape({:{}, [], [left, right]}, params_acc, vars, env)
   end
 
   # Tuple
-  defp escape({:{}, _, list}, params_take, vars, env) do
-    {list, params_take} = Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
+  defp escape({:{}, _, list}, params_acc, vars, env) do
+    {list, params_acc} = Enum.map_reduce(list, params_acc, &escape(&1, &2, vars, env))
     expr = {:{}, [], [:{}, [], list]}
-    {expr, params_take}
+    {expr, params_acc}
   end
 
   # Struct
-  defp escape({:%, _, [name, map]}, params_take, vars, env) do
+  defp escape({:%, _, [name, map]}, params_acc, vars, env) do
     name = Macro.expand(name, env)
-    {escaped_map, params_take} = escape(map, params_take, vars, env)
-    {{:{}, [], [:%, [], [name, escaped_map]]}, params_take}
+    {escaped_map, params_acc} = escape(map, params_acc, vars, env)
+    {{:{}, [], [:%, [], [name, escaped_map]]}, params_acc}
   end
 
   # Map
-  defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_take, vars, env) do
-    {data, params_take} = escape(data, params_take, vars, env)
-    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
-    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_take}
+  defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_acc, vars, env) do
+    {data, params_acc} = escape(data, params_acc, vars, env)
+    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
+    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_acc}
   end
 
   # Merge
-  defp escape({:merge, _, [left, {kind, _, _} = right]}, params_take, vars, env)
+  defp escape({:merge, _, [left, {kind, _, _} = right]}, params_acc, vars, env)
        when kind in [:%{}, :map] do
-    {left, params_take} = escape(left, params_take, vars, env)
-    {right, params_take} = escape(right, params_take, vars, env)
-    {{:{}, [], [:merge, [], [left, right]]}, params_take}
+    {left, params_acc} = escape(left, params_acc, vars, env)
+    {right, params_acc} = escape(right, params_acc, vars, env)
+    {{:{}, [], [:merge, [], [left, right]]}, params_acc}
   end
 
-  defp escape({:merge, _, [_left, right]}, _params_take, _vars, _env) do
+  defp escape({:merge, _, [_left, right]}, _params_acc, _vars, _env) do
     Builder.error! "expected the second argument of merge/2 in select to be a map, got: `#{Macro.to_string(right)}`"
   end
 
   # Map
-  defp escape({:%{}, _, pairs}, params_take, vars, env) do
-    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
-    {{:{}, [], [:%{}, [], pairs]}, params_take}
+  defp escape({:%{}, _, pairs}, params_acc, vars, env) do
+    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
+    {{:{}, [], [:%{}, [], pairs]}, params_acc}
   end
 
   # List
-  defp escape(list, params_take, vars, env) when is_list(list) do
-    Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
+  defp escape(list, params_acc, vars, env) when is_list(list) do
+    Enum.map_reduce(list, params_acc, &escape(&1, &2, vars, env))
   end
 
   # map/struct(var, [:foo, :bar])
-  defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, env)
+  defp escape({tag, _, [{var, _, context}, fields]}, {params, acc}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
     expr = Builder.escape_var!(var, vars)
-    take = add_take(take, Builder.find_var!(var, vars), {tag, taken})
-    {expr, {params, take}}
+    acc = add_take(acc, Builder.find_var!(var, vars), {tag, taken})
+    {expr, {params, acc}}
   end
 
-  defp escape(expr, params_take, vars, env) do
-    Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5})
+  # aliased values
+  defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
+    {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
+    expr = {:{}, [], [:selected_as, [], [escaped, name]]}
+    aliases = Builder.add_select_alias(acc.aliases, name)
+    {expr, {params, %{acc | aliases: aliases}}}
   end
 
-  defp escape_expansion(expr, _type, params_take, vars, env) do
-    escape(expr, params_take, vars, env)
+  defp escape({:selected_as, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
+    Builder.error! "selected_as/2 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
-  defp escape_pairs(pairs, params_take, vars, env) do
-    Enum.map_reduce pairs, params_take, fn({k, v}, acc) ->
+  defp escape(expr, params_acc, vars, env) do
+    Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
+  end
+
+  defp escape_expansion(expr, _type, params_acc, vars, env) do
+    escape(expr, params_acc, vars, env)
+  end
+
+  defp escape_pairs(pairs, params_acc, vars, env) do
+    Enum.map_reduce(pairs, params_acc, fn {k, v}, acc ->
       {k, acc} = escape_key(k, acc, vars, env)
       {v, acc} = escape(v, acc, vars, env)
       {{k, v}, acc}
-    end
+    end)
   end
 
-  defp escape_key(k, params_take, _vars, _env) when is_atom(k) do
-    {k, params_take}
+  defp escape_key(k, params_acc, _vars, _env) when is_atom(k) do
+    {k, params_acc}
   end
-  defp escape_key(k, params_take, vars, env) do
-    escape(k, params_take, vars, env)
+
+  defp escape_key(k, params_acc, vars, env) do
+    escape(k, params_acc, vars, env)
   end
 
   defp escape_fields({:^, _, [interpolated]}, tag, _env) do
@@ -139,8 +157,11 @@ defmodule Ecto.Query.Builder.Select do
       fields when is_list(fields) ->
         fields
       _ ->
-        Builder.error! "`#{tag}/2` in `select` expects either a literal or " <>
-          "an interpolated list of atom fields"
+        Builder.error!(
+          "`#{tag}/2` in `select` expects either a literal or " <>
+            "an interpolated (1) list of atom fields, (2) dynamic, or " <>
+            "(3) map with dynamic values"
+        )
     end
   end
 
@@ -180,14 +201,78 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime for interpolated/dynamic selects.
   """
+  def select!(kind, query, fields, file, line) when is_map(fields) do
+    {expr, {params, subqueries, aliases, _count}} = expand_nested(fields, {[], [], %{}, 0}, query)
+
+    %Ecto.Query.SelectExpr{
+      expr: expr,
+      params: Enum.reverse(params),
+      subqueries: Enum.reverse(subqueries),
+      aliases: aliases,
+      file: file,
+      line: line
+    }
+    |> apply_or_merge(kind, query)
+  end
+
   def select!(kind, query, fields, file, line) do
     take = %{0 => {:any, fields!(:select, fields)}}
-    expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+
+    %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+    |> apply_or_merge(kind, query)
+  end
+
+  defp apply_or_merge(select, kind, query) do
     if kind == :select do
-      apply(query, expr)
+      apply(query, select)
     else
-      merge(query, expr)
+      merge(query, select)
     end
+  end
+
+  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, aliases, count}, query) do
+    {expr, params, subqueries, aliases, count} =
+      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, aliases, count)
+
+    {expr, {params, subqueries, aliases, count}}
+  end
+
+  defp expand_nested(%Ecto.SubQuery{} = subquery, {params, subqueries, aliases, count}, _query) do
+    index = length(subqueries)
+    # used both in ast and in parameters, as a placeholder.
+    expr = {:subquery, index}
+    params = [expr | params]
+    subqueries = [subquery | subqueries]
+    count = count + 1
+
+    {expr, {params, subqueries, aliases, count}}
+  end
+
+  defp expand_nested(%type{} = fields, acc, query) do
+    {fields, acc} = fields |> Map.from_struct() |> expand_nested(acc, query)
+    {{:%, [], [type, fields]}, acc}
+  end
+
+  defp expand_nested(fields, acc, query) when is_map(fields) do
+    {fields, acc} = fields |> Enum.map_reduce(acc, &expand_nested_pair(&1, &2, query))
+    {{:%{}, [], fields}, acc}
+  end
+
+  defp expand_nested(invalid, _acc, query) when is_list(invalid) or is_tuple(invalid) do
+    raise Ecto.QueryError,
+      query: query,
+      message:
+        "Interpolated map values in :select can only be " <>
+          "maps, structs, dynamics, subqueries and literals. Got #{inspect(invalid)}"
+  end
+
+  defp expand_nested(other, acc, _query) do
+    {other, acc}
+  end
+
+  defp expand_nested_pair({key, val}, acc, query) do
+    {val, acc} = expand_nested(val, acc, query)
+    {{key, val}, acc}
   end
 
   @doc """
@@ -208,16 +293,19 @@ defmodule Ecto.Query.Builder.Select do
 
   def build(kind, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, take}} = escape(expr, binding, env)
+    {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
-    take   = {:%{}, [], Map.to_list(take)}
+    take = {:%{}, [], Map.to_list(acc.take)}
+    aliases = {:%{}, [], Map.to_list(acc.aliases)}
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
                          params: unquote(params),
                          file: unquote(env.file),
                          line: unquote(env.line),
-                         take: unquote(take)}
+                         take: unquote(take),
+                         subqueries: unquote(acc.subqueries),
+                         aliases: unquote(aliases)}
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)
@@ -247,19 +335,23 @@ defmodule Ecto.Query.Builder.Select do
   The callback applied by `build/5` when merging.
   """
   def merge(%Ecto.Query{select: nil} = query, new_select) do
-    merge(query, new_select, {:&, [], [0]}, [], %{}, new_select)
+    merge(query, new_select, {:&, [], [0]}, [], [], %{}, %{}, new_select)
   end
   def merge(%Ecto.Query{select: old_select} = query, new_select) do
-    %{expr: old_expr, params: old_params, take: old_take} = old_select
-    merge(query, old_select, old_expr, old_params, old_take, new_select)
+    %{expr: old_expr, params: old_params, subqueries: old_subqueries, take: old_take, aliases: old_aliases} = old_select
+    merge(query, old_select, old_expr, old_params, old_subqueries, old_take, old_aliases, new_select)
   end
   def merge(query, expr) do
     merge(Ecto.Queryable.to_query(query), expr)
   end
 
-  defp merge(query, select, old_expr, old_params, old_take, new_select) do
-    %{expr: new_expr, params: new_params, take: new_take} = new_select
-    new_expr = Ecto.Query.Builder.bump_interpolations(new_expr, old_params)
+  defp merge(query, select, old_expr, old_params, old_subqueries, old_take, old_aliases, new_select) do
+    %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take, aliases: new_aliases} = new_select
+
+    new_expr =
+      new_expr
+      |> Ecto.Query.Builder.bump_interpolations(old_params)
+      |> Ecto.Query.Builder.bump_subqueries(old_subqueries)
 
     expr =
       case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do
@@ -318,8 +410,10 @@ defmodule Ecto.Query.Builder.Select do
 
     select = %{
       select | expr: expr,
-               params: old_params ++ new_params,
-               take: merge_take(old_expr, old_take, new_take)
+               params: old_params ++ bump_subquery_params(new_params, old_subqueries),
+               subqueries: old_subqueries ++ new_subqueries,
+               take: merge_take(query.from.source, old_expr, old_take, new_take),
+               aliases: merge_aliases(old_aliases, new_aliases)
     }
 
     %{query | select: select}
@@ -362,21 +456,39 @@ defmodule Ecto.Query.Builder.Select do
     Macro.to_string(other)
   end
 
-  defp add_take(take, key, value) do
-    Map.update(take, key, value, &merge_take_kind_and_fields(key, &1, value))
+  defp add_take(acc, key, value) do
+    take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
+    %{acc | take: take}
   end
 
-  defp merge_take(old_expr, %{} = old_take, %{} = new_take) do
-    Enum.reduce(new_take, old_take, fn {binding, new_value}, acc ->
+  defp bump_subquery_params(new_params, old_subqueries) do
+    len = length(old_subqueries)
+
+    Enum.map(new_params, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
+  end
+
+  defp merge_take(source, old_expr, %{} = old_take, %{} = new_take) do
+    Enum.reduce(new_take, old_take, fn {binding, {new_kind, new_fields} = new_value}, acc ->
       case acc do
         %{^binding => old_value} ->
           Map.put(acc, binding, merge_take_kind_and_fields(binding, old_value, new_value))
 
         %{} ->
-          # If the binding is a not filtered source, merge shouldn't restrict it
-          case old_expr do
-            {:&, _, [^binding]} -> acc
-            _ -> Map.put(acc, binding, new_value)
+          # If merging with a schema, add the schema's query fields. This comes in handy if the user
+          # is merging fields with load_in_query = false.
+          # If merging with a schemaless source, do nothing so the planner can take all the fields.
+          case {old_expr, source} do
+            {{:&, _, [^binding]}, {_source, schema}} when not is_nil(schema) ->
+              Map.put(acc, binding, {new_kind, Enum.uniq(new_fields ++ schema.__schema__(:query_fields))})
+
+            {{:&, _, [^binding]}, _} ->
+                acc
+
+            _ ->
+              Map.put(acc, binding, new_value)
           end
       end
     end)
@@ -392,5 +504,11 @@ defmodule Ecto.Query.Builder.Select do
   defp merge_take_kind(binding, old, new) do
     Builder.error! "cannot select_merge because the binding at position #{binding} " <>
                    "was previously specified as a `#{old}` and later as `#{new}`"
+  end
+
+  defp merge_aliases(old_aliases, new_aliases) do
+    Enum.reduce(new_aliases, old_aliases, fn {alias, _}, aliases ->
+      Builder.add_select_alias(aliases, alias)
+    end)
   end
 end

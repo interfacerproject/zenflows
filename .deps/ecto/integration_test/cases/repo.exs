@@ -616,7 +616,7 @@ defmodule Ecto.Integration.RepoTest do
     |> Ecto.Changeset.assoc_constraint(:post)
   end
 
-  test "unsafe_validate_unique/3" do
+  test "unsafe_validate_unique/4" do
     {:ok, inserted_post} = TestRepo.insert(%Post{title: "Greetings", visits: 13})
     new_post_changeset = Post.changeset(%Post{}, %{title: "Greetings", visits: 17})
 
@@ -632,7 +632,7 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors[:title] == nil # cannot conflict with itself
   end
 
-  test "unsafe_validate_unique/3 with composite keys" do
+  test "unsafe_validate_unique/4 with composite keys" do
     {:ok, inserted_post} = TestRepo.insert(%CompositePk{a: 123, b: 456, name: "UniqueName"})
 
     different_pk = CompositePk.changeset(%CompositePk{}, %{name: "UniqueName", a: 789, b: 321})
@@ -1075,21 +1075,25 @@ defmodule Ecto.Integration.RepoTest do
     test "Repo.insert_all upserts and fills in placeholders with conditioned on_conflict query" do
       do_not_update_title = "don't touch me"
 
+      posted_value =
+        from p in Post, where: p.public == ^true and p.id > ^0, select: p.posted, limit: 1
+
       on_conflict =
         from p in Post, update: [set: [title: "updated"]], where: p.title != ^do_not_update_title
 
-      placeholders = %{posted: Date.utc_today(), title: "title"}
+      placeholders = %{visits: 1, title: "title"}
 
       post1 = [
+        visits: {:placeholder, :visits},
         title: {:placeholder, :title},
         uuid: Ecto.UUID.generate(),
-        posted: {:placeholder, :posted}
+        posted: posted_value
       ]
 
       post2 = [
         title: do_not_update_title,
         uuid: Ecto.UUID.generate(),
-        posted: {:placeholder, :posted}
+        posted: posted_value
       ]
 
       assert TestRepo.insert_all(Post, [post1, post2],
@@ -1533,6 +1537,111 @@ defmodule Ecto.Integration.RepoTest do
 
       assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
+
+    @tag :selected_as_with_group_by
+    test "selected_as/2 with group_by" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      query =
+        from p in Post,
+          select: %{
+            posted: selected_as(p.posted, :date),
+            min_visits: p.visits |> coalesce(0) |> min()
+          },
+          group_by: selected_as(:date),
+          order_by: p.posted
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
+               TestRepo.all(query)
+    end
+
+    @tag :selected_as_with_order_by
+    test "selected_as/2 with order_by" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      base_query =
+        from p in Post,
+          select: %{
+            posted: p.posted,
+            min_visits: p.visits |> coalesce(0) |> min() |> selected_as(:min_visits)
+          },
+          group_by: p.posted
+
+      # ascending order
+      results = base_query |> order_by(selected_as(:min_visits)) |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
+               results
+
+      # descending order
+      results = base_query |> order_by([desc: selected_as(:min_visits)]) |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-21], min_visits: 2}, %{posted: ~D[2020-12-20], min_visits: 0}] =
+               results
+    end
+
+    @tag :selected_as_with_order_by
+    test "selected_as/2 respects custom types" do
+      TestRepo.insert!(%Post{title: "title1", visits: 1})
+      TestRepo.insert!(%Post{title: "title2"})
+      uuid = Ecto.UUID.generate()
+
+      query =
+        from p in Post,
+          select: %{
+            uuid: type(^uuid, Ecto.UUID) |> selected_as(:uuid),
+            visits: p.visits |> coalesce(0) |> selected_as(:visits)
+          },
+          order_by: [selected_as(:uuid), selected_as(:visits)]
+
+      assert [%{uuid: ^uuid, visits: 0}, %{uuid: ^uuid, visits: 1}] = TestRepo.all(query)
+    end
+
+    @tag :selected_as_with_order_by_expression
+    test "selected_as/2 with order_by expression" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3, intensity: 2.0})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil, intensity: 10.0})
+
+      results =
+        from(p in Post,
+          select: %{
+            posted: p.posted,
+            visits: p.visits |> coalesce(0) |> selected_as(:num_visits),
+            intensity: selected_as(p.intensity, :strength)
+          },
+          order_by: [desc: (selected_as(:num_visits) + selected_as(:strength))]
+        )
+        |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], visits: 0}, %{posted: ~D[2020-12-21], visits: 3}] =
+               results
+    end
+
+    @tag :selected_as_with_having
+    test "selected_as/2 with having" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      results =
+        from(p in Post,
+          select: %{
+            posted: p.posted,
+            min_visits: p.visits |> coalesce(0) |> min() |> selected_as(:min_visits)
+          },
+          group_by: p.posted,
+          having: selected_as(:min_visits) > 0,
+          or_having: not(selected_as(:min_visits) > 0),
+          order_by: p.posted
+        )
+        |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] = results
+    end
   end
 
   test "query count distinct" do
@@ -1836,8 +1945,26 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "on conflict query and conflict target" do
-      on_conflict = from Post, update: [set: [title: "second"]]
+      on_conflict = from p in Post, where: p.id > ^0, update: [set: [title: "second"]]
       post = [title: "first", uuid: Ecto.UUID.generate()]
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:id]))
+
+      # Error on conflict target
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+      assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
+
+    @tag :insert_select
+    @tag :with_conflict_target
+    test "on conflict query and insert select and conflict target" do
+      on_conflict = from p in Post, where: p.id > ^0, update: [set: [title: "second"]]
+      visits_value = from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
+      post = [title: "first", uuid: Ecto.UUID.generate(), visits: visits_value]
       assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
 

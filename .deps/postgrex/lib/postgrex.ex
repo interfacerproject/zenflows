@@ -53,6 +53,7 @@ defmodule Postgrex do
           | {:prepare, :named | :unnamed}
           | {:transactions, :strict | :naive}
           | {:types, module}
+          | {:search_path, [String.t()]}
           | {:disconnect_on_error_codes, [atom]}
           | DBConnection.start_option()
 
@@ -158,6 +159,15 @@ defmodule Postgrex do
       option is only required when using custom encoding or decoding (default:
       `Postgrex.DefaultTypes`);
 
+    * `:search_path` - A list of strings used to set the search path for the connection.
+      This is useful when, for instance, an extension like `citext` is installed in a
+      separate schema. If that schema is not in the connection's search path, Postgrex
+      might not be able to recognize the extension's data type. When this option is `nil`,
+      the search path is not modified. (default: `nil`).
+      See the [PostgreSQL docs](https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATH)
+      for more details.
+
+
   `Postgrex` uses the `DBConnection` library and supports all `DBConnection`
   options like `:idle`, `:after_connect` etc. See `DBConnection.start_link/2`
   for more information.
@@ -179,20 +189,38 @@ defmodule Postgrex do
 
   ## SSL client authentication
 
-  When connecting to CockroachDB instances running in secure mode it is idiomatic to use
-  client SSL certificate authentication.
+  When connecting to Postgres or CockroachDB instances over SSL it is idiomatic to use
+  certificate authentication. Config files do not allowing passing functions,
+  so use the `init` callback of the Ecto supervisor.
 
-  An example of Repository configuration:
+  In your Repository configuration:
 
       config :app, App.Repo,
         ssl: String.to_existing_atom(System.get_env("DB_SSL_ENABLED", "true")),
-        ssl_opts: [
+        verify_ssl: true
+
+  And in App.Repo, set your `:ssl_opts`:
+
+      def init(_type, config) do
+        config =
+          if config[:verify_ssl] do
+            Keyword.put(config, :ssl_opts, my_ssl_opts(config[:hostname]))
+          else
+            config
+          end
+
+        {:ok, config}
+      end
+
+      def my_ssl_opts(server) do
+        [
           verify: :verify_peer,
-          server_name_indication: System.get_env("DB_HOSTNAME")
           cacertfile: System.get_env("DB_CA_CERT_FILE"),
+          server_name_indication: String.to_charlist(server),
           customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)],
           depth: 3
         ]
+      end
 
   ## PgBouncer
 

@@ -366,8 +366,11 @@ if Code.ensure_loaded?(Postgrex) do
       intersperse_map(fields, ", ", fn
         {:&, _, [idx]} ->
           case elem(sources, idx) do
+            {nil, source, nil} ->
+              error!(query, "PostgreSQL adapter does not support selecting all fields from fragment #{source}. " <>
+                            "Please specify exactly which fields you want to select")
             {source, _, nil} ->
-              error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
+              error!(query, "PostgreSQL adapter does not support selecting all fields from #{source} without a schema. " <>
                             "Please specify a schema or specify exactly which fields you want to select")
             {_, source, _} ->
               source
@@ -676,6 +679,10 @@ if Code.ensure_loaded?(Postgrex) do
       quote_name(literal)
     end
 
+    defp expr({:selected_as, _, [name]}, _sources, _query) do
+      [quote_name(name)]
+    end
+
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       [expr(datetime, sources, query), type_unless_typed(datetime, "timestamp"), " + ",
        interval(count, interval, sources, query)]
@@ -904,6 +911,13 @@ if Code.ensure_loaded?(Postgrex) do
       fields = intersperse_map(index.columns, ", ", &index_expr/1)
       include_fields = intersperse_map(index.include, ", ", &index_expr/1)
 
+      maybe_nulls_distinct =
+        case index.nulls_distinct do
+          nil -> []
+          true -> " NULLS DISTINCT"
+          false -> " NULLS NOT DISTINCT"
+        end
+
       queries = [["CREATE ",
                   if_do(index.unique, "UNIQUE "),
                   "INDEX ",
@@ -915,6 +929,7 @@ if Code.ensure_loaded?(Postgrex) do
                   if_do(index.using, [" USING " , to_string(index.using)]),
                   ?\s, ?(, fields, ?),
                   if_do(include_fields != [], [" INCLUDE ", ?(, include_fields, ?)]),
+                  maybe_nulls_distinct,
                   if_do(index.where, [" WHERE ", to_string(index.where)])]]
 
       queries ++ comments_on("INDEX", quote_table(index.prefix, index.name), index.comment)

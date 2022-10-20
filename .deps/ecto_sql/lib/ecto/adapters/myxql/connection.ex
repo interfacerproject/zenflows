@@ -271,8 +271,11 @@ if Code.ensure_loaded?(MyXQL) do
       intersperse_map(fields, ", ", fn
         {:&, _, [idx]} ->
           case elem(sources, idx) do
+            {nil, source, nil} ->
+              error!(query, "MySQL adapter does not support selecting all fields from fragment #{source}. " <>
+                            "Please specify exactly which fields you want to select")
             {source, _, nil} ->
-              error!(query, "MySQL does not support selecting all fields from #{source} without a schema. " <>
+              error!(query, "MySQL adapter does not support selecting all fields from #{source} without a schema. " <>
                             "Please specify a schema or specify exactly which fields you want to select")
             {_, source, _} ->
               source
@@ -572,6 +575,10 @@ if Code.ensure_loaded?(MyXQL) do
       quote_name(literal)
     end
 
+    defp expr({:selected_as, _, [name]}, _sources, _query) do
+      [quote_name(name)]
+    end
+
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       ["date_add(", expr(datetime, sources, query), ", ",
        interval(count, interval, sources, query) | ")"]
@@ -767,6 +774,10 @@ if Code.ensure_loaded?(MyXQL) do
     def execute_ddl({:create, %Index{} = index}) do
       if index.where do
         error!(nil, "MySQL adapter does not support where in indexes")
+      end
+
+      if index.nulls_distinct == false do
+        error!(nil, "MySQL adapter does not support nulls_distinct set to false in indexes")
       end
 
       [["CREATE", if_do(index.unique, " UNIQUE"), " INDEX ",

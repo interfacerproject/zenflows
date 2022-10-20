@@ -44,7 +44,7 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows_or_query, header, placeholder_values, counter} =
+    {rows_or_query, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, counter} =
       extract_header_and_fields(repo, rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter, opts)
 
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
@@ -52,10 +52,11 @@ defmodule Ecto.Repo.Schema do
     on_conflict = Keyword.get(opts, :on_conflict, :raise)
     conflict_target = Keyword.get(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
-    on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
+    {on_conflict, conflict_cast_params} = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
+    opts = Keyword.put(opts, :cast_params, placeholder_cast_params ++ row_cast_params ++ conflict_cast_params)
 
     {count, rows_or_query} =
-      adapter.insert_all(adapter_meta, schema_meta, header, rows_or_query, on_conflict, return_sources, placeholder_values, opts)
+      adapter.insert_all(adapter_meta, schema_meta, header, rows_or_query, on_conflict, return_sources, placeholder_dump_params, opts)
 
     {count, postprocess(rows_or_query, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -81,44 +82,33 @@ defmodule Ecto.Repo.Schema do
        when is_list(rows) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
-    {rows, {header, has_query?, placeholder_dump, _}} =
-      Enum.map_reduce(rows, {%{}, false, %{}, 1}, fn fields, acc ->
-        {fields, {header, has_query?, placeholder_dump, counter}} = Enum.map_reduce(fields, acc, mapper)
+    {rows, {header, placeholder_dump, _}} =
+      Enum.map_reduce(rows, {%{}, %{}, 1}, fn fields, acc ->
+        {fields, {header, placeholder_dump, counter}} = Enum.map_reduce(fields, acc, mapper)
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
-        {fields, {header, has_query?, placeholder_dump, counter}}
+        {fields, {header, placeholder_dump, counter}}
       end)
 
     header = Map.keys(header)
 
     placeholder_size = map_size(placeholder_dump)
 
-    counter = fn ->
-      Enum.reduce(
-        rows,
-        placeholder_size,
-        &(Enum.count(&1, fn {_, val} -> not match?({:placeholder, _}, val) end) + &2)
-      )
-    end
-
-    placeholder_vals_list =
+    {placeholder_cast_params, placeholder_dump_params} =
       placeholder_dump
-      |> Enum.map(fn {_, {idx, _, value}} -> {idx, value} end)
+      |> Enum.map(fn {_, {idx, _, cast_value, dump_value}} -> {idx, cast_value, dump_value} end)
       |> Enum.sort
-      |> Enum.map(&elem(&1, 1))
+      |> Enum.map(&{elem(&1, 1), elem(&1, 2)})
+      |> Enum.unzip
 
-    if has_query? do
-      rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_vals_list, counter}
-    else
-      {rows, header, placeholder_vals_list, counter}
-    end
+    {rows, row_cast_params, counter} = plan_query_in_rows(rows, header, adapter, placeholder_size)
+    {rows, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
   end
 
   defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
 
-    {query, params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
+    {query, cast_params, dump_params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
@@ -144,9 +134,9 @@ defmodule Ecto.Repo.Schema do
         """
     end
 
-    counter = fn -> length(params) end
+    counter = fn -> length(dump_params) end
 
-    {{query, params}, header, [], counter}
+    {{query, dump_params}, header, cast_params, [], [], counter}
   end
 
   defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
@@ -176,28 +166,28 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp extract_value(source, value, type, placeholder_map, acc, dumper) do
-    {header, has_query?, placeholder_dump, counter} = acc
+    {header, placeholder_dump, counter} = acc
 
     case value do
       %Ecto.Query{} = query ->
-        {{source, query}, {Map.put(header, source, true), true, placeholder_dump, counter}}
+        {{source, query}, {Map.put(header, source, true), placeholder_dump, counter}}
 
       {:placeholder, key} ->
         {value, placeholder_dump, counter} =
           extract_placeholder(key, type, placeholder_map, placeholder_dump, counter, dumper)
 
         {{source, value},
-          {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+          {Map.put(header, source, true), placeholder_dump, counter}}
 
-      value ->
-        {{source, dumper.(value)},
-         {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+      cast_value ->
+        {{source, cast_value, dumper.(value)},
+         {Map.put(header, source, true), placeholder_dump, counter}}
     end
   end
 
   defp extract_placeholder(key, type, placeholder_map, placeholder_dump, counter, dumper) do
     case placeholder_dump do
-      %{^key => {idx, ^type, _}} ->
+      %{^key => {idx, ^type, _, _}} ->
         {{:placeholder, idx}, placeholder_dump, counter}
 
       %{^key => {_, type, _}} ->
@@ -206,42 +196,47 @@ defmodule Ecto.Repo.Schema do
                 "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
 
       %{} ->
-        dumped_value =
+        {cast_value, dump_value} =
           case placeholder_map do
-            %{^key => val} ->
-              dumper.(val)
+            %{^key => cast_value} ->
+              {cast_value, dumper.(cast_value)}
 
             _ ->
               raise KeyError,
                     "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
           end
 
-        placeholder_dump = Map.put(placeholder_dump, key, {counter, type, dumped_value})
+        placeholder_dump = Map.put(placeholder_dump, key, {counter, type, cast_value, dump_value})
         {{:placeholder, counter}, placeholder_dump, counter + 1}
     end
   end
 
-  defp plan_query_in_rows(rows, header, adapter) do
-    {rows, _counter} =
-      Enum.map_reduce(rows, 0, fn fields, counter ->
-        Enum.flat_map_reduce(header, counter, fn key, counter ->
+  defp plan_query_in_rows(rows, header, adapter, counter) do
+    {rows, {cast_params, counter}} =
+      Enum.map_reduce(rows, {[], counter}, fn fields, {cast_param_acc, counter} ->
+        Enum.flat_map_reduce(header, {cast_param_acc, counter}, fn key, {cast_param_acc, counter} ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
               {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
+              {cast_params, dump_params} = Enum.unzip(params)
               {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
+              num_params = length(dump_params)
 
-              {[{key, {query, params}}], counter + length(params)}
+              {[{key, {query, dump_params}}], {Enum.reverse(cast_params, cast_param_acc), counter + num_params}}
 
-            {^key, value} ->
-              {[{key, value}], counter + 1}
+            {^key, {:placeholder, _} = value} ->
+              {[{key, value}], {cast_param_acc, counter}}
+
+            {^key, cast_value, dump_value} ->
+              {[{key, dump_value}], {[cast_value | cast_param_acc], counter + 1}}
 
             false ->
-              {[], counter}
+              {[], {cast_param_acc, counter}}
           end
         end)
       end)
 
-    rows
+    {rows, Enum.reverse(cast_params), counter}
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do
@@ -250,12 +245,13 @@ defmodule Ecto.Repo.Schema do
 
   defp autogenerate_id({key, source, type}, fields, header, adapter) do
     case :lists.keyfind(key, 1, fields) do
-      {^key, _} ->
+      {^key, _, _} ->
         {fields, header}
 
       false ->
-        if value = Ecto.Type.adapter_autogenerate(adapter, type) do
-          {[{source, value} | fields], Map.put(header, source, true)}
+        if dump_value = Ecto.Type.adapter_autogenerate(adapter, type) do
+          {:ok, cast_value} = Ecto.Type.adapter_load(adapter, type, dump_value)
+          {[{source, cast_value, dump_value} | fields], Map.put(header, source, true)}
         else
           {fields, header}
         end
@@ -353,20 +349,26 @@ defmodule Ecto.Repo.Schema do
         schema_meta = metadata(struct, autogen_id, opts)
         changes = Map.merge(changeset.changes, embeds)
 
-        {changes, extra, return_types, return_sources} =
+        {changes, cast_extra, dump_extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
 
-        {changes, autogen} =
-          dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
+        changes = Map.take(changes, fields)
+        autogen = autogenerate_changes(schema, :insert, changes)
 
-        on_conflict =
-          on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(changes) end, adapter)
+        dump_changes =
+          dump_changes!(:insert, changes, autogen, schema, dump_extra, dumper, adapter)
 
-        args = [adapter_meta, schema_meta, changes, on_conflict, return_sources, opts]
+        {on_conflict, conflict_cast_params} =
+          on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(dump_changes) end, adapter)
+
+        change_values = Enum.map(changes, &elem(&1, 1))
+        autogen_values = Enum.map(autogen, &elem(&1, 1))
+        opts = Keyword.put(opts, :cast_params, change_values ++ autogen_values ++ cast_extra ++ conflict_cast_params)
+        args = [adapter_meta, schema_meta, dump_changes, on_conflict, return_sources, opts]
 
         case apply(user_changeset, adapter, :insert, args) do
           {:ok, values} ->
-            values = extra ++ values
+            values = dump_extra ++ values
 
             changeset
             |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
@@ -435,16 +437,22 @@ defmodule Ecto.Repo.Schema do
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
-          original = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
-          {changes, autogen} = dump_changes!(:update, original, schema, [], dumper, adapter)
+          changes = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
+          autogen = autogenerate_changes(schema, :update, changes)
+          dump_changes = dump_changes!(:update, changes, autogen, schema, [], dumper, adapter)
 
           schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
-          filters = dump_fields!(:update, schema, filters, dumper, adapter)
-          args = [adapter_meta, schema_meta, changes, filters, return_sources, opts]
+          dump_filters = dump_fields!(:update, schema, filters, dumper, adapter)
+
+          change_values = Enum.map(changes, &elem(&1, 1))
+          autogen_values = Enum.map(autogen, &elem(&1, 1))
+          filter_values = Enum.map(filters, &elem(&1, 1))
+          opts = Keyword.put(opts, :cast_params, change_values ++ autogen_values ++ filter_values)
+          args = [adapter_meta, schema_meta, dump_changes, dump_filters, return_sources, opts]
 
           # If there are no changes or all the changes were autogenerated but not forced, we skip
           {action, autogen} =
-            if original != %{} or (autogen != [] and force?),
+            if changes != %{} or (autogen != [] and force?),
                do: {:update, autogen},
                else: {:noop, []}
 
@@ -529,7 +537,7 @@ defmodule Ecto.Repo.Schema do
 
       if changeset.valid? do
         filters = add_pk_filter!(changeset.filters, struct)
-        filters = dump_fields!(:delete, schema, filters, dumper, adapter)
+        dump_filters = dump_fields!(:delete, schema, filters, dumper, adapter)
 
         # Delete related associations
         for %{__struct__: mod, on_delete: on_delete} = reflection <- assocs do
@@ -537,7 +545,9 @@ defmodule Ecto.Repo.Schema do
         end
 
         schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
-        args = [adapter_meta, schema_meta, filters, opts]
+        filter_values = Enum.map(filters, &elem(&1, 1))
+        opts = Keyword.put(opts, :cast_params, filter_values)
+        args = [adapter_meta, schema_meta, dump_filters, opts]
 
         case apply(changeset, adapter, :delete, args) do
           {:ok, values} ->
@@ -618,7 +628,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
   defp put_repo_and_action(%{action: given}, action, repo, _tuplet) when given != nil and given != action,
-    do: raise ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2"
+    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
   defp put_repo_and_action(changeset, action, repo, {_adapter_meta, opts}),
     do: %{changeset | action: action, repo: repo, repo_opts: opts}
 
@@ -673,23 +683,23 @@ defmodule Ecto.Repo.Schema do
 
     case on_conflict do
       :raise when conflict_target == [] ->
-        {:raise, [], []}
+        {{:raise, [], []}, []}
 
       :raise ->
         raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise"
 
       :nothing ->
-        {:nothing, [], conflict_target}
+        {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
         fields = Enum.map(keys, &field_source!(schema, &1))
-        {fields, [], conflict_target}
+        {{fields, [], conflict_target}, []}
 
       :replace_all ->
-        {replace_all_fields!(:replace_all, schema, []), [], conflict_target}
+        {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
-        {replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}
+        {{replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}, []}
 
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
@@ -725,6 +735,8 @@ defmodule Ecto.Repo.Schema do
     {query, params, _} =
       Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter)
 
+    {cast_params, dump_params} = Enum.unzip(params)
+
     unless query.from.source == from do
       raise ArgumentError, "cannot run on_conflict: query because the query " <>
                            "has a different {source, schema} pair than the " <>
@@ -733,7 +745,7 @@ defmodule Ecto.Repo.Schema do
     end
 
     {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter_fun.())
-    {query, params, conflict_target}
+    {{query, dump_params, conflict_target}, cast_params}
   end
 
   defp apply(_user_changeset, _adapter, :noop, _args) do
@@ -920,27 +932,25 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp autogenerate_id(nil, changes, return_types, return_sources, _adapter) do
-    {changes, [], return_types, return_sources}
+    {changes, [], [], return_types, return_sources}
   end
 
   defp autogenerate_id({key, source, type}, changes, return_types, return_sources, adapter) do
     cond do
       Map.has_key?(changes, key) -> # Set by user
-        {changes, [], return_types, return_sources}
-      value = Ecto.Type.adapter_autogenerate(adapter, type) -> # Autogenerated now
-        {changes, [{source, value}], [{key, type} | return_types], return_sources}
+        {changes, [], [], return_types, return_sources}
+      dump_value = Ecto.Type.adapter_autogenerate(adapter, type) -> # Autogenerated now
+        {:ok, cast_value} = Ecto.Type.adapter_load(adapter, type, dump_value)
+        {changes, [cast_value], [{source, dump_value}] , [{key, type} | return_types], return_sources}
       true -> # Autogenerated in storage
-        {changes, [], [{key, type} | return_types], [source | List.delete(return_sources, source)]}
+        {changes, [], [], [{key, type} | return_types], [source | List.delete(return_sources, source)]}
     end
   end
 
-  defp dump_changes!(action, changes, schema, extra, dumper, adapter) do
-    autogen = autogenerate_changes(schema, action, changes)
-    dumped =
-      dump_fields!(action, schema, changes, dumper, adapter) ++
-      dump_fields!(action, schema, autogen, dumper, adapter) ++
-      extra
-    {dumped, autogen}
+  defp dump_changes!(action, changes, autogen, schema, extra, dumper, adapter) do
+    dump_fields!(action, schema, changes, dumper, adapter) ++
+    dump_fields!(action, schema, autogen, dumper, adapter) ++
+    extra
   end
 
   defp autogenerate_changes(schema, action, changes) do

@@ -395,12 +395,13 @@ if Code.ensure_loaded?(Tds) do
       intersperse_map(fields, ", ", fn
         {:&, _, [idx]} ->
           case elem(sources, idx) do
+            {nil, source, nil} ->
+              error!(query, "Tds adapter does not support selecting all fields from fragment #{source}. " <>
+                            "Please specify exactly which fields you want to select")
+
             {source, _, nil} ->
-              error!(
-                query,
-                "Tds adapter does not support selecting all fields from #{source} without a schema. " <>
-                  "Please specify a schema or specify exactly which fields you want in projection"
-              )
+              error!(query, "Tds adapter does not support selecting all fields from #{source} without a schema. " <>
+                            "Please specify a schema or specify exactly which fields you want in projection")
 
             {_, source, _} ->
               source
@@ -764,6 +765,10 @@ if Code.ensure_loaded?(Tds) do
       quote_name(literal)
     end
 
+    defp expr({:selected_as, _, [name]}, _sources, _query) do
+      [quote_name(name)]
+    end
+
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       [
         "DATEADD(",
@@ -1063,6 +1068,10 @@ if Code.ensure_loaded?(Tds) do
 
       if index.using do
         error!(nil, "MSSQL does not support `using` in indexes")
+      end
+
+      if index.nulls_distinct == true do
+        error!(nil, "MSSQL does not support nulls_distinct set to true in indexes")
       end
 
       with_options =

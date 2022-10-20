@@ -1,5 +1,47 @@
 # Changelog for v3.x
 
+## v3.9.1 (2022-10-06)
+
+### Enhancements
+
+  * [Ecto.Query] Allow `selected_as` at the root of `dynamic/2`
+  * [Ecto.Query] Allow `selected_as` to be used with `type/2`
+  * [Ecto.Query] Allow `selected_as` to be used with `select_merge`
+
+### Bug fixes
+
+  * [Ecto.Changeset] Reenable support for embedded schemas in `unsafe_validate_unique/4`
+  * [Ecto.Query] Ensure `join_where` conditions preload correctly in `many_to_many` or with queries with one or many joins
+
+## v3.9.0 (2022-09-27)
+
+### Enhancements
+
+  * [Ecto.Changeset] Add `:force_changes` option to `cast/4`
+  * [Ecto.Enum] Allow enum fields to be embed either as their values or their dumped versions
+  * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
+  * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
+  * [Ecto.Query] Support select aliases through `selected_as/1` and `selected_as/2`
+  * [Ecto.Query] Allow `parent_as/1` in `type/2`
+  * [Ecto.Query] Add `with_named_binding/3`
+  * [Ecto.Query] Allow fragment sources in keyword queries
+  * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
+  * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
+  * [Ecto.Schema] Support preloading associations in embedded schemas
+
+### Bug fix
+
+  * [Ecto.Changeset] Raise when schemaless changeset or embedded schema is used in `unsafe_validate_unique/4`
+  * [Ecto.Query] Respect virtual field type in subqueries
+  * [Ecto.Query] Don't select struct fields overridden with `nil`
+  * [Ecto.Query] Fix `select_merge` not tracking `load_in_query: false` field
+  * [Ecto.Query] Fix field source when used in `json_extract_path`
+  * [Ecto.Query] Properly build CTEs at compile time
+  * [Ecto.Query] Properly order subqueries in `dynamic`
+  * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
+  * [Ecto.Repo] Raise if combination query is used in a `many` preload
+  * [Ecto.Schema] Ignore associations that aren't loaded on insert
+
 ## v3.8.4 (2022-06-04)
 
 ### Enhancements

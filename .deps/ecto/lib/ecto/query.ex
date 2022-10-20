@@ -385,7 +385,7 @@ defmodule Ecto.Query do
 
   defmodule FromExpr do
     @moduledoc false
-    defstruct [:source, :as, :prefix, hints: []]
+    defstruct [:source, :file, :line, :as, :prefix, params: [], hints: []]
   end
 
   defmodule DynamicExpr do
@@ -405,7 +405,7 @@ defmodule Ecto.Query do
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, :fields, params: [], take: %{}]
+    defstruct [:expr, :file, :line, :fields, params: [], take: %{}, subqueries: [], aliases: %{}]
   end
 
   defmodule JoinExpr do
@@ -423,7 +423,7 @@ defmodule Ecto.Query do
     # * value is the tagged value
     # * tag is the directly tagged value, like Ecto.UUID
     # * type is the underlying tag type, like :string
-    defstruct [:value, :tag, :type]
+    defstruct [:tag, :type, :value]
   end
 
   @type t :: %__MODULE__{}
@@ -490,7 +490,7 @@ defmodule Ecto.Query do
 
       order_by = [
         asc: :some_field,
-        desc: dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+        desc: dynamic([p], fragment("?->>?", p.another_field, "json_key"))
       ]
 
       from query, order_by: ^order_by
@@ -513,7 +513,7 @@ defmodule Ecto.Query do
 
       group_by = [
         :some_field,
-        dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+        dynamic([p], fragment("?->>?", p.another_field, "json_key"))
       ]
 
       from query, group_by: ^group_by
@@ -528,6 +528,46 @@ defmodule Ecto.Query do
   But this will:
 
       from query, group_by: ^[:some_field, dynamic(...)]
+
+  ## `select` and `select_merge`
+
+  Dynamics can be inside maps interpolated at the root of a
+  `select` or `select_merge`. For example, you can write:
+
+      fields = %{
+        period: dynamic([p], p.month),
+        metric: dynamic([p], p.distance)
+      }
+
+      from query, select: ^fields
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of a root. For example, this won't work:
+
+      from query, select: %{field: ^dynamic(...)}
+
+  But this will:
+
+      from query, select: ^%{field: dynamic(...)}
+
+  Maps with dynamics can also be merged into existing `select` structures,
+  enabling a variety of possibilities for partially dynamic selects:
+
+      metric = dynamic([p], p.distance)
+
+      from query, select: [:period, :metric], select_merge: ^%{metric: metric}
+
+  Aliasing fields with `selected_as/2` and referencing them with `selected_as/1`
+  is also allowed:
+
+      fields = %{
+        period: dynamic([p], selected_as(p.month, :month)),
+        metric: dynamic([p], p.distance)
+      }
+
+      order = dynamic(selected_as(:month))
+
+      from query, select: ^fields, order_by: ^order
 
   ## Updates
 
@@ -751,8 +791,8 @@ defmodule Ecto.Query do
   It can either be a keyword query or a query expression.
 
   If it is a keyword query the first argument must be
-  either an `in` expression, or a value that implements
-  the `Ecto.Queryable` protocol. If the query needs a
+  either an `in` expression, a value that implements
+  the `Ecto.Queryable` protocol, or an `Ecto.Query.API.fragment/1`. If the query needs a
   reference to the data source in any other part of the
   expression, then an `in` must be used to create a reference
   variable. The second argument should be a keyword query
@@ -763,13 +803,30 @@ defmodule Ecto.Query do
   a value that implements the `Ecto.Queryable` protocol
   and the second argument the expression.
 
-  ## Keywords example
+  ## Keywords examples
 
+      # `in` expression
       from(c in City, select: c)
 
-  ## Expressions example
+      # Ecto.Queryable
+      from(City, limit: 1)
 
+      # Fragment
+      from(f in fragment("generate_series(?, ?) as x", ^0, ^100000), select f.x)
+
+  ## Expressions examples
+
+      # Schema
       City |> select([c], c)
+
+      # Source
+      "cities" |> select([c], c)
+
+      # Source with schema
+      {"cities", Source} |> select([c], c)
+
+      # Ecto.Query
+      from(c in Cities) |> select([c], c)
 
   ## Examples
 
@@ -1239,6 +1296,11 @@ defmodule Ecto.Query do
 
   If you want a map with only the selected fields to be returned.
 
+  To select a struct but omit only given fields, you can
+  override them with `nil` or another default value:
+
+      from(city in City, select: %{city | geojson: nil, text: "<redacted>"})
+
   For more information, read the docs for `Ecto.Query.API.struct/2`
   and `Ecto.Query.API.map/2`.
 
@@ -1250,7 +1312,17 @@ defmodule Ecto.Query do
       City |> select([:name])
       City |> select([c], struct(c, [:name]))
       City |> select([c], map(c, [:name]))
+      City |> select([c], %{c | geojson: nil, text: "<redacted>"})
 
+  ## Dynamic parts
+
+  Dynamics can be part of a `select` as values in a map that must be interpolated
+  at the root level:
+
+      period = if monthly?, do: dynamic([p], p.month), else: dynamic([p], p.date)
+      metric = if distance?, do: dynamic([p], p.distance), else: dynamic([p], p.time)
+
+      from(c in City, select: ^%{period: period, metric: metric})
   """
   defmacro select(query, binding \\ [], expr) do
     Builder.Select.build(:select, query, binding, expr, __CALLER__)
@@ -1310,6 +1382,10 @@ defmodule Ecto.Query do
 
   `select_merge` cannot be used to set fields in associations, as
   associations are always loaded later, overriding any previous value.
+
+  Dynamics can be part of a `select_merge` as values in a map that must be
+  interpolated at the root level. The rules for merging detailed above apply.
+  This allows merging dynamic values into previsouly selected maps and structs.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)
@@ -1487,22 +1563,22 @@ defmodule Ecto.Query do
 
   It's also possible to order by an aliased or calculated column:
 
-    from(c in City,
-      select: %{
-        name: c.name,
-        total_population:
-          fragment(
-            "COALESCE(?, ?) + ? AS total_population",
-            c.animal_population,
-            0,
-            c.human_population
-          )
-      },
-      order_by: [
-        # based on `AS total_population` in the previous fragment
-        {:desc, fragment("total_population")}
-      ]
-    )
+      from(c in City,
+        select: %{
+          name: c.name,
+          total_population:
+            fragment(
+              "COALESCE(?, ?) + ? AS total_population",
+              c.animal_population,
+              0,
+              c.human_population
+            )
+        },
+        order_by: [
+          # based on `AS total_population` in the previous fragment
+          {:desc, fragment("total_population")}
+        ]
+      )
 
   ## Expressions examples
 
@@ -1526,17 +1602,34 @@ defmodule Ecto.Query do
   consider using `union_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union.
+  current `query` apply to the result of the union. `order_by` must
+  be specified in one of the following ways, since the union of two
+  or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Wrap the union in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, union: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      union_query = from c in Customer, select: c.city, union: ^supplier_query
+      from s in subquery(union_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> union(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      union(customer_query, ^supplier_query)
 
   """
   defmacro union(query, other_query) do
@@ -1550,17 +1643,34 @@ defmodule Ecto.Query do
   must be exactly the same, with the same types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union.
+  current `query` apply to the result of the union. `order_by` must
+  be specified in one of the following ways, since the union of two
+  or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Wrap the union in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, union_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      union_all_query = from c in Customer, select: c.city, union_all: ^supplier_query
+      from s in subquery(union_all_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> union_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      union_all(customer_query, ^supplier_query)
   """
   defmacro union_all(query, other_query) do
     Builder.Combination.build(:union_all, query, other_query, __CALLER__)
@@ -1579,17 +1689,34 @@ defmodule Ecto.Query do
   removing duplicate rows consider using `except_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the set difference
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
+    - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, except: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      except_query = from c in Customer, select: c.city, except: ^supplier_query
+      from s in subquery(except_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> except(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      except(customer_query, ^supplier_query)
   """
   defmacro except(query, other_query) do
     Builder.Combination.build(:except, query, other_query, __CALLER__)
@@ -1603,17 +1730,34 @@ defmodule Ecto.Query do
   types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the set difference
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
+    - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, except_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      except_all_query = from c in Customer, select: c.city, except_all: ^supplier_query
+      from s in subquery(except_all_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> except_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      except_all(customer_query, ^supplier_query)
   """
   defmacro except_all(query, other_query) do
     Builder.Combination.build(:except_all, query, other_query, __CALLER__)
@@ -1632,17 +1776,34 @@ defmodule Ecto.Query do
   removing duplicate rows consider using `intersect_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the intersection
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
+    - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, intersect: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      intersect_query = from c in Customer, select: c.city, intersect: ^supplier_query
+      from s in subquery(intersect_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> intersect(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      intersect(customer_query, ^supplier_query)
   """
   defmacro intersect(query, other_query) do
     Builder.Combination.build(:intersect, query, other_query, __CALLER__)
@@ -1656,17 +1817,34 @@ defmodule Ecto.Query do
   types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the intersection
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
+    - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, intersect_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      intersect_all_query = from c in Customer, select: c.city, intersect_all: ^supplier_query
+      from s in subquery(intersect_all_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> intersect_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      intersect_all(customer_query, ^supplier_query)
   """
   defmacro intersect_all(query, other_query) do
     Builder.Combination.build(:intersect_all, query, other_query, __CALLER__)
@@ -2111,6 +2289,65 @@ defmodule Ecto.Query do
 
   def has_named_binding?(queryable, key) do
     has_named_binding?(Ecto.Queryable.to_query(queryable), key)
+  end
+
+  @doc """
+  Applies a callback function to a query if it doesn't contain the given named binding. 
+  Otherwise, returns the original query.
+
+  The callback function must accept a queryable and return an `Ecto.Query` struct 
+  that contains the provided named binding, otherwise an error is raised. It can also 
+  accept second argument which is the atom representing the name of a binding.
+  
+  For example, one might use this function as a convenience to conditionally add a new 
+  named join to a query:
+
+      if has_named_binding?(query, :comments) do
+        query
+      else
+        join(query, :left, c in assoc(p, :comments), as: :comments)
+      end
+
+  With this function it can be simplified to:
+
+      with_named_binding(query, :comments, fn  query, binding ->
+        join(query, :left, a in assoc(p, ^binding), as: ^binding)
+      end) 
+
+  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`. 
+  """
+  def with_named_binding(%Ecto.Query{} = query, key, fun) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      query
+      |> apply_binding_callback(fun, key)
+      |> raise_on_invalid_callback_return(key)
+    end
+  end
+
+  def with_named_binding(queryable, key, fun) do
+    queryable
+    |> Ecto.Queryable.to_query()
+    |> with_named_binding(key, fun)
+  end
+  
+  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: query |> fun.() 
+  defp apply_binding_callback(query, fun, key) when is_function(fun, 2), do: query |> fun.(key)
+  defp apply_binding_callback(_query, fun, _key) do
+    raise ArgumentError, "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
+  end
+  
+  defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      raise RuntimeError, "callback function for with_named_binding/3 should create a named binding for key #{inspect(key)}"
+    end
+  end
+
+  defp raise_on_invalid_callback_return(other, _key) do
+    raise RuntimeError, "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
   end
 
   @doc """

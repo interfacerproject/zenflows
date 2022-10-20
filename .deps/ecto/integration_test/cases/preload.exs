@@ -10,6 +10,7 @@ defmodule Ecto.Integration.PreloadTest do
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
   alias Ecto.Integration.Custom
+  alias Ecto.Integration.Order
 
   test "preload with parameter from select_merge" do
     p1 = TestRepo.insert!(%Post{title: "p1"})
@@ -706,6 +707,65 @@ defmodule Ecto.Integration.PreloadTest do
     # Now we preload it
     item = TestRepo.preload(item, :user)
     assert %User{id: ^uid1} = item.user
+  end
+
+  describe "preload associations from nested embeds" do
+    setup do
+      %User{id: uid1} = TestRepo.insert!(%User{name: "1"})
+      %User{id: uid2} = TestRepo.insert!(%User{name: "2"})
+      %User{id: uid3} = TestRepo.insert!(%User{name: "3"})
+      item1 = %Item{id: 1, user_id: uid1}
+      item2 = %Item{id: 2, user_id: uid2}
+      item3 = %Item{id: 3, user_id: uid3}
+      order1 = %Order{items: [item1, item3, item2], item: item1}
+      order2 = %Order{items: [], item: nil}
+      order3 = %Order{items: nil, item: nil}
+      order4 = %Order{items: [item1, item2], item: item2}
+
+      [orders: [order1, order2, order3, order4]]
+    end
+
+    test "cannot preload embed without its associations", context do
+      assert_raise ArgumentError, ~r/cannot preload embedded field/, fn ->
+        TestRepo.preload(context.orders, :item)
+      end
+    end
+
+    test "embeds_one", context do
+      [nil | preloaded_orders] = [nil | context.orders] |> TestRepo.preload(item: :user)
+
+      expected_item_user =
+        Enum.map(context.orders, fn
+          %{item: nil} -> {nil, nil}
+          %{item: item} -> {item.id, item.user_id}
+        end)
+
+      actual_item_user =
+        Enum.map(preloaded_orders, fn
+          %{item: nil} -> {nil, nil}
+          %{item: item} -> {item.id, item.user.id}
+        end)
+
+      assert expected_item_user == actual_item_user
+    end
+
+    test "embeds_many", context do
+      [nil | preloaded_orders] = [nil | context.orders] |> TestRepo.preload(items: :user)
+
+      expected_items_user =
+        Enum.map(context.orders, fn
+          %{items: nil} -> {nil, nil}
+          %{items: items} -> Enum.map(items, & {&1.id, &1.user_id})
+        end)
+
+      actual_items_user =
+        Enum.map(preloaded_orders, fn
+          %{items: nil} -> {nil, nil}
+          %{items: items} -> Enum.map(items, & {&1.id, &1.user.id})
+        end)
+
+      assert expected_items_user == actual_items_user
+    end
   end
 
   defp sort_by_id(values) do

@@ -55,7 +55,7 @@ end
 defp deps() do
 	[
 		# db
-		{:ecto_sql, "~> 3.7"},
+		{:ecto_sql, "~> 3.9"},
 		{:postgrex, ">= 0.0.0"},
 
 		# crypto

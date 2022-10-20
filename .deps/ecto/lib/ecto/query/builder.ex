@@ -41,6 +41,8 @@ defmodule Ecto.Query.Builder do
     ntile: {1, :integer}
   ]
 
+  @select_alias_dummy_value []
+
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
@@ -52,6 +54,17 @@ defmodule Ecto.Query.Builder do
   """
   @type quoted_type :: Ecto.Type.primitive | {non_neg_integer, atom | Macro.t}
 
+  @typedoc """
+  The accumulator during escape.
+
+  If the subqueries field is available, subquery escaping must take place.
+  """
+  @type acc :: %{
+          optional(:subqueries) => list(Macro.t()),
+          optional(:take) => %{non_neg_integer => Macro.t()},
+          optional(any) => any
+        }
+
   @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
@@ -61,8 +74,8 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, term},
-               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
+  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, acc},
+               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, acc}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
@@ -121,6 +134,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(access_expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{{:., _, [{:parent_as, _, [_parent]}, _field]}, _, []} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
     case Macro.expand_once(expr, get_env(env)) do
       ^expr ->
@@ -134,6 +151,7 @@ defmodule Ecto.Query.Builder do
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
+          * parent_as/1 (parent_as(:parent).field)
 
         Got: #{Macro.to_string(expr)}
         """
@@ -168,11 +186,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # subqueries
-  def escape({:subquery, _, [expr]}, _, {params, subqueries}, _vars, _env) do
+  def escape({:subquery, _, [expr]}, _, {params, %{subqueries: subqueries} = acc}, _vars, _env) do
     subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
     index = length(subqueries)
-    expr = {:subquery, index} # used both in ast and in parameters, as a placeholder.
-    {expr, {[expr | params], [subquery | subqueries]}}
+    # used both in ast and in parameters, as a placeholder.
+    expr = {:subquery, index}
+    acc = %{acc | subqueries: [subquery | subqueries]}
+    {expr, {[expr | params], acc}}
   end
 
   # interval
@@ -384,6 +404,29 @@ defmodule Ecto.Query.Builder do
     {aggregate, params_acc} = escape_window_function(aggregate, type, params_acc, vars, env)
     {window, params_acc} = escape_window_description(over_args, params_acc, vars, env)
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
+  end
+
+  def escape({:selected_as, _, [_expr, _name]}, _type, _params_acc, _vars, _env) do
+    error! """
+    selected_as/2 can only be used at the root of a select statement. \
+    If you are trying to use it inside of an expression, consider putting the \
+    expression inside of `selected_as/2` instead. For instance, instead of:
+
+        from p in Post, select: coalesce(selected_as(p.visits, :v), 0)
+
+    use:
+
+        from p in Post, select: selected_as(coalesce(p.visits, 0), :v)
+    """
+  end
+
+  def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:selected_as, [], [name]]}
+    {expr, params_acc}
+  end
+
+  def escape({:selected_as, _, [name]}, _type, _params_acc, _vars, _env) do
+    error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   def escape({quantifier, meta, [subquery]}, type, params_acc, vars, env) when quantifier in [:all, :any, :exists] do
@@ -716,7 +759,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
@@ -739,6 +782,12 @@ defmodule Ecto.Query.Builder do
   """
   @spec escape_params(list()) :: list()
   def escape_params(list), do: Enum.reverse(list)
+
+  @doc """
+  Escape the select alias map
+  """
+  @spec escape_select_aliases(map()) :: Macro.t
+  def escape_select_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
 
   @doc """
   Escapes a variable according to the given binds.
@@ -1160,6 +1209,33 @@ defmodule Ecto.Query.Builder do
       {:^, meta, [counter]} when is_integer(counter) -> {:^, meta, [len + counter]}
       other -> other
     end)
+  end
+
+  @doc """
+  Bump subqueries by the count of pre-existing subqueries.
+  """
+  def bump_subqueries(expr, []), do: expr
+
+  def bump_subqueries(expr, subqueries) do
+    len = length(subqueries)
+
+    Macro.prewalk(expr, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
+  end
+
+  @doc """
+  Called by the select escaper at compile time and dynamic builder at runtime to track select aliases
+  """
+  def add_select_alias(aliases, name) do
+    case aliases do
+      %{^name => _} ->
+        error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
+
+      aliases ->
+        Map.put(aliases, name, @select_alias_dummy_value)
+    end
   end
 
   @doc """

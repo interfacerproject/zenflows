@@ -49,14 +49,16 @@ mix dialyzer
 
 ### Command line options
 
-  * `--no-compile`         - do not compile even if needed.
-  * `--no-check`           - do not perform (quick) check to see if PLT needs to be updated.
-  * `--ignore-exit-status` - display warnings but do not halt the VM or return an exit status code
-  *  `--format short`      - format the warnings in a compact format.
-  *  `--format raw`        - format the warnings in format returned before Dialyzer formatting
-  *  `--format dialyxir`   - format the warnings in a pretty printed format
-  *  `--format dialyzer`   - format the warnings in the original Dialyzer format
-  *  `--quiet`             - suppress all informational messages
+  * `--no-compile`          - do not compile even if needed.
+  * `--no-check`            - do not perform (quick) check to see if PLT needs to be updated.
+  * `--ignore-exit-status`  - display warnings but do not halt the VM or return an exit status code.
+  *  `--format short`       - format the warnings in a compact format, suitable for ignore file using Elixir term format.
+  *  `--format raw`         - format the warnings in format returned before Dialyzer formatting.
+  *  `--format dialyxir`    - format the warnings in a pretty printed format.
+  *  `--format dialyzer`    - format the warnings in the original Dialyzer format, suitable for ignore file using simple string matches.
+  *  `--format github`      - format the warnings in the Github Actions message format.
+  *  `--format ignore_file` - format the warnings to be suitable for adding to Elixir Format ignore file.
+  *  `--quiet`              - suppress all informational messages.
 
 Warning flags passed to this task are passed on to `:dialyzer` - e.g.
 
@@ -80,7 +82,7 @@ To use Dialyzer in CI, you must be aware of several things:
 2) The PLT should be cached using the CI caching system
 3) The PLT will need to be rebuilt whenever adding a new Erlang or Elixir version to build matrix
 
-Using Travis, this would look like:
+### Travis
 
 `.travis.yml`
 ```markdown
@@ -98,6 +100,43 @@ script:
 cache:
   directories:
     - priv/plts
+```
+
+### Github Actions
+
+`dialyzer.yml`
+```yaml
+...
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.12.3" # Define the elixir version
+          otp-version: "24.1" # Define the OTP version
+
+      # Don't cache PLTs based on mix.lock hash, as Dialyzer can incrementally update even old ones
+      # Cache key based on Elixir & Erlang version (also useful when running in matrix)
+      - name: Restore PLT cache
+        uses: actions/cache@v2
+        id: plt_cache
+        with:
+          key: |
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+          restore-keys: |
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+          path: |
+            priv/plts
+
+      # Create PLTs if no cache was found
+      - name: Create PLTs
+        if: steps.plt_cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt
+
+      - name: Run dialyzer
+        run: mix dialyzer --format github
+
 ```
 
 `mix.exs`
@@ -254,6 +293,8 @@ end
 
 This file comes in two formats: `--format dialyzer` string matches (compatible with `<= 0.5.1` ignore files), and the [term format](#elixir-term-format).
 
+Dialyzer will look for an ignore file using the term format with the name `.dialyzer_ignore.exs` by default if you don't specify something otherwise.
+
 #### Simple String Matches
 
 Any line of dialyzer format output (partially) matching a line in `"dialyzer.ignore-warnings"` is filtered.
@@ -264,7 +305,7 @@ For example, in a project where `mix dialyzer --format dialyzer` outputs:
 
 ```
   Proceeding with analysis...
-config.ex:64: The call ets:insert('Elixir.MyApp.Config',{'Elixir.MyApp.Config',_}) might have an unintended effect due to a possible race condition caused by its combination withthe ets:lookup('Elixir.MyApp.Config','Elixir.MyApp.Config') call in config.ex on line 26
+config.ex:64: The call ets:insert('Elixir.MyApp.Config',{'Elixir.MyApp.Config',_}) might have an unintended effect due to a possible race condition caused by its combination with the ets:lookup('Elixir.MyApp.Config','Elixir.MyApp.Config') call in config.ex on line 26
 config.ex:79: Guard test is_binary(_@5::#{'__exception__':='true', '__struct__':=_, _=>_}) can never succeed
 config.ex:79: Guard test is_atom(_@6::#{'__exception__':='true', '__struct__':=_, _=>_}) can never succeed
  done in 0m1.32s
@@ -282,15 +323,15 @@ And then run `mix dialyzer` would output:
 
 ```
   Proceeding with analysis...
-config.ex:64: The call ets:insert('Elixir.MyApp.Config',{'Elixir.MyApp.Config',_}) might have an unintended effect due to a possible race condition caused by its combination withthe ets:lookup('Elixir.MyApp.Config','Elixir.MyApp.Config') call in config.ex on line 26
+config.ex:64: The call ets:insert('Elixir.MyApp.Config',{'Elixir.MyApp.Config',_}) might have an unintended effect due to a possible race condition caused by its combination with the ets:lookup('Elixir.MyApp.Config','Elixir.MyApp.Config') call in config.ex on line 26
  done in 0m1.32s
 done (warnings were emitted)
 ```
 
 #### Elixir Term Format
 
-Dialyxir also recognizes an Elixir format of the ignore file. If your ignore file is an `exs` file, Dialyxir will evaluate it and process its data structure. The file looks like the following, and can match either tuple patterns or an arbitrary Regex
-applied to the *short-description* (`mix dialyzer --format short`):
+Dialyxir also recognizes an Elixir format of the ignore file. If your ignore file is an `exs` file, Dialyxir will evaluate it and process its data structure. A line may be either a tuple or an arbitrary Regex
+applied to the *short-description* format of Dialyzer output (`mix dialyzer --format short`). The file looks like the following:
 
 ```elixir
 # .dialyzer_ignore.exs
@@ -311,6 +352,9 @@ applied to the *short-description* (`mix dialyzer --format short`):
   ~r/my_file\.ex.*my_function.*no local return/
 ]
 ```
+
+Entries for existing warnings can be generated with `mix dialyzer --format short`. Just remember to put the output in quotes and braces to match the format above.
+
 
 #### List unused Filters
 

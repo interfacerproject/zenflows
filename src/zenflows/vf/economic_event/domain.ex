@@ -89,7 +89,7 @@ end
 defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produce"] do
 	cond do
 		evt.resource_conforms_to_id != nil ->
-			cset =
+			res_params =
 				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
@@ -100,10 +100,9 @@ defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produ
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
 				|> Map.put(:classified_as, evt.resource_classified_as)
-				|> EconomicResource.chgset()
 
 			Multi.new()
-			|> Multi.insert(:eco_res, cset)
+			|> Multi.insert(:eco_res, EconomicResource.chgset(res_params))
 			|> Multi.update(:updated_evt, fn %{eco_res: res} ->
 				Changeset.change(evt, resource_inventoried_as_id: res.id)
 			end)
@@ -519,6 +518,9 @@ defp handle_multi("transferCustody", evt, res_params) do
 		fields = ~w[
 			id custodian_id conforms_to_id
 			onhand_quantity_has_numerical_value onhand_quantity_has_unit_id
+
+			name note tracking_identifier okhv repo version licensor license metadata
+			classified_as
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -584,7 +586,7 @@ defp handle_multi("transferCustody", evt, res_params) do
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
 		else
-			cset =
+			res_params =
 				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
@@ -594,10 +596,19 @@ defp handle_multi("transferCustody", evt, res_params) do
 				|> Map.put(:onhand_quantity_has_unit_id, evt.resource_quantity_has_unit_id)
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
-				|> EconomicResource.chgset()
+				|> Map.put(:classified_as, evt.resource_classified_as || res.classified_as)
+				|> Map.put_new(:name, res.name)
+				|> Map.put_new(:note, res.note)
+				|> Map.put_new(:tracking_identifier, res.tracking_identifier)
+				|> Map.put_new(:okhv, res.okhv)
+				|> Map.put_new(:repo, res.repo)
+				|> Map.put_new(:version, res.version)
+				|> Map.put_new(:licensor, res.licensor)
+				|> Map.put_new(:license, res.license)
+				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, cset)
+			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
 			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
 				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
 			end)
@@ -631,6 +642,9 @@ defp handle_multi("transferAllRights", evt, res_params) do
 		fields = ~w[
 			id primary_accountable_id conforms_to_id
 			accounting_quantity_has_numerical_value accounting_quantity_has_unit_id
+
+			name note tracking_identifier okhv repo version licensor license metadata
+			classified_as
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -696,7 +710,7 @@ defp handle_multi("transferAllRights", evt, res_params) do
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
 		else
-			cset =
+			res_params =
 				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
@@ -705,10 +719,19 @@ defp handle_multi("transferAllRights", evt, res_params) do
 				|> Map.put(:accounting_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:onhand_quantity_has_unit_id, evt.resource_quantity_has_unit_id)
 				|> Map.put(:onhand_quantity_has_numerical_value, 0)
-				|> EconomicResource.chgset()
+				|> Map.put(:classified_as, evt.resource_classified_as || res.classified_as)
+				|> Map.put_new(:name, res.name)
+				|> Map.put_new(:note, res.note)
+				|> Map.put_new(:tracking_identifier, res.tracking_identifier)
+				|> Map.put_new(:okhv, res.okhv)
+				|> Map.put_new(:repo, res.repo)
+				|> Map.put_new(:version, res.version)
+				|> Map.put_new(:licensor, res.licensor)
+				|> Map.put_new(:license, res.license)
+				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, cset)
+			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
 			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
 				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
 			end)
@@ -743,6 +766,9 @@ defp handle_multi("transfer", evt, res_params) do
 			id primary_accountable_id custodian_id conforms_to_id
 			accounting_quantity_has_numerical_value accounting_quantity_has_unit_id
 			onhand_quantity_has_numerical_value
+
+			name note tracking_identifier okhv repo version licensor license metadata
+			classified_as
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -819,7 +845,7 @@ defp handle_multi("transfer", evt, res_params) do
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
 		else
-			cset =
+			res_params =
 				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
@@ -829,10 +855,19 @@ defp handle_multi("transfer", evt, res_params) do
 				|> Map.put(:onhand_quantity_has_unit_id, evt.resource_quantity_has_unit_id)
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
-				|> EconomicResource.chgset()
+				|> Map.put(:classified_as, evt.resource_classified_as || res.classified_as)
+				|> Map.put_new(:name, res.name)
+				|> Map.put_new(:note, res.note)
+				|> Map.put_new(:tracking_identifier, res.tracking_identifier)
+				|> Map.put_new(:okhv, res.okhv)
+				|> Map.put_new(:repo, res.repo)
+				|> Map.put_new(:version, res.version)
+				|> Map.put_new(:licensor, res.licensor)
+				|> Map.put_new(:license, res.license)
+				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, cset)
+			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
 			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
 				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
 			end)
@@ -869,6 +904,9 @@ defp handle_multi("move", evt, res_params) do
 			id primary_accountable_id custodian_id conforms_to_id
 			accounting_quantity_has_numerical_value accounting_quantity_has_unit_id
 			onhand_quantity_has_numerical_value
+
+			name note tracking_identifier okhv repo version licensor license metadata
+			classified_as
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -951,7 +989,7 @@ defp handle_multi("move", evt, res_params) do
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
 		else
-			cset =
+			res_params =
 				res_params
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
@@ -961,10 +999,19 @@ defp handle_multi("move", evt, res_params) do
 				|> Map.put(:onhand_quantity_has_unit_id, evt.resource_quantity_has_unit_id)
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
-				|> EconomicResource.chgset()
+				|> Map.put(:classified_as, evt.resource_classified_as || res.classified_as)
+				|> Map.put_new(:name, res.name)
+				|> Map.put_new(:note, res.note)
+				|> Map.put_new(:tracking_identifier, res.tracking_identifier)
+				|> Map.put_new(:okhv, res.okhv)
+				|> Map.put_new(:repo, res.repo)
+				|> Map.put_new(:version, res.version)
+				|> Map.put_new(:licensor, res.licensor)
+				|> Map.put_new(:license, res.license)
+				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, cset)
+			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
 			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
 				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
 			end)
@@ -1005,7 +1052,8 @@ end
 		| :provider | :receiver
 		| :resource_inventoried_as | :to_resource_inventoried_as
 		| :resource_conforms_to | :resource_quantity | :effort_quantity
-		| :to_location | :at_location | :realization_of | :triggered_by)
+		| :to_location | :at_location | :realization_of | :triggered_by
+		| :previous_event)
 	:: EconomicEvent.t()
 def preload(eco_evt, :action) do
 	Action.preload(eco_evt, :action)
@@ -1061,5 +1109,9 @@ end
 
 def preload(eco_evt, :triggered_by) do
 	Repo.preload(eco_evt, :triggered_by)
+end
+
+def preload(eco_evt, :previous_event) do
+	Repo.preload(eco_evt, :previous_event)
 end
 end

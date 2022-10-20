@@ -109,11 +109,14 @@ defmodule ExDoc.Language.Elixir do
       if actual_def in module_data.private.optional_callbacks, do: ["optional"], else: []
 
     specs =
-      case Map.fetch(module_data.private.callbacks, actual_def) do
-        {:ok, specs} ->
+      case module_data.private.callbacks do
+        %{^actual_def => specs} when kind == :macrocallback ->
+          Enum.map(specs, &remove_callback_term/1)
+
+        %{^actual_def => specs} ->
           specs
 
-        :error ->
+        %{} ->
           []
       end
 
@@ -134,6 +137,14 @@ defmodule ExDoc.Language.Elixir do
       specs: quoted,
       extra_annotations: extra_annotations
     }
+  end
+
+  defp remove_callback_term({:type, num, :bounded_fun, [lhs, rhs]}) do
+    {:type, num, :bounded_fun, [remove_callback_term(lhs), rhs]}
+  end
+
+  defp remove_callback_term({:type, num, :fun, [{:type, num, :product, [_ | rest_args]} | rest]}) do
+    {:type, num, :fun, [{:type, num, :product, rest_args} | rest]}
   end
 
   @impl true
@@ -214,7 +225,7 @@ defmodule ExDoc.Language.Elixir do
     prefixes
     |> Enum.find(&String.starts_with?(title, &1 <> "."))
     |> case do
-      nil -> {nil, nil}
+      nil -> nil
       prefix -> {"." <> String.trim_leading(title, prefix <> "."), prefix}
     end
   end
@@ -353,6 +364,7 @@ defmodule ExDoc.Language.Elixir do
       {{:|, _, _}, position} -> to_var({}, position)
       {left, position} -> to_var(left, position)
     end)
+    |> Macro.prewalk(fn node -> Macro.update_meta(node, &Keyword.delete(&1, :line)) end)
   end
 
   defp to_var({:%, meta, [name, _]}, _), do: {:%, meta, [name, {:%{}, meta, []}]}
@@ -812,7 +824,10 @@ defmodule ExDoc.Language.Elixir do
 
   defp try_autoimported_function(name, arity, mode, config, original_text) do
     Enum.find_value(@autoimported_modules, fn module ->
-      remote_url({:function, module, name, arity}, config, original_text, warn?: false, mode: mode)
+      remote_url({:function, module, name, arity}, config, original_text,
+        warn?: false,
+        mode: mode
+      )
     end)
   end
 
@@ -823,16 +838,12 @@ defmodule ExDoc.Language.Elixir do
 
     case {mode, Refs.get_visibility({:module, module}), Refs.get_visibility(ref)} do
       {_mode, _module_visibility, :public} ->
-        case Autolink.tool(module, config) do
-          :no_tool ->
-            nil
+        tool = Autolink.tool(module, config)
 
-          tool ->
-            if same_module? do
-              fragment(tool, kind, name, arity)
-            else
-              Autolink.app_module_url(tool, module, config) <> fragment(tool, kind, name, arity)
-            end
+        if same_module? do
+          fragment(tool, kind, name, arity)
+        else
+          Autolink.app_module_url(tool, module, config) <> fragment(tool, kind, name, arity)
         end
 
       {:regular_link, module_visibility, :undefined}

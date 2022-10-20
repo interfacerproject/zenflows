@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.29.0 (2022-10-19)
+
+  * Enhancements
+    * Support cheatsheets as `.cheatmd` files
+
+  * Bug fix
+    * Collapse sidebar when resizing page even if stored in the session as opened
+
+## v0.28.6 (2022-10-13)
+
+  * Enhancements
+    * Add Elixir special punctuation ! and ? to natural sort
+    * Add night mode to settings pane
+    * Support --proglang in mix docs
+    * Save sidebar state per session
+    * Distinguish output code blocks in Livebooks
+
+  * Bug fixes
+    * Prevent sidebar button scrolling out of view
+    * Prevent unreadable text when using inline code with admonition headers
+
+## v0.28.5 (2022-08-18)
+
+  * Enhancements
+    * Do not preserve spaces from spec declaration in signature rendering
+    * Index hyphens in search
+    * Index `@` in search
+    * Change minimal package search length to 2
+
+  * Bug fixes
+    * Remove extra `term()` argument at start of `@macrocallback`
+
 ## v0.28.4 (2022-04-28)
 
   * Enhancements

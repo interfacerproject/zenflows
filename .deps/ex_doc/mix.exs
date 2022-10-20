@@ -2,7 +2,7 @@ defmodule ExDoc.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/elixir-lang/ex_doc"
-  @version "0.28.4"
+  @version "0.29.0"
 
   def project do
     [
@@ -16,6 +16,7 @@ defmodule ExDoc.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       source_url: @source_url,
       test_coverage: [tool: ExCoveralls],
+      test_elixirc_options: [docs: true, debug_info: true],
       preferred_cli_env: [coveralls: :test],
       name: "ExDoc",
       description: "ExDoc is a documentation generation tool for Elixir",
@@ -55,7 +56,7 @@ defmodule ExDoc.Mixfile do
     [
       licenses: ["Apache-2.0"],
       maintainers: ["José Valim", "Milton Mazzarri", "Wojtek Mach"],
-      files: ["formatters", "lib", "mix.exs", "LICENSE", "CHANGELOG.md", "README.md"],
+      files: ~w(CHANGELOG.md Cheatsheet.cheatmd formatters lib LICENSE mix.exs README.md),
       links: %{
         "GitHub" => @source_url,
         "Changelog" => "https://hexdocs.pm/ex_doc/changelog.html",
@@ -78,7 +79,7 @@ defmodule ExDoc.Mixfile do
       main: "readme",
       extras: [
         "README.md",
-        "LICENSE",
+        "Cheatsheet.cheatmd",
         "CHANGELOG.md"
       ],
       source_ref: "v#{@version}",

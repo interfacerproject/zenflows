@@ -1,6 +1,5 @@
 defmodule EarmarkParser.Context do
   @moduledoc false
-  use EarmarkParser.Types
   alias EarmarkParser.Options
 
   @type t :: %__MODULE__{
@@ -105,19 +104,22 @@ defmodule EarmarkParser.Context do
   end
 
   defp rules_for(options) do
+    subsup =
+      if options.sub_sup do
+        "~^"
+      else
+        ""
+      end
     rule_updates =
       if options.gfm do
         rules = [
-          escape: ~r{^\\([\\`*\{\}\[\]()\#+\-.!_>~|])},
-          url: ~r{^(https?:\/\/[^\s<]+[^<.,:;\"\')\]\s])},
-          strikethrough: ~r{^~~(?=\S)([\s\S]*?\S)~~},
-          text: ~r{^[\s\S]+?(?=[\\<!\[_*`~]|https?://| \{2,\}\n|$)}
+          text: ~r{^[\s\S]+?(?=~~|[\\<!\[_*`#{subsup}]|https?://| \{2,\}\n|$)}
         ]
 
         if options.breaks do
           break_updates = [
             br: ~r{^ *\n(?!\s*$)},
-            text: ~r{^[\s\S]+?(?=[\\<!\[_*`~]|https?://| *\n|$)}
+            text: ~r{^[\s\S]+?(?=[\\<!\[_*`#{subsup}]|https?://| *\n|$)}
           ]
 
           Keyword.merge(rules, break_updates)

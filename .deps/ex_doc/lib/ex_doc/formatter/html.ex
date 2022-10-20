@@ -67,10 +67,10 @@ defmodule ExDoc.Formatter.HTML do
   def render_all(project_nodes, ext, config, opts) do
     base = [
       apps: config.apps,
+      deps: config.deps,
       ext: ext,
       extras: extra_paths(config),
-      skip_undefined_reference_warnings_on: config.skip_undefined_reference_warnings_on,
-      deps: config.deps
+      skip_undefined_reference_warnings_on: config.skip_undefined_reference_warnings_on
     ]
 
     project_nodes
@@ -79,9 +79,9 @@ defmodule ExDoc.Formatter.HTML do
         autolink_opts =
           [
             current_module: node.module,
-            module_id: node.id,
             file: node.source_path,
-            line: node.doc_line
+            line: node.doc_line,
+            module_id: node.id
           ] ++ base
 
         language = node.language
@@ -206,8 +206,8 @@ defmodule ExDoc.Formatter.HTML do
   defp digest(content) do
     content
     |> :erlang.md5()
-    |> Base.encode16(case: :lower)
-    |> binary_part(0, 10)
+    |> Base.encode16(case: :upper)
+    |> binary_part(0, 8)
   end
 
   defp generate_extras(nodes_map, extras, config) do
@@ -224,7 +224,8 @@ defmodule ExDoc.Formatter.HTML do
           next: next && %{path: "#{next.id}.html", title: next.title}
         }
 
-        html = Templates.extra_template(config, node, nodes_map, refs)
+        extension = node.source_path && Path.extname(node.source_path)
+        html = Templates.extra_template(config, node, extra_type(extension), nodes_map, refs)
 
         if File.regular?(output) do
           IO.puts(:stderr, "warning: file #{Path.relative_to_cwd(output)} already exists")
@@ -236,6 +237,10 @@ defmodule ExDoc.Formatter.HTML do
 
     generated_extras ++ copy_extras(config, extras)
   end
+
+  defp extra_type(".cheatmd"), do: :cheatmd
+  defp extra_type(".livemd"), do: :livemd
+  defp extra_type(_), do: :extra
 
   defp copy_extras(config, extras) do
     for %{source_path: source_path, id: id} when source_path != nil <- extras,
@@ -295,7 +300,7 @@ defmodule ExDoc.Formatter.HTML do
   defp default_assets(config) do
     [
       {Assets.dist(config.proglang), "dist"},
-      {Assets.fonts(), "dist/html/fonts"}
+      {Assets.fonts(), "dist"}
     ]
   end
 
@@ -306,13 +311,13 @@ defmodule ExDoc.Formatter.HTML do
       ~s{API Reference <small class="app-vsn">#{config.project} v#{config.version}</small>}
 
     %{
-      id: "api-reference",
-      title: "API Reference",
-      group: nil,
-      title_content: title_content,
       content: api_reference,
+      group: nil,
+      id: "api-reference",
       source_path: nil,
-      source_url: nil
+      source_url: nil,
+      title: "API Reference",
+      title_content: title_content
     }
   end
 
@@ -325,10 +330,10 @@ defmodule ExDoc.Formatter.HTML do
 
     autolink_opts = [
       apps: config.apps,
+      deps: config.deps,
       ext: ext,
       extras: extra_paths(config),
-      skip_undefined_reference_warnings_on: config.skip_undefined_reference_warnings_on,
-      deps: config.deps
+      skip_undefined_reference_warnings_on: config.skip_undefined_reference_warnings_on
     ]
 
     config.extras
@@ -359,14 +364,15 @@ defmodule ExDoc.Formatter.HTML do
         extension when extension in ["", ".txt"] ->
           [{:pre, [], "\n" <> File.read!(input), %{}}]
 
-        extension when extension in [".md", ".livemd"] ->
+        extension when extension in [".md", ".livemd", ".cheatmd"] ->
           input
           |> File.read!()
           |> Markdown.to_ast(opts)
+          |> sectionize(extension)
 
         _ ->
           raise ArgumentError,
-                "file extension not recognized, allowed extension is either .livemd, .md, .txt or no extension"
+                "file extension not recognized, allowed extension is either .cheatmd, .livemd, .md, .txt or no extension"
       end
 
     {title_ast, ast} =
@@ -390,9 +396,9 @@ defmodule ExDoc.Formatter.HTML do
     source_url = Utils.source_url_pattern(source_url_pattern, source_path, 1)
 
     %{
-      id: id,
       content: content_html,
       group: group,
+      id: id,
       source_path: source_path,
       source_url: source_url,
       title: title,
@@ -405,6 +411,16 @@ defmodule ExDoc.Formatter.HTML do
     |> Path.extname()
     |> String.downcase()
   end
+
+  defp sectionize(ast, ".cheatmd") do
+    Markdown.sectionize(ast, fn
+      {:h2, _, _, _} -> true
+      {:h3, _, _, _} -> true
+      _ -> false
+    end)
+  end
+
+  defp sectionize(ast, _), do: ast
 
   @doc """
   Convert the input file name into a title

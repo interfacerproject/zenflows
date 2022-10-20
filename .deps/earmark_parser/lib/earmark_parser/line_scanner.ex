@@ -1,8 +1,6 @@
 defmodule EarmarkParser.LineScanner do
   @moduledoc false
 
-  use EarmarkParser.Types
-
   alias EarmarkParser.{Helpers, Line, Options}
 
   # This is the re that matches the ridiculous "[id]: url title" syntax
@@ -182,7 +180,7 @@ defmodule EarmarkParser.LineScanner do
           line: line
         }
 
-      Regex.run(~r/\A (\s*) .* \s \| \s /x, line) ->
+      line |> String.replace(~r/\[\[ .*? \]\]/x, "") |> String.match?(~r/\A (\s*) .* \s \| \s /x) ->
         columns = _split_table_columns(line)
 
         %Line.TableLine{
@@ -193,7 +191,7 @@ defmodule EarmarkParser.LineScanner do
           line: line
         }
 
-      options.gfm_tables && Regex.run(~r/\A (\s*) .* \| /x, line) ->
+      options.gfm_tables && line |> String.replace(~r/\[\[ .*? \]\]/x, "") |> String.match?(~r/\A (\s*) .* \| /x) ->
         columns = _split_table_columns(line)
 
         %Line.TableLine{

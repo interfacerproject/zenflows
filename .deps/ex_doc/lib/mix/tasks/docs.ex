@@ -19,10 +19,13 @@ defmodule Mix.Tasks.Docs do
     * `--language` - Specifies the language to annotate the
       EPUB output in valid [BCP 47](https://tools.ietf.org/html/bcp47)
 
+    * `--open` - open browser window pointed to the documentation
+
     * `--output`, `-o` - Output directory for the generated
       docs, default: `"doc"`
 
-    * `--open` - open browser window pointed to the documentation
+    * `--proglang` - Chooses the main programming language: "elixir"
+      or "erlang"
 
   The command line options have higher precedence than the options
   specified in your `mix.exs` file below.
@@ -118,8 +121,6 @@ defmodule Mix.Tasks.Docs do
       to provide up-to-date data for features like the version dropdown - See the "Additional
       JavaScript config" section. Example: `"../versions.js"`
 
-    * `:nest_modules_by_prefix` - See the "Nesting" section
-
     * `:language` - Identify the primary language of the documents, its value must be
       a valid [BCP 47](https://tools.ietf.org/html/bcp47) language tag; default: "en"
 
@@ -133,6 +134,8 @@ defmodule Mix.Tasks.Docs do
 
     * `:markdown_processor` - The markdown processor to use,
       either `module()` or `{module(), keyword()}` to provide configuration options;
+
+    * `:nest_modules_by_prefix` - See the "Nesting" section
 
     * `:output` - Output directory for the generated docs; default: "doc".
       May be overridden by command line argument.
@@ -308,11 +311,16 @@ defmodule Mix.Tasks.Docs do
     canonical: :string,
     formatter: :keep,
     language: :string,
+    open: :boolean,
     output: :string,
-    open: :boolean
+    proglang: :string
   ]
 
-  @aliases [n: :canonical, f: :formatter, o: :output]
+  @aliases [
+    f: :formatter,
+    n: :canonical,
+    o: :output
+  ]
 
   @doc false
   def run(args, config \\ Mix.Project.config(), generator \\ &ExDoc.generate_docs/3) do
@@ -334,10 +342,19 @@ defmodule Mix.Tasks.Docs do
     project =
       to_string(
         config[:name] || config[:app] ||
-          raise("expected :name or :app to be found in the project definition in mix.exs")
+          Mix.raise("expected :name or :app to be found in the project definition in mix.exs")
       )
 
     version = config[:version] || "dev"
+
+    cli_opts =
+      Keyword.update(cli_opts, :proglang, :elixir, fn proglang ->
+        if proglang not in ~w(erlang elixir) do
+          Mix.raise("--proglang must be elixir or erlang")
+        end
+
+        String.to_atom(proglang)
+      end)
 
     options =
       config

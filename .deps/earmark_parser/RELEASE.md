@@ -3,6 +3,41 @@
 
 -  [Depreacting message to be passed in as an array in options, and fixing it](https://github.com/robertdober/earmark_parser/issues/86)
 
+## 1.4.29 2022-10-20
+
+- Bugfix for [Strike Through Only Working on start of line #115](https://github.com/RobertDober/earmark_parser/issues/115)
+
+## 1.4.28 2022-10-01
+
+- [Do not wrap labelled wikilinks in `<p>` tags](https://github.com/RobertDober/earmark_parser/pull/112)
+
+  Kudos to [Ben Olive](https://github.com/sionide21)
+
+- Add option `all: true` enabling all options which are disabled by default, which are:
+            `breaks`, `footnotes`, `gfm_tables`, `sub_sup`, `wikilinks`
+
+- Fix bug for `a^n^` not being parsed as sup
+
+## 1.4.27 2022-09-30
+
+- [Nice addition of sub and sup elements](https://github.com/RobertDober/earmark_parser/tree/i108-sub-and-sup)
+
+  Needs to be enabled with the option `sub_sup: true` renders `~x~` inside `<sub>` and `^x^` inside `<sup>`
+
+  Kudos to [manuel-rubio](https://github.com/manuel-rubio)
+
+- Optimisation in the inline renderer
+
+- Removal of compiler warnings
+
+## 1.4.26 2022-06-15
+
+- Allow unquoted values for HTML attributes
+
+- [Accept valueless HTML attributes](https://github.com/RobertDober/earmark_parser/pull/106)
+
+  Kudos to [Tom Conroy](https://github.com/tomconroy)
+
 ## 1.4.25 2022-03-24
 
 - [Two PRs to assure lookahead scanning is applied on the top level, where needed most](https://github.com/robertdober/earmark_parser/issues/100)
@@ -13,9 +48,11 @@
 
 ## 1.4.24 2022-03-20
 
-- Single worded footnote definitions where shadowed by ID Definitions, they tiebreak was resolved in favor of 
-  Footnotes as ID Definitions do not need, and might as a matter of fact almost never, start with a `^`
+- Single worded footnote definitions where shadowed by ID Definitions, the tiebreak was resolved in favor of
+  Footnotes as ID Definitions do not need, and might as a matter of fact almost never, to start with a `^`
   [Related Issue](https://github.com/RobertDober/earmark_parser/issues/99)
+
+- Unused import warning removed
 
 ## 1.4.23 2022-03-16
 

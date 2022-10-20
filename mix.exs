@@ -79,7 +79,7 @@ defp deps() do
 		{:dialyxir, "~> 1.0", only: [:dev], runtime: false},
 
 		# doc
-		{:ex_doc, "~> 0.28", only: :dev, runtime: false},
+		{:ex_doc, "~> 0.29", only: :dev, runtime: false},
 	]
 end
 

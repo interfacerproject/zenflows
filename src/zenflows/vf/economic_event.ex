@@ -253,21 +253,30 @@ end
 
 defp do_chgset("transferAllRights", schema, params) do
 	schema
-	|> Changeset.cast(params, ~w[resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity]a)
+	|> Changeset.cast(params, ~w[
+		resource_inventoried_as_id to_resource_inventoried_as_id
+		resource_quantity resource_classified_as
+	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 end
 
 defp do_chgset(action, schema, params) when action in ~w[transferCustody transfer] do
 	schema
-	|> Changeset.cast(params, ~w[resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity to_location_id]a)
+	|> Changeset.cast(params, ~w[
+		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
+		to_location_id resource_classified_as
+	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 end
 
 defp do_chgset("move", schema, params) do
 	schema
-	|> Changeset.cast(params, ~w[resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity to_location_id]a)
+	|> Changeset.cast(params, ~w[
+		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
+		to_location_id resource_classified_as
+	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 	|> require_agents_same()

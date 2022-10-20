@@ -74,18 +74,16 @@ defmodule Credo.Code do
 
   @doc false
   def ast(source, filename \\ "nofilename") when is_binary(source) do
-    try do
-      case Code.string_to_quoted(source, line: 1, columns: true, file: filename) do
-        {:ok, value} ->
-          {:ok, value}
+    case Code.string_to_quoted(source, line: 1, columns: true, file: filename) do
+      {:ok, value} ->
+        {:ok, value}
 
-        {:error, error} ->
-          {:error, [issue_for(error, filename)]}
-      end
-    rescue
-      e in UnicodeConversionError ->
-        {:error, [issue_for({1, e.message, nil}, filename)]}
+      {:error, error} ->
+        {:error, [issue_for(error, filename)]}
     end
+  rescue
+    e in UnicodeConversionError ->
+      {:error, [issue_for({1, e.message, nil}, filename)]}
   end
 
   defp issue_for({line_no, error_message, _}, filename) do
@@ -156,6 +154,8 @@ defmodule Credo.Code do
   def contains_child?(parent, child) do
     Credo.Code.prewalk(parent, &find_child(&1, &2, child), false)
   end
+
+  defp find_child({parent, _meta, child}, _acc, child), do: {parent, true}
 
   defp find_child(parent, acc, child), do: {parent, acc || parent == child}
 

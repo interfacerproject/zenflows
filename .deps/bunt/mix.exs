@@ -4,17 +4,17 @@ defmodule Bunt.Mixfile do
   def project do
     [
       app: :bunt,
-      version: "0.2.0",
+      version: "0.2.1",
       elixir: "~> 1.1",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Bunt",
       description: "256 color ANSI coloring in the terminal",
       package: [
         maintainers: ["René Föhring"],
         licenses: ["MIT"],
-        links: %{"GitHub" => "https://github.com/rrrene/bunt"},
+        links: %{"GitHub" => "https://github.com/rrrene/bunt"}
       ]
     ]
   end

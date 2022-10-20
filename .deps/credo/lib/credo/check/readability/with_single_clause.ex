@@ -43,14 +43,12 @@ defmodule Credo.Check.Readability.WithSingleClause do
       """
     ]
 
-  alias Credo.Code
-
   @doc false
   @impl true
   def run(%SourceFile{} = source_file, params) do
     issue_meta = IssueMeta.for(source_file, params)
 
-    Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+    Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
   end
 
   # TODO: consider for experimental check front-loader (ast)
@@ -80,18 +78,24 @@ defmodule Credo.Check.Readability.WithSingleClause do
   end
 
   defp issue_if_one_pattern_clause_with_else(clauses, body, line, issue_meta) do
+    contains_unquote_splicing? = Enum.any?(clauses, &match?({:unquote_splicing, _, _}, &1))
     pattern_clauses_count = Enum.count(clauses, &match?({:<-, _, _}, &1))
 
-    if pattern_clauses_count <= 1 and Keyword.has_key?(body, :else) do
-      [
-        format_issue(issue_meta,
-          message:
-            "`with` contains only one <- clause and an `else` branch, consider using `case` instead",
-          line_no: line
-        )
-      ]
-    else
-      []
+    cond do
+      contains_unquote_splicing? ->
+        []
+
+      pattern_clauses_count <= 1 and Keyword.has_key?(body, :else) ->
+        [
+          format_issue(issue_meta,
+            message:
+              "`with` contains only one <- clause and an `else` branch, consider using `case` instead",
+            line_no: line
+          )
+        ]
+
+      true ->
+        []
     end
   end
 end

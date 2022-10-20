@@ -1,7 +1,7 @@
 defmodule Credo.Mixfile do
   use Mix.Project
 
-  @version "1.6.4"
+  @version "1.6.7"
 
   def project do
     [
@@ -31,9 +31,20 @@ defmodule Credo.Mixfile do
       extra_section: "GUIDES",
       assets: "guides/assets",
       formatters: ["html"],
+      nest_modules_by_prefix: nest_modules_by_prefix(),
       groups_for_modules: groups_for_modules(),
       extras: extras(),
       groups_for_extras: groups_for_extras()
+    ]
+  end
+
+  defp nest_modules_by_prefix do
+    [
+      Credo.Check.Design,
+      Credo.Check.Readability,
+      Credo.Check.Refactor,
+      Credo.Check.Warning,
+      Credo.Check.Consistency
     ]
   end
 
@@ -132,7 +143,7 @@ defmodule Credo.Mixfile do
   defp deps do
     [
       {:file_system, "~> 0.2.8"},
-      {:bunt, "~> 0.2.0"},
+      {:bunt, "~> 0.2.1"},
       {:jason, "~> 1.0"},
       {:ex_doc, "~> 0.25", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},

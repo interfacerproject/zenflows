@@ -6,7 +6,7 @@ defmodule Plug.Crypto do
   `Plug.Crypto.MessageEncryptor`, and `Plug.Crypto.MessageVerifier`.
   """
 
-  use Bitwise
+  import Bitwise
   alias Plug.Crypto.{KeyGenerator, MessageVerifier, MessageEncryptor}
 
   @doc """
@@ -123,7 +123,7 @@ defmodule Plug.Crypto do
   end
 
   defp masked_compare(<<x, left::binary>>, <<y, right::binary>>, <<z, mask::binary>>, acc) do
-    xorred = bxor(x , bxor(y, z))
+    xorred = bxor(x, bxor(y, z))
     masked_compare(left, right, mask, acc ||| xorred)
   end
 
@@ -155,6 +155,9 @@ defmodule Plug.Crypto do
 
       Plug.Crypto.sign(conn.secret_key_base, "user-secret", {:elixir, :terms})
 
+  A key will be derived from the secret key base and the given user secret.
+  The key will also be cached for performance reasons on future calls.
+
   ## Options
 
     * `:key_iterations` - option passed to `Plug.Crypto.KeyGenerator`
@@ -178,6 +181,11 @@ defmodule Plug.Crypto do
   @doc """
   Encodes, encrypts, and signs data into a token you can send to clients.
 
+      Plug.Crypto.encrypt(conn.secret_key_base, "user-secret", {:elixir, :terms})
+
+  A key will be derived from the secret key base and the given user secret.
+  The key will also be cached for performance reasons on future calls.
+
   ## Options
 
     * `:key_iterations` - option passed to `Plug.Crypto.KeyGenerator`
@@ -192,9 +200,9 @@ defmodule Plug.Crypto do
       `86400` seconds (1 day) and it may be overridden on `decrypt/4`.
 
   """
-  def encrypt(key_base, secret, token, opts \\ [])
+  def encrypt(key_base, secret, data, opts \\ [])
       when is_binary(key_base) and is_binary(secret) do
-    encrypt(key_base, secret, nil, token, opts)
+    encrypt(key_base, secret, nil, data, opts)
   end
 
   @doc false

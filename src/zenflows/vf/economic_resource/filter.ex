@@ -47,15 +47,21 @@ defp f(q, {:custodian, v}),
 	do: where(q, [x], x.custodian_id in ^v)
 defp f(q, {:conforms_to, v}),
 	do: where(q, [x], x.conforms_to_id in ^v)
+defp f(q, {:gt_onhand_quantity_has_numerical_value, v}),
+	do: where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
 
 embedded_schema do
 	field :classified_as, {:array, :string}
 	field :primary_accountable, {:array, ID}
 	field :custodian, {:array, ID}
 	field :conforms_to, {:array, ID}
+	field :gt_onhand_quantity_has_numerical_value, :float
 end
 
-@cast ~w[classified_as primary_accountable custodian conforms_to]a
+@cast ~w[
+	classified_as primary_accountable custodian conforms_to
+	gt_onhand_quantity_has_numerical_value
+]a
 
 @spec chgset(params()) :: Changeset.t()
 defp chgset(params) do
@@ -65,5 +71,7 @@ defp chgset(params) do
 	|> Validate.class(:primary_accountable)
 	|> Validate.class(:custodian)
 	|> Validate.class(:conforms_to)
+	|> Changeset.validate_number(:gt_onhand_quantity_has_numerical_value,
+		greater_than_or_equal_to: 0)
 end
 end

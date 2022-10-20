@@ -243,6 +243,7 @@ input_object :economic_resource_filter_params do
 	field :conforms_to, list_of(non_null(:id))
 	field :primary_accountable, list_of(non_null(:id))
 	field :custodian, list_of(non_null(:id))
+	field :gt_onhand_quantity_has_numerical_value, :float
 end
 
 object :query_economic_resource do

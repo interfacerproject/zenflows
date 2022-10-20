@@ -18,7 +18,7 @@
 ARG MIX_ENV=prod
 
 
-FROM elixir:1.13-alpine AS build
+FROM elixir:1.14-alpine AS build
 ARG MIX_ENV
 ENV MIX_ENV=$MIX_ENV
 

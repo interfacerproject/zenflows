@@ -69,7 +69,7 @@ defp deps() do
 		# graphql
 		{:absinthe, "~> 1.7"},
 		{:absinthe_plug, "~> 1.5"},
-		{:jason, "~> 1.3"},
+		{:jason, "~> 1.4"},
 
 		# live reload
 		{:exsync, "~> 0.2", only: :dev},

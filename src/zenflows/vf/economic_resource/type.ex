@@ -181,7 +181,7 @@ end
 
 input_object :economic_resource_create_params do
 	@desc @name
-	field :name, non_null(:string)
+	field :name, :string
 
 	@desc @note
 	field :note, :string

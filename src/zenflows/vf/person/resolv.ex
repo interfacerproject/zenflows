@@ -28,7 +28,7 @@ def people(params, _) do
 	Domain.all(params)
 end
 
-def person_exists(params, _) do
+def person_check(params, _) do
 	Domain.one(params)
 end
 

@@ -180,12 +180,12 @@ object :query_person do
 		resolve &Resolv.people/2
 	end
 
-	@desc "Find if a person exists by email and eddsa-public-key."
-	field :person_exists, non_null(:person) do
+	@desc "If exists, find a person by email and eddsa-public-key."
+	field :person_check, non_null(:person) do
 		meta only_guest?: true
 		arg :email, non_null(:string)
 		arg :eddsa_public_key, non_null(:string)
-		resolve &Resolv.person_exists/2
+		resolve &Resolv.person_check/2
 	end
 
 	@desc "Retrieve a person from the email (if a person with that email exists)"

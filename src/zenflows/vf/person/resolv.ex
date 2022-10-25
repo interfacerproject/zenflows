@@ -32,6 +32,10 @@ def person_exists(params, _) do
 	Domain.one(params)
 end
 
+def person_pubkey(%{email: email}, _) do
+	Domain.pubkey(email)
+end
+
 def create_person(%{person: params}, _) do
 	with {:ok, per} <- Domain.create(params) do
 		{:ok, %{agent: per}}

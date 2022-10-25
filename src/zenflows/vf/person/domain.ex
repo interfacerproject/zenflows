@@ -54,6 +54,16 @@ def exists?(conds) do
 	where(Person, ^conds) |> Repo.exists?()
 end
 
+@spec pubkey(Keyword.t()) :: {:ok, Person.t()} | {:error, chgset()}
+def pubkey(email) do
+	where(Person, email: ^email)
+	|> select([:eddsa_public_key]) |> Repo.one()
+	|> case do
+		nil -> {:error, "not found"}
+		found -> {:ok, found}
+	end
+end
+
 @spec create(params()) :: {:ok, Person.t()} | {:error, chgset()}
 def create(params) do
 	Multi.new()

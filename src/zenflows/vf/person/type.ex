@@ -83,6 +83,12 @@ object :person do
 	field :schnorr_public_key, :string
 end
 
+@desc "Person eddsa public key"
+object :person_pubkey do
+	@desc @eddsa_public_key
+	field :eddsa_public_key, :string
+end
+
 input_object :person_create_params do
 	@desc @name
 	field :name, non_null(:string)
@@ -182,10 +188,10 @@ object :query_person do
 		resolve &Resolv.person_exists/2
 	end
 	@desc "Retrieve a person from the email (if a person with that email exists)"
-	field :person_pubkey, :person do
+	field :person_pubkey, :person_pubkey do
 		meta only_guest?: true
 		arg :email, non_null(:string)
-		resolve &Resolv.person_exists/2
+		resolve &Resolv.person_pubkey/2
 	end
 end
 

@@ -181,7 +181,7 @@ object :query_person do
 	end
 
 	@desc "Find if a person exists by email and eddsa-public-key."
-	field :person_exists, :person do
+	field :person_exists, non_null(:person) do
 		meta only_guest?: true
 		arg :email, non_null(:string)
 		arg :eddsa_public_key, non_null(:string)
@@ -189,7 +189,7 @@ object :query_person do
 	end
 
 	@desc "Retrieve a person from the email (if a person with that email exists)"
-	field :person_pubkey, :string do
+	field :person_pubkey, non_null(:string) do
 		meta only_guest?: true
 		arg :email, non_null(:string)
 		resolve &Resolv.person_pubkey/2

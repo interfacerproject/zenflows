@@ -51,7 +51,7 @@ end
 
 @spec exists?(Keyword.t()) :: boolean()
 def exists?(conds) do
-	where(Person, ^conds) |> Repo.exists?()
+	where(Person, ^conds) |> where(type: :per) |> Repo.exists?()
 end
 
 @spec pubkey(Keyword.t()) :: {:ok, String.t()} | {:error, String.t()}

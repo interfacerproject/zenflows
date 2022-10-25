@@ -54,13 +54,13 @@ def exists?(conds) do
 	where(Person, ^conds) |> Repo.exists?()
 end
 
-@spec pubkey(Keyword.t()) :: {:ok, Person.t()} | {:error, chgset()}
+@spec pubkey(Keyword.t()) :: {:ok, String.t()} | {:error, chgset()}
 def pubkey(email) do
 	where(Person, email: ^email)
 	|> select([:eddsa_public_key]) |> Repo.one()
 	|> case do
 		nil -> {:error, "not found"}
-		found -> {:ok, found}
+		found -> {:ok, found.eddsa_public_key}
 	end
 end
 

@@ -32,8 +32,8 @@ def person_exists(params, _) do
 	Domain.one(params)
 end
 
-def person_pubkey(%{email: email}, _) do
-	Domain.pubkey(email)
+def person_pubkey(%{id: id}, _) do
+	Domain.pubkey(id)
 end
 
 def create_person(%{person: params}, _) do

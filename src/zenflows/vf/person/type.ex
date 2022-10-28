@@ -188,10 +188,10 @@ object :query_person do
 		resolve &Resolv.person_check/2
 	end
 
-	@desc "Retrieve a person from the email (if a person with that email exists)"
+	@desc "Retrieve a Person's public key by its id."
 	field :person_pubkey, non_null(:string) do
 		meta only_guest?: true
-		arg :email, non_null(:string)
+		arg :id, non_null(:id)
 		resolve &Resolv.person_pubkey/2
 	end
 end

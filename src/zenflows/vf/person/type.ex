@@ -191,7 +191,7 @@ object :query_person do
 	@desc "Retrieve a person from the email (if a person with that email exists)"
 	field :person_pubkey, :string do
 		meta only_guest?: true
-		arg :id, :id
+		arg :id, non_null(:id)
 		resolve &Resolv.person_pubkey/2
 	end
 end

@@ -28,7 +28,7 @@ alias Zenflows.VF.EconomicResource
 def all(%{filter: nil}), do: {:ok, EconomicResource}
 def all(%{filter: params}) do
 	with {:ok, filters} <- all_validate(params) do
-		Enum.reduce(filters, EconomicResource, &all_f(&2, &1))
+		{:ok, Enum.reduce(filters, EconomicResource, &all_f(&2, &1))}
 	end
 end
 

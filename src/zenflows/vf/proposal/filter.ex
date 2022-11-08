@@ -28,7 +28,7 @@ alias Zenflows.VF.Proposal
 def all(%{filter: nil}), do: {:ok, Proposal}
 def all(%{filter: params}) do
 	with {:ok, filters} <- all_validate(params) do
-		Enum.reduce(filters, Proposal, &all_f(&2, &1))
+		{:ok, Enum.reduce(filters, Proposal, &all_f(&2, &1))}
 	end
 end
 

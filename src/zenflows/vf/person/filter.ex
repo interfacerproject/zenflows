@@ -28,7 +28,7 @@ alias Zenflows.VF.Person
 def all(%{filter: nil}), do: {:ok, where(Person, type: :per)}
 def all(%{filter: params}) do
 	with {:ok, filters} <- all_validate(params) do
-		Enum.reduce(filters, where(Person, type: :per), &all_f(&2, &1))
+		{:ok, Enum.reduce(filters, where(Person, type: :per), &all_f(&2, &1))}
 	end
 end
 

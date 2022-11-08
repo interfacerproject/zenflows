@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.TimeUnit.Type do
-@moduledoc "GraphQL types of TimeUnits."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

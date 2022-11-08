@@ -30,7 +30,7 @@ end
 test "create ProposedTo", %{params: params} do
 	assert {:ok, %ProposedTo{} = prop_to} =
 		params
-		|> ProposedTo.chgset()
+		|> ProposedTo.changeset()
 		|> Repo.insert()
 
 	assert prop_to.proposed_to_id == params.proposed_to_id
@@ -41,7 +41,7 @@ test "update ProposedTo", %{params: params} do
 	assert {:ok, %ProposedTo{} = prop_to} =
 		:proposed_to
 		|> Factory.insert!()
-		|> ProposedTo.chgset(params)
+		|> ProposedTo.changeset(params)
 		|> Repo.update()
 
 	assert prop_to.proposed_to_id == params.proposed_to_id

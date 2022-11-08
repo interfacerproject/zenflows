@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Scenario.Type do
-@moduledoc "GraphQL types of Scenarios."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

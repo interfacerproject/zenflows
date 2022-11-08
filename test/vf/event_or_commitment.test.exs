@@ -33,7 +33,7 @@ describe "create EventOrCommitment" do
 	test "with both event and commitment", %{params: params} do
 		assert {:error, %Changeset{errors: errs}} =
 			params
-			|> EventOrCommitment.chgset()
+			|> EventOrCommitment.changeset()
 			|> Repo.insert()
 
 		assert {:ok, _} = Keyword.fetch(errs, :event_id)
@@ -45,7 +45,7 @@ describe "create EventOrCommitment" do
 		assert {:ok, %EventOrCommitment{} = evt_comm} =
 			params
 			|> Map.delete(:commitment_id)
-			|> EventOrCommitment.chgset()
+			|> EventOrCommitment.changeset()
 			|> Repo.insert()
 
 		assert evt_comm.event_id == params.event_id
@@ -57,7 +57,7 @@ describe "create EventOrCommitment" do
 		assert {:ok, %EventOrCommitment{} = evt_comm} =
 			params
 			|> Map.delete(:event_id)
-			|> EventOrCommitment.chgset()
+			|> EventOrCommitment.changeset()
 			|> Repo.insert()
 
 		assert evt_comm.event_id == nil
@@ -71,7 +71,7 @@ describe "update EventOrCommitment" do
 		assert {:error, %Changeset{errors: errs}} =
 			:event_or_commitment
 			|> Factory.insert!(event: Factory.build(:economic_event), commitment: nil)
-			|> EventOrCommitment.chgset(params)
+			|> EventOrCommitment.changeset(params)
 			|> Repo.update()
 
 		assert {:ok, _} = Keyword.fetch(errs, :commitment_id)
@@ -79,7 +79,7 @@ describe "update EventOrCommitment" do
 		assert {:error, %Changeset{errors: errs}} =
 			:event_or_commitment
 			|> Factory.insert!(event: nil, commitment: Factory.build(:commitment))
-			|> EventOrCommitment.chgset(params)
+			|> EventOrCommitment.changeset(params)
 			|> Repo.update()
 
 		assert {:ok, _} = Keyword.fetch(errs, :event_id)
@@ -90,7 +90,7 @@ describe "update EventOrCommitment" do
 		assert {:ok, %EventOrCommitment{} = evt_comm} =
 			:event_or_commitment
 			|> Factory.insert!(event: Factory.build(:economic_event), commitment: nil)
-			|> EventOrCommitment.chgset(
+			|> EventOrCommitment.changeset(
 				Map.delete(params, :commitment_id)
 			)
 			|> Repo.update()
@@ -104,7 +104,7 @@ describe "update EventOrCommitment" do
 		assert {:ok, %EventOrCommitment{} = evt_comm} =
 			:event_or_commitment
 			|> Factory.insert!(event: nil, commitment: Factory.build(:commitment))
-			|> EventOrCommitment.chgset(
+			|> EventOrCommitment.changeset(
 				Map.delete(params, :event_id)
 			)
 			|> Repo.update()

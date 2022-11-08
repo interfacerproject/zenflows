@@ -22,7 +22,8 @@ A physical mappable location.
 
 use Zenflows.DB.Schema
 
-alias Zenflows.VF.Validate
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 
 @type t() :: %__MODULE__{
 	id: String.t(),
@@ -48,8 +49,8 @@ schema "vf_spatial_thing" do
 end
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

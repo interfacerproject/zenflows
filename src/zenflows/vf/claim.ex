@@ -23,6 +23,8 @@ received.
 """
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -30,7 +32,6 @@ alias Zenflows.VF.{
 	Measure,
 	ResourceSpecification,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -79,8 +80,8 @@ end
 ]a # in_scope_of
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

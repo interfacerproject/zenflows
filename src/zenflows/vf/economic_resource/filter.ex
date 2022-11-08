@@ -16,62 +16,54 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.EconomicResource.Filter do
-@moduledoc "Filtering logic of EconomicResources."
-
-use Zenflows.DB.Schema
+@moduledoc false
 
 import Ecto.Query
 
-alias Ecto.Query
-alias Zenflows.DB.{Filter, ID}
-alias Zenflows.VF.{EconomicResource, Validate}
+alias Ecto.{Changeset, Queryable}
+alias Zenflows.DB.{ID, Page, Schema, Validate}
+alias Zenflows.VF.EconomicResource
 
-@type error() :: Filter.error()
-
-@spec filter(Filter.params()) :: Filter.result()
-def filter(params) do
-	case chgset(params) do
-		%{valid?: true, changes: c} ->
-			{:ok, Enum.reduce(c, EconomicResource, &f(&2, &1))}
-		%{valid?: false} = cset ->
-			{:error, cset}
+@spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def all(%{filter: nil}), do: {:ok, EconomicResource}
+def all(%{filter: params}) do
+	with {:ok, filters} <- all_validate(params) do
+		Enum.reduce(filters, EconomicResource, &all_f(&2, &1))
 	end
 end
 
-@spec f(Query.t(), {atom(), term()}) :: Query.t()
-defp f(q, {:classified_as, v}),
+@spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
+defp all_f(q, {:classified_as, v}),
 	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
-defp f(q, {:primary_accountable, v}),
+defp all_f(q, {:primary_accountable, v}),
 	do: where(q, [x], x.primary_accountable_id in ^v)
-defp f(q, {:custodian, v}),
+defp all_f(q, {:custodian, v}),
 	do: where(q, [x], x.custodian_id in ^v)
-defp f(q, {:conforms_to, v}),
+defp all_f(q, {:conforms_to, v}),
 	do: where(q, [x], x.conforms_to_id in ^v)
-defp f(q, {:gt_onhand_quantity_has_numerical_value, v}),
+defp all_f(q, {:gt_onhand_quantity_has_numerical_value, v}),
 	do: where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
 
-embedded_schema do
-	field :classified_as, {:array, :string}
-	field :primary_accountable, {:array, ID}
-	field :custodian, {:array, ID}
-	field :conforms_to, {:array, ID}
-	field :gt_onhand_quantity_has_numerical_value, :float
-end
-
-@cast ~w[
-	classified_as primary_accountable custodian conforms_to
-	gt_onhand_quantity_has_numerical_value
-]a
-
-@spec chgset(params()) :: Changeset.t()
-defp chgset(params) do
-	%__MODULE__{}
-	|> Changeset.cast(params, @cast)
+@spec all_validate(Schema.params()) ::
+	{:ok, Changeset.data()} | {:error, Changeset.t()}
+defp all_validate(params) do
+	{%{}, %{
+		classified_as: {:array, :string},
+		primary_accountable: {:array, ID},
+		custodian: {:array, ID},
+		conforms_to: {:array, ID},
+		gt_onhand_quantity_has_numerical_value: :float,
+	}}
+	|> Changeset.cast(params, ~w[
+		classified_as primary_accountable custodian conforms_to
+		gt_onhand_quantity_has_numerical_value
+	]a)
 	|> Validate.class(:classified_as)
 	|> Validate.class(:primary_accountable)
 	|> Validate.class(:custodian)
 	|> Validate.class(:conforms_to)
 	|> Changeset.validate_number(:gt_onhand_quantity_has_numerical_value,
 		greater_than_or_equal_to: 0)
+	|> Changeset.apply_action(nil)
 end
 end

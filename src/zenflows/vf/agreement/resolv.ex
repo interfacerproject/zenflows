@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Agreement.Resolv do
-@moduledoc "Resolvers of Agreements."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Agreement.Domain
 
 def agreement(params, _info) do
@@ -25,7 +26,10 @@ def agreement(params, _info) do
 end
 
 def agreements(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_agreement(%{agreement: params}, _info) do

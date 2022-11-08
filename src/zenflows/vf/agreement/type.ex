@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Agreement.Type do
-@moduledoc "GraphQL types of Agreements."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

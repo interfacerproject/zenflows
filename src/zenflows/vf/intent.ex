@@ -22,6 +22,8 @@ to economic events (sometimes through commitments).
 """
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
@@ -33,7 +35,6 @@ alias Zenflows.VF.{
 	ResourceSpecification,
 	SpatialThing,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -108,15 +109,15 @@ end
 ]a # in_scope_of_id
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
-	|> mutex_check()
+	|> Validate.exist_xor([:provider_id, :receiver_id], method: :both)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
+	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:resource_classified_as)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)
@@ -128,49 +129,5 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:resource_conforms_to)
 	|> Changeset.assoc_constraint(:resource_inventoried_as)
 	|> Changeset.assoc_constraint(:at_location)
-end
-
-# Validate that provider and receiver are mutually exclusive.
-@spec mutex_check(Changeset.t()) :: Changeset.t()
-defp mutex_check(cset) do
-	# credo:disable-for-previous-line Credo.Check.Refactor.CyclomaticComplexity
-
-	{data_prov, chng_prov, field_prov} =
-		case Changeset.fetch_field(cset, :provider_id) do
-			{:data, x} -> {x, nil, x}
-			{:changes, x} -> {nil, x, x}
-		end
-	{data_recv, chng_recv, field_recv} =
-		case Changeset.fetch_field(cset, :receiver_id) do
-			{:data, x} -> {x, nil, x}
-			{:changes, x} -> {nil, x, x}
-		end
-
-	cond do
-		data_prov && chng_recv ->
-			msg = "receiver is not allowed in this record"
-			Changeset.add_error(cset, :receiver_id, msg)
-
-		data_recv && chng_prov ->
-			msg = "provider is not allowed in this record"
-			Changeset.add_error(cset, :provider_id, msg)
-
-		chng_prov && chng_recv ->
-			msg = "receiver is mutually exclusive with provider"
-
-			cset
-			|> Changeset.add_error(:provider_id, msg)
-			|> Changeset.add_error(:receiver_id, msg)
-
-		field_prov || field_recv ->
-			cset
-
-		true ->
-			msg = "either provider or receiver is required"
-
-			cset
-			|> Changeset.add_error(:provider_id, msg)
-			|> Changeset.add_error(:receiver_id, msg)
-	end
 end
 end

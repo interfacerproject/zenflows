@@ -23,6 +23,8 @@ unit.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.Schema
 alias Zenflows.VF.Unit
 
 @type t() :: %__MODULE__{
@@ -45,38 +47,35 @@ and `Zenflows.VF.ScenarioDefinition` modules.
 def cast(cset, key) do
 	case Changeset.fetch_change(cset, key) do
 		{:ok, params} ->
-			case chgset(params) do
+			case changeset(params) do
 				%{valid?: true} = cset_meas ->
 					cset
-					|> Changeset.put_change(field_has_unit_id(key),
+					|> Changeset.put_change(:"#{key}_has_unit_id",
 						Changeset.fetch_change!(cset_meas, :has_unit_id))
-					|> Changeset.put_change(field_has_numerical_value(key),
+					|> Changeset.put_change(:"#{key}_has_numerical_value",
 						Changeset.fetch_change!(cset_meas, :has_numerical_value))
-
 				cset_meas ->
 					Changeset.traverse_errors(cset_meas, fn {msg, opts} ->
 						Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-							opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+							opts |> Keyword.get(:"#{key}", key) |> to_string()
 						end)
 					end)
 					|> Enum.reduce(cset, fn {field, msg}, acc ->
 						Changeset.add_error(acc, key, "#{field}: #{msg}")
 					end)
 			end
-
 		:error ->
 			# Ecto seems to convert the params' keys to string
 			# whether they were originally string or atom.
-			strkey = Atom.to_string(key)
+			strkey = "#{key}"
 			case cset.params do
 				# If the field `key` is set to `nil`,
 				# this will set the associated fields to
 				# `nil` as well.
 				%{^strkey => nil} ->
 					cset
-					|> Changeset.force_change(field_has_unit_id(key), nil)
-					|> Changeset.force_change(field_has_numerical_value(key), nil)
-
+					|> Changeset.force_change(:"#{key}_has_unit_id", nil)
+					|> Changeset.force_change(:"#{key}_has_numerical_value", nil)
 				_ ->
 					cset
 			end
@@ -84,8 +83,7 @@ def cast(cset, key) do
 	|> case do
 		# if not embedded schema, which doesn't allow `assoc_constraint/3`...
 		%{data: %{__meta__: %Ecto.Schema.Metadata{}}} = cset ->
-			Changeset.assoc_constraint(cset, String.to_existing_atom("#{key}_has_unit"))
-
+			Changeset.assoc_constraint(cset, :"#{key}_has_unit")
 		# this case is most useful when testing, which you use emebedded schemas
 		cset ->
 			cset
@@ -100,29 +98,19 @@ as a %Measure{} struct.  Useful for GraphQL types as can be seen in
 @spec preload(Schema.t(), atom()) :: Schema.t()
 def preload(schema, key) do
 	%{schema | key => %__MODULE__{
-		has_unit_id: Map.get(schema, field_has_unit_id(key)),
-		has_numerical_value: Map.get(schema, field_has_numerical_value(key)),
+		has_unit_id: Map.get(schema, :"#{key}_has_unit_id"),
+		has_numerical_value: Map.get(schema, :"#{key}_has_numerical_value"),
 	}}
 end
 
 @cast ~w[has_unit_id has_numerical_value]a
 @reqr @cast
 
-@spec chgset(params()) :: Changeset.t()
-defp chgset(params) do
+@spec changeset(Schema.params()) :: Changeset.t()
+defp changeset(params) do
 	%__MODULE__{}
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
 	|> Changeset.validate_number(:has_numerical_value, greater_than: 0)
-end
-
-@spec field_has_unit_id(atom()) :: atom()
-defp field_has_unit_id(key) do
-	String.to_existing_atom("#{key}_has_unit_id")
-end
-
-@spec field_has_numerical_value(atom()) :: atom()
-defp field_has_numerical_value(key) do
-	String.to_existing_atom("#{key}_has_numerical_value")
 end
 end

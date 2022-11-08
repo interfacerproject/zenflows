@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Process.Type do
-@moduledoc "GraphQL types of Processs."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

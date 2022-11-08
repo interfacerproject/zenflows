@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.SpatialThing.Type do
-@moduledoc "GraphQL types of SpatialThings."
+@moduledoc false
 # Basically, a fancy name for (geo)location.  :P
 
 use Absinthe.Schema.Notation

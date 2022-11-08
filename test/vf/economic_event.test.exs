@@ -21,12 +21,16 @@ use ZenflowsTest.Help.EctoCase, async: true
 alias Ecto.Changeset
 alias Zenflows.VF.EconomicEvent
 
+setup_all do
+	[errmsg_exist_xnor: "exactly one of them must be provided"]
+end
+
 test """
 `chgset/1`: every event requires the `:action_id`, `:provider_id`,
 `:receiver_id` fields and the allowed combinations of the datetime
 fields `:has_point_in_time`, `:has_beginning`, `:has_end`
 """ do
-	assert %Changeset{valid?: false} = cset = EconomicEvent.chgset(%{})
+	assert %Changeset{valid?: false} = cset = EconomicEvent.changeset(%{})
 	err = Changeset.traverse_errors(cset, &elem(&1, 0))
 	assert {[_], err} = pop_in(err[:action_id])
 	assert {[_], err} = pop_in(err[:provider_id])
@@ -37,7 +41,7 @@ fields `:has_point_in_time`, `:has_beginning`, `:has_end`
 	assert err == %{}
 
 	assert %Changeset{valid?: false} = cset =
-		EconomicEvent.chgset(%{has_point_in_time: DateTime.utc_now()})
+		EconomicEvent.changeset(%{has_point_in_time: DateTime.utc_now()})
 	err = Changeset.traverse_errors(cset, &elem(&1, 0))
 	assert {[_], err} = pop_in(err[:action_id])
 	assert {[_], err} = pop_in(err[:provider_id])
@@ -45,7 +49,7 @@ fields `:has_point_in_time`, `:has_beginning`, `:has_end`
 	assert err == %{}
 
 	assert %Changeset{valid?: false} = cset =
-		EconomicEvent.chgset(%{has_beginning: DateTime.utc_now()})
+		EconomicEvent.changeset(%{has_beginning: DateTime.utc_now()})
 	err = Changeset.traverse_errors(cset, &elem(&1, 0))
 	assert {[_], err} = pop_in(err[:action_id])
 	assert {[_], err} = pop_in(err[:provider_id])
@@ -53,7 +57,7 @@ fields `:has_point_in_time`, `:has_beginning`, `:has_end`
 	assert err == %{}
 
 	assert %Changeset{valid?: false} = cset =
-		EconomicEvent.chgset(%{has_end: DateTime.utc_now()})
+		EconomicEvent.changeset(%{has_end: DateTime.utc_now()})
 	err = Changeset.traverse_errors(cset, &elem(&1, 0))
 	assert {[_], err} = pop_in(err[:action_id])
 	assert {[_], err} = pop_in(err[:provider_id])
@@ -61,7 +65,7 @@ fields `:has_point_in_time`, `:has_beginning`, `:has_end`
 	assert err == %{}
 
 	assert %Changeset{valid?: false} = cset =
-		EconomicEvent.chgset(%{
+		EconomicEvent.changeset(%{
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
 		})
@@ -93,7 +97,7 @@ describe "`chgset/1` with raise:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
@@ -101,30 +105,30 @@ describe "`chgset/1` with raise:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
-	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
-		assert %Changeset{valid?: false} = cset = EconomicEvent.chgset(params)
+	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
+		assert %Changeset{valid?: false} = cset = EconomicEvent.changeset(params)
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
-	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
+	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
 		res = Factory.insert!(:economic_resource)
 		spec = Factory.insert!(:resource_specification)
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
@@ -136,7 +140,7 @@ describe "`chgset/1` with raise:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -145,7 +149,7 @@ describe "`chgset/1` with raise:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -175,7 +179,7 @@ describe "`chgset/1` with produce:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
@@ -183,30 +187,30 @@ describe "`chgset/1` with produce:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
-	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
-		assert %Changeset{valid?: false} = cset = EconomicEvent.chgset(params)
+	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
+		assert %Changeset{valid?: false} = cset = EconomicEvent.changeset(params)
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
-	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
+	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`",
+		%{params: params, errmsg_exist_xnor: errmsg} do
 		res = Factory.insert!(:economic_resource)
 		spec = Factory.insert!(:resource_specification)
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
@@ -218,7 +222,7 @@ describe "`chgset/1` with produce:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -227,7 +231,7 @@ describe "`chgset/1` with produce:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -253,7 +257,7 @@ describe "`chgset/1` with lower:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -262,7 +266,7 @@ describe "`chgset/1` with lower:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -271,7 +275,7 @@ describe "`chgset/1` with lower:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -299,7 +303,7 @@ describe "`chgset/1` with consume:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -308,7 +312,7 @@ describe "`chgset/1` with consume:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -317,7 +321,7 @@ describe "`chgset/1` with consume:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -340,27 +344,27 @@ describe "`chgset/1` with use:" do
 		}}
 	end
 
-	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
-		assert %Changeset{valid?: false} = cset = EconomicEvent.chgset(params)
+	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`",
+		%{params: params, errmsg_exist_xnor: errmsg} do
+		assert %Changeset{valid?: false} = cset = EconomicEvent.changeset(params)
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
-	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
+	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
 		res = Factory.insert!(:economic_resource)
 		spec = Factory.insert!(:resource_specification)
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
@@ -369,7 +373,7 @@ describe "`chgset/1` with use:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
@@ -377,12 +381,12 @@ describe "`chgset/1` with use:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 end
 
 test "`chgset/1` with work: pass when all good" do
-	assert %Changeset{valid?: true} = EconomicEvent.chgset(%{
+	assert %Changeset{valid?: true} = EconomicEvent.changeset(%{
 		action_id: "work",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: Factory.insert!(:agent).id,
@@ -416,7 +420,7 @@ describe "`chgset/1` with cite:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
@@ -424,30 +428,30 @@ describe "`chgset/1` with cite:" do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
-	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
-		assert %Changeset{valid?: false} = cset = EconomicEvent.chgset(params)
+	test "fail without `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
+		assert %Changeset{valid?: false} = cset = EconomicEvent.changeset(params)
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 
-	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`", %{params: params} do
+	test "fail with `:resource_conforms_to` and `:resource_inventoried_as`",
+			%{params: params, errmsg_exist_xnor: errmsg} do
 		res = Factory.insert!(:economic_resource)
 		spec = Factory.insert!(:resource_specification)
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:resource_inventoried_as_id, res.id)
 			|> Map.put(:resource_conforms_to_id, spec.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "these are mutually exclusive and exactly one must be provided"
-		assert {[^msg], err} = pop_in(err[:resource_conforms_to_id])
-		assert {[^msg], err} = pop_in(err[:resource_inventoried_as_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_conforms_to_id])
+		assert {[^errmsg], err} = pop_in(err[:resource_inventoried_as_id])
 		assert err == %{}
 	end
 end
@@ -470,30 +474,30 @@ describe "`chgset/1` with deliverService:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:output_of_id, params.input_of_id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
-		msg = "must have different processes"
+		msg = "all of them must be different"
 		assert {[^msg], err} = pop_in(err[:input_of_id])
 		assert {[^msg], err} = pop_in(err[:output_of_id])
 		assert err == %{}
 	end
 
 	test "pass with `:input_of` and `:output_of` differ", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "pass without `:input_of`", %{params: params} do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.delete(:input_of)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 
 	test "pass without `:output_of`", %{params: params} do
 		assert %Changeset{valid?: true} =
 			params
 			|> Map.delete(:output_of)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 	end
 end
 
@@ -516,7 +520,7 @@ describe "`chgset/1` with pickup:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -525,7 +529,7 @@ describe "`chgset/1` with pickup:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -534,7 +538,7 @@ describe "`chgset/1` with pickup:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -562,7 +566,7 @@ describe "`chgset/1` with dropoff:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -571,7 +575,7 @@ describe "`chgset/1` with dropoff:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -580,7 +584,7 @@ describe "`chgset/1` with dropoff:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -607,7 +611,7 @@ describe "`chgset/1` with accept:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -616,7 +620,7 @@ describe "`chgset/1` with accept:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -625,7 +629,7 @@ describe "`chgset/1` with accept:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -653,7 +657,7 @@ describe "`chgset/1` with modify:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -662,7 +666,7 @@ describe "`chgset/1` with modify:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -671,7 +675,7 @@ describe "`chgset/1` with modify:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -680,7 +684,7 @@ describe "`chgset/1` with modify:" do
 end
 
 test "`chgset/1` with transferCustody: pass when all good" do
-	assert %Changeset{valid?: true} = EconomicEvent.chgset(%{
+	assert %Changeset{valid?: true} = EconomicEvent.changeset(%{
 		action_id: "transferCustody",
 		provider_id: Factory.insert!(:agent).id,
 		receiver_id: Factory.insert!(:agent).id,
@@ -694,7 +698,7 @@ test "`chgset/1` with transferCustody: pass when all good" do
 end
 
 test "`chgset/1` with transferAllRights: pass when all good" do
-	assert %Changeset{valid?: true} = EconomicEvent.chgset(%{
+	assert %Changeset{valid?: true} = EconomicEvent.changeset(%{
 		action_id: "transferAllRights",
 		provider_id: Factory.insert!(:agent).id,
 		receiver_id: Factory.insert!(:agent).id,
@@ -709,7 +713,7 @@ test "`chgset/1` with transferAllRights: pass when all good" do
 end
 
 test "`chgset/1` with transfer: pass when all good" do
-	assert %Changeset{valid?: true} = EconomicEvent.chgset(%{
+	assert %Changeset{valid?: true} = EconomicEvent.changeset(%{
 		action_id: "transfer",
 		provider_id: Factory.insert!(:agent).id,
 		receiver_id: Factory.insert!(:agent).id,
@@ -741,7 +745,7 @@ describe "`chgset/1` with move:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert %Changeset{valid?: true} = EconomicEvent.chgset(params)
+		assert %Changeset{valid?: true} = EconomicEvent.changeset(params)
 	end
 
 	test "fail when `:provider` and `:receiver` differ", %{params: params} do
@@ -750,7 +754,7 @@ describe "`chgset/1` with move:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:provider_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -759,7 +763,7 @@ describe "`chgset/1` with move:" do
 		assert %Changeset{valid?: false} = cset =
 			params
 			|> Map.put(:receiver_id, agent.id)
-			|> EconomicEvent.chgset()
+			|> EconomicEvent.changeset()
 		err = Changeset.traverse_errors(cset, &elem(&1, 0))
 		assert {[_], err} = pop_in(err[:provider_id])
 		assert {[_], err} = pop_in(err[:receiver_id])
@@ -777,7 +781,7 @@ describe "" do
 
 	# 	assert {:error, %Changeset{errors: errs}} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert {:ok, _} = Keyword.fetch(errs, :resource_conforms_to_id)
@@ -793,7 +797,7 @@ describe "" do
 
 	# 	assert {:error, %Changeset{errors: errs}} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert {:ok, _} = Keyword.fetch(errs, :resource_conforms_to_id)
@@ -808,7 +812,7 @@ describe "" do
 
 	# 	assert {:ok, %EconomicEvent{} = eco_evt} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert eco_evt.action_id == params.action_id
@@ -843,7 +847,7 @@ describe "" do
 
 	# 	assert {:ok, %EconomicEvent{} = eco_evt} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert eco_evt.action_id == params.action_id
@@ -879,7 +883,7 @@ describe "" do
 
 	# 	assert {:ok, %EconomicEvent{} = eco_evt} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert eco_evt.action_id == params.action_id
@@ -914,7 +918,7 @@ describe "" do
 
 	# 	assert {:ok, %EconomicEvent{} = eco_evt} =
 	# 		params
-	# 		|> EconomicEvent.chgset()
+	# 		|> EconomicEvent.changeset()
 	# 		|> Repo.insert()
 
 	# 	assert eco_evt.action_id == params.action_id
@@ -948,7 +952,7 @@ test "update EconomicEvent", %{params: _params} do
 
 	# assert {:ok, %EconomicEvent{} = new} =
 	# 	old
-	# 	|> EconomicEvent.chgset(params)
+	# 	|> EconomicEvent.changeset(params)
 	# 	|> Repo.update()
 
 	# assert new.action_id == old.action_id

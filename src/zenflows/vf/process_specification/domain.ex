@@ -18,16 +18,11 @@
 defmodule Zenflows.VF.ProcessSpecification.Domain do
 @moduledoc "Domain logic of ProcessSpecifications."
 
-alias Ecto.Multi
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.{Changeset, Multi}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.ProcessSpecification
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, ProcessSpecification.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -38,47 +33,106 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(ProcessSpecification, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
+	:: ProcessSpecification.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-@spec create(params()) :: {:ok, ProcessSpecification.t()} | {:error, chgset()}
+@spec all(Page.t()) :: {:ok, [ProcessSpecification.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(ProcessSpecification, page)}
+end
+
+@spec all!(Page.t()) :: [ProcessSpecification.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params())
+	:: {:ok, ProcessSpecification.t()} | {:error, Changeset.t()}
 def create(params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:insert, ProcessSpecification.chgset(params))
+	|> multi_insert(params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{insert: p}} -> {:ok, p}
-		{:error, _, cset, _} -> {:error, cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec update(id(), params())
-	:: {:ok, ProcessSpecification.t()} | {:error, String.t() | chgset()}
+@spec create!(Schema.params()) :: ProcessSpecification.t()
+def create!(params) do
+	{:ok, value} = create(params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, ProcessSpecification.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.update(:update, &ProcessSpecification.chgset(&1.one, params))
+	|> multi_update(id, params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{update: p}} -> {:ok, p}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec delete(id())
-	:: {:ok, ProcessSpecification.t()} | {:error, String.t()  | chgset()}
+@spec update!(Schema.id(), Schema.params()) :: ProcessSpecification.t()
+def update!(id, params) do
+	{:ok, value} = update(id, params)
+	value
+end
+
+@spec delete(Schema.id())
+	:: {:ok, ProcessSpecification.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.delete(:delete, & &1.one)
+	|> multi_delete(id)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: p}} -> {:ok, p}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec delete!(Schema.id()) :: ProcessSpecification.t()
+def delete!(id) do
+	{:ok, value} = delete(id)
+	value
+end
+
+@spec multi_key() :: atom()
+def multi_key(), do: :process_specification
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
+end
+
+@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, key \\ multi_key(), params) do
+	Multi.insert(m, key, ProcessSpecification.changeset(params))
+end
+
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&ProcessSpecification.changeset(Map.fetch!(&1, "#{key}.one"), params))
+end
+
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

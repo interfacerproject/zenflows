@@ -16,9 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.SpatialThing.Resolv do
-@moduledoc "Resolvers of SpatialThings."
+@moduledoc false
 # Basically, a fancy name for (geo)location.  :P
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.SpatialThing.Domain
 
 def spatial_thing(params, _) do
@@ -26,7 +27,10 @@ def spatial_thing(params, _) do
 end
 
 def spatial_things(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_spatial_thing(%{spatial_thing: params}, _) do

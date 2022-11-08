@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.RecipeResource.Resolv do
-@moduledoc "Resolvers of RecipeResources."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.RecipeResource.Domain
 
 def recipe_resource(params, _) do
@@ -25,7 +26,10 @@ def recipe_resource(params, _) do
 end
 
 def recipe_resources(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_recipe_resource(%{recipe_resource: params}, _) do

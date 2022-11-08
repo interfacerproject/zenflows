@@ -23,12 +23,13 @@ or events that partially or full satisfy one or more intents.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	EventOrCommitment,
 	Intent,
 	Measure,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -56,8 +57,8 @@ end
 @cast @reqr ++ ~w[resource_quantity effort_quantity note]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

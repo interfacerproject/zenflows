@@ -23,6 +23,8 @@ agent.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -34,7 +36,6 @@ alias Zenflows.VF.{
 	ResourceSpecification,
 	SpatialThing,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -102,13 +103,15 @@ end
 ]a # in_scope_of_id
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
-	|> datetime_check()
-	|> resource_check()
+	|> Validate.exist_or([:has_point_in_time, :has_beginning, :has_end, :due])
+	|> Validate.exist_nand([:has_point_in_time, :has_beginning])
+	|> Validate.exist_nand([:has_point_in_time, :has_end])
+	|> Validate.exist_xor([:resource_conforms_to_id, :resource_inventoried_as_id], method: :both)
 	|> Validate.note(:note)
 	|> Validate.class(:resource_classified_as)
 	|> Measure.cast(:effort_quantity)
@@ -122,110 +125,5 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:independent_demand_of)
 	|> Changeset.assoc_constraint(:at_location)
 	|> Changeset.assoc_constraint(:clause_of)
-end
-
-# Validate that either :has_point_in_time, :has_beginning, :has_end,
-# or :due is provided and that :has_point_in_time and (:has_beginning
-# and/or :has_end) are mutually exclusive.
-@spec datetime_check(Changeset.t()) :: Changeset.t()
-defp datetime_check(cset) do
-	# credo:disable-for-previous-line Credo.Check.Refactor.CyclomaticComplexity
-
-	{data_point, chng_point, field_point} =
-		case Changeset.fetch_field(cset, :has_point_in_time) do
-			{:data, x} -> {x, nil, x}
-			{:changes, x} -> {nil, x, x}
-		end
-	{data_begin, chng_begin, field_begin} =
-		case Changeset.fetch_field(cset, :has_beginning) do
-			{:data, x} -> {x, nil, x}
-			{:changes, x} -> {nil, x, x}
-		end
-	{data_end, chng_end, field_end} =
-		case Changeset.fetch_field(cset, :has_end) do
-			{:data, x} -> {x, nil, x}
-			{:changes, x} -> {nil, x, x}
-		end
-	field_due = Changeset.get_field(cset, :due)
-
-	cond do
-		data_point && chng_begin ->
-			msg = "has_beginning is not allowed in this record"
-			Changeset.add_error(cset, :has_beginning, msg)
-
-		data_point && chng_end ->
-			msg = "has_end is not allowed in this record"
-			Changeset.add_error(cset, :has_end, msg)
-
-		(data_begin || data_end) && chng_point ->
-			msg = "has_point_in_time is not allowed in this record"
-			Changeset.add_error(cset, :has_point_in_time, msg)
-
-		chng_point && chng_begin ->
-			msg = "has_point_in_time and has_beginning are mutually exclusive"
-
-			cset
-			|> Changeset.add_error(:has_point_in_time, msg)
-			|> Changeset.add_error(:has_beginning, msg)
-
-		chng_point && chng_end ->
-			msg = "has_point_in_time and has_end are mutually exclusive"
-
-			cset
-			|> Changeset.add_error(:has_point_in_time, msg)
-			|> Changeset.add_error(:has_end, msg)
-
-		field_point || field_begin || field_end || field_due ->
-			cset
-
-		true ->
-			msg = "hasBeginning or hasEnd or hasPointInTime or due is required"
-
-			cset
-			|> Changeset.add_error(:has_point_in_time, msg)
-			|> Changeset.add_error(:has_beginning, msg)
-			|> Changeset.add_error(:has_end, msg)
-			|> Changeset.add_error(:due, msg)
-	end
-end
-
-# Validate mutual exclusivity of having an actual resource or its
-# specification.
-# In other words, forbid :resource_conforms_to and
-# :resource_inventoried_as to be provided at the same time.
-@spec resource_check(Changeset.t()) :: Changeset.t()
-defp resource_check(cset) do
-	# credo:disable-for-previous-line Credo.Check.Refactor.CyclomaticComplexity
-
-	{data_res_con, chng_res_con} =
-		case Changeset.fetch_field(cset, :resource_conforms_to_id) do
-			{:data, x} -> {x, nil}
-			{:changes, x} -> {nil, x}
-		end
-	{data_res_inv, chng_res_inv} =
-		case Changeset.fetch_field(cset, :resource_inventoried_as_id) do
-			{:data, x} -> {x, nil}
-			{:changes, x} -> {nil, x}
-		end
-
-	cond do
-		data_res_con && chng_res_inv ->
-			msg = "resource_inventoried_as is not allowed in this record"
-			Changeset.add_error(cset, :resource_inventoried_as_id, msg)
-
-		data_res_inv && chng_res_con ->
-			msg = "resource_conforms_to is not allowed in this record"
-			Changeset.add_error(cset, :resource_conforms_to_id, msg)
-
-		chng_res_con && chng_res_inv ->
-			msg = "resource_conforms_to and resource_inventoried_as are mutually exclusive"
-
-			cset
-			|> Changeset.add_error(:resource_conforms_to_id, msg)
-			|> Changeset.add_error(:resource_inventoried_as_id, msg)
-
-		true ->
-			cset
-	end
 end
 end

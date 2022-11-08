@@ -22,11 +22,12 @@ Published requests or offers, sometimes with what is expected in return.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Intent,
 	ProposedIntent,
 	SpatialThing,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -60,8 +61,8 @@ end
 @cast ~w[name has_beginning has_end unit_based note eligible_location_id]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Validate.name(:name)

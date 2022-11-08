@@ -18,20 +18,11 @@
 defmodule Zenflows.VF.RecipeFlow.Domain do
 @moduledoc "Domain logic of RecipeFlows."
 
-alias Ecto.Multi
-alias Zenflows.DB.{Paging, Repo}
-alias Zenflows.VF.{
-	Action,
-	Measure,
-	RecipeFlow,
-}
+alias Ecto.{Changeset, Multi}
+alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.VF.{Action, Measure, RecipeFlow}
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, RecipeFlow.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -42,78 +33,117 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(RecipeFlow, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: RecipeFlow.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-@spec create(params()) :: {:ok, RecipeFlow.t()} | {:error, chgset()}
+@spec all(Page.t()) :: {:ok, [RecipeFlow.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(RecipeFlow, page)}
+end
+
+@spec all!(Page.t()) :: [RecipeFlow.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params()) :: {:ok, RecipeFlow.t()} | {:error, Changeset.t()}
 def create(params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:insert, RecipeFlow.chgset(params))
+	|> multi_insert(params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{insert: rf}} -> {:ok, rf}
-		{:error, _, cset, _} -> {:error, cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec update(id(), params())
-	:: {:ok, RecipeFlow.t()} | {:error, String.t() | chgset()}
+@spec create!(Schema.params()) :: RecipeFlow.t()
+def create!(params) do
+	{:ok, value} = create(params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, RecipeFlow.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.update(:update, &RecipeFlow.chgset(&1.one, params))
+	|> multi_update(id, params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{update: rf}} -> {:ok, rf}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec delete(id()) :: {:ok, RecipeFlow.t()} | {:error, String.t() | chgset()}
+@spec update!(Schema.id(), Schema.params()) :: RecipeFlow.t()
+def update!(id, params) do
+	{:ok, value} = update(id, params)
+	value
+end
+
+@spec delete(Schema.id())
+	:: {:ok, RecipeFlow.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.delete(:delete, & &1.one)
+	|> multi_delete(id)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: rf}} -> {:ok, rf}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec delete!(Schema.id()) :: RecipeFlow.t()
+def delete!(id) do
+	{:ok, value} = delete(id)
+	value
 end
 
 @spec preload(RecipeFlow.t(), :resource_quantity | :effort_quantity
 		| :recipe_flow_resource | :action | :recipe_input_of | :recipe_output_of
 		| :recipe_clause_of)
 	:: RecipeFlow.t()
-def preload(rec_flow, :resource_quantity) do
-	Measure.preload(rec_flow, :resource_quantity)
+def preload(rec_flow, x) when x in ~w[
+	recipe_flow_resource recipe_input_of recipe_output_of recipe_clause_of
+]a,
+	do: Repo.preload(rec_flow, x)
+def preload(rec_flow, :action),
+	do: Action.preload(rec_flow, :action)
+def preload(rec_flow, x) when x in ~w[resource_quantity effort_quantity]a,
+	do: Measure.preload(rec_flow, x)
+
+@spec multi_key() :: atom()
+def multi_key(), do: :recipe_flow
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-def preload(rec_flow, :effort_quantity) do
-	Measure.preload(rec_flow, :effort_quantity)
+@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, key \\ multi_key(), params) do
+	Multi.insert(m, key, RecipeFlow.changeset(params))
 end
 
-def preload(rec_flow, :recipe_flow_resource) do
-	Repo.preload(rec_flow, :recipe_flow_resource)
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&RecipeFlow.changeset(Map.fetch!(&1, "#{key}.one"), params))
 end
 
-def preload(rec_flow, :action) do
-	Action.preload(rec_flow, :action)
-end
-
-def preload(rec_flow, :recipe_input_of) do
-	Repo.preload(rec_flow, :recipe_input_of)
-end
-
-def preload(rec_flow, :recipe_output_of) do
-	Repo.preload(rec_flow, :recipe_output_of)
-end
-
-def preload(rec_flow, :recipe_clause_of) do
-	Repo.preload(rec_flow, :recipe_clause_of)
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

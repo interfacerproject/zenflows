@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.EconomicResource.Resolv do
-@moduledoc "Resolvers of EconomicResource."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.EconomicResource.Domain
 
 def economic_resource(params, _) do
@@ -27,7 +28,10 @@ def economic_resource(params, _) do
 end
 
 def economic_resources(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def economic_resource_classifications(_, _) do

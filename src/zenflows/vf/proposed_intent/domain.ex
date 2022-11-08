@@ -18,16 +18,11 @@
 defmodule Zenflows.VF.ProposedIntent.Domain do
 @moduledoc "Domain logic of ProposedIntents."
 
-alias Ecto.Multi
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.{Changeset, Multi}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.ProposedIntent
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, ProposedIntent.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -38,43 +33,109 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(ProposedIntent, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: ProposedIntent.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-@spec create(params()) :: {:ok, ProposedIntent.t()} | {:error, chgset()}
+@spec all(Page.t()) :: {:ok, [ProposedIntent.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(ProposedIntent, page)}
+end
+
+@spec all!(Page.t()) :: [ProposedIntent.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params()) :: {:ok, ProposedIntent.t()} | {:error, Changeset.t()}
 def create(params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:insert, ProposedIntent.chgset(params))
+	|> multi_insert(params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{insert: pi}} -> {:ok, pi}
-		{:error, _, cset, _} -> {:error, cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec delete(id())
-	:: {:ok, ProposedIntent.t()} | {:error, String.t() | chgset()}
-def delete(id) do
+@spec create!(Schema.params()) :: ProposedIntent.t()
+def create!(params) do
+	{:ok, value} = create(params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, ProposedIntent.t()} | {:error, String.t() | Changeset.t()}
+def update(id, params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.delete(:delete, & &1.one)
+	|> multi_update(id, params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: pi}} -> {:ok, pi}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec update!(Schema.id(), Schema.params()) :: ProposedIntent.t()
+def update!(id, params) do
+	{:ok, value} = update(id, params)
+	value
+end
+
+@spec delete(Schema.id()) :: {:ok, ProposedIntent.t()} | {:error, String.t() | Changeset.t()}
+def delete(id) do
+	key = multi_key()
+	Multi.new()
+	|> multi_delete(id)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
+@spec delete!(Schema.id()) :: ProposedIntent.t()
+def delete!(id) do
+	{:ok, value} = delete(id)
+	value
 end
 
 @spec preload(ProposedIntent.t(), :published_in | :publishes)
 	:: ProposedIntent.t()
-def preload(prop_int, :published_in) do
-	Repo.preload(prop_int, :published_in)
+def preload(prop_int, x) when x in ~w[published_in publishes]a do
+	Repo.preload(prop_int, x)
 end
 
-def preload(prop_int, :publishes) do
-	Repo.preload(prop_int, :publishes)
+@spec multi_key() :: atom()
+def multi_key(), do: :proposed_intent
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
+end
+
+@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, key \\ multi_key(), params) do
+	Multi.insert(m, key, ProposedIntent.changeset(params))
+end
+
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&ProposedIntent.changeset(Map.fetch!(&1, "#{key}.one"), params))
+end
+
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

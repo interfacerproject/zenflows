@@ -40,7 +40,7 @@ end
 test "create Settlement", %{params: params} do
 	assert {:ok, %Settlement{} = settl} =
 		params
-		|> Settlement.chgset()
+		|> Settlement.changeset()
 		|> Repo.insert()
 
 	assert settl.note == params.note
@@ -57,7 +57,7 @@ test "update Settlement", %{params: params} do
 	assert {:ok, %Settlement{} = settl} =
 		:settlement
 		|> Factory.insert!()
-		|> Settlement.chgset(params)
+		|> Settlement.changeset(params)
 		|> Repo.update()
 
 	assert settl.note == params.note

@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Organization.Resolv do
-@moduledoc "Resolvers of Organizations."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Organization.Domain
 
 def organization(params, _) do
@@ -25,7 +26,10 @@ def organization(params, _) do
 end
 
 def organizations(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_organization(%{organization: params}, _) do

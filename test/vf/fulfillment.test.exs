@@ -40,7 +40,7 @@ end
 test "create Fulfillment", %{params: params} do
 	assert {:ok, %Fulfillment{} = fulf} =
 		params
-		|> Fulfillment.chgset()
+		|> Fulfillment.changeset()
 		|> Repo.insert()
 
 	assert fulf.note == params.note
@@ -57,7 +57,7 @@ test "update Fulfillment", %{params: params} do
 	assert {:ok, %Fulfillment{} = fulf} =
 		:fulfillment
 		|> Factory.insert!()
-		|> Fulfillment.chgset(params)
+		|> Fulfillment.changeset(params)
 		|> Repo.update()
 
 	assert fulf.note == params.note

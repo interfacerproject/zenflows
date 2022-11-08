@@ -22,11 +22,12 @@ Specifies a process in a recipe for use in planning from recipe.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Duration,
 	ProcessSpecification,
 	TimeUnitEnum,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -54,8 +55,8 @@ end
 @cast @reqr ++ ~w[process_classified_as note has_duration]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

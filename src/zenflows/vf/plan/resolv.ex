@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Plan.Resolv do
-@moduledoc "Resolvers of Plan."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Plan.Domain
 
 def plan(params, _) do
@@ -27,7 +28,10 @@ def plan(params, _) do
 end
 
 def plans(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_plan(%{plan: params}, _) do

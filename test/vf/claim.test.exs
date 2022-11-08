@@ -48,7 +48,7 @@ end
 test "create Claim", %{params: params} do
 	assert {:ok, %Claim{} = claim} =
 		params
-		|> Claim.chgset()
+		|> Claim.changeset()
 		|> Repo.insert()
 
 	assert claim.action_id == params.action_id
@@ -73,7 +73,7 @@ test "update Appreciation", %{params: params} do
 	assert {:ok, %Claim{} = claim} =
 		:claim
 		|> Factory.insert!()
-		|> Claim.chgset(params)
+		|> Claim.changeset(params)
 		|> Repo.update()
 
 	assert claim.action_id == params.action_id

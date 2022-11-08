@@ -78,8 +78,7 @@ end
 
 test "classifications/0 returns list of unique `classified_as` values" do
 	Enum.each(1..10, fn _ -> Factory.insert!(:economic_resource) end)
-	{:ok, %{edges: edges}} = Domain.all()
-	left = Enum.flat_map(edges, & &1.node.classified_as)
+	left = Enum.flat_map(Domain.all!(), & &1.classified_as)
 	right = Domain.classifications()
 	assert [] = left -- right
 end

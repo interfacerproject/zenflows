@@ -16,8 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Person.Resolv do
-@moduledoc "Resolvers of Persons."
+@moduledoc false
 
+alias Ecto.Changeset
+alias Zenflows.DB.Validate
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Person.Domain
 
 def person(params, _) do
@@ -25,7 +28,16 @@ def person(params, _) do
 end
 
 def people(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
+end
+
+def person_exists(params, _) do
+	with {:ok, parsed} <- parse_person_exists(params) do
+		{:ok, parsed |> Map.to_list() |> Domain.exists?()}
+	end
 end
 
 def person_check(params, _) do
@@ -62,5 +74,15 @@ end
 def primary_location(per, _, _) do
 	per = Domain.preload(per, :primary_location)
 	{:ok, per.primary_location}
+end
+
+@spec parse_person_exists(map()) :: {:ok, map()} | {:error, Changeset.t()}
+def parse_person_exists(params) do
+	{%{}, %{email: :string, user: :string}}
+	|> Changeset.cast(params, [:email, :user])
+	|> Validate.exist_xor([:email, :user])
+	|> Validate.email(:email)
+	|> Validate.name(:user)
+	|> Changeset.apply_action(nil)
 end
 end

@@ -18,13 +18,11 @@
 defmodule Zenflows.File.Domain do
 @moduledoc "Domain logic of Files."
 
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.Changeset
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.File
 
-@typep repo() :: Ecto.Repo.t()
-@typep id() :: Zenflows.DB.Schema.id()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, File.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -35,8 +33,20 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(File, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: File.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
+end
+
+@spec all(Page.t()) :: {:ok, [File.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(File, page)}
+end
+
+@spec all!(Page.t()) :: [File.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
 end
 end

@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Person.Type do
-@moduledoc "GraphQL types of Persons."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
@@ -178,6 +178,14 @@ object :query_person do
 		arg :before, :id
 		arg :filter, :person_filter_params
 		resolve &Resolv.people/2
+	end
+
+	@desc "Check if a person exists by email xor username."
+	field :person_exists, non_null(:boolean) do
+		meta only_guest?: true
+		arg :email, :string
+		arg :user, :string
+		resolve &Resolv.person_exists/2
 	end
 
 	@desc "If exists, find a person by email and eddsa-public-key."

@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.ResourceSpecification.Type do
-@moduledoc "GraphQL types of ResourceSpecifications."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

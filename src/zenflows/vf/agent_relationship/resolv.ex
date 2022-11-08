@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.AgentRelationship.Resolv do
-@moduledoc "Resolvers of AgentRelationships."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.{AgentRelationship, AgentRelationship.Domain}
 
 def agent_relationship(params, _) do
@@ -25,7 +26,10 @@ def agent_relationship(params, _) do
 end
 
 def agent_relationships(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_agent_relationship(%{relationship: params}, _) do

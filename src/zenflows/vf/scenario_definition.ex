@@ -22,10 +22,11 @@ The type definition of one or more scenarios, such as Yearly Budget.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Duration,
 	TimeUnitEnum,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -49,8 +50,8 @@ end
 @cast @reqr ++ ~w[note has_duration]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	Changeset.cast(schema, params, @cast)
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)

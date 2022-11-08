@@ -62,7 +62,7 @@ defp deps() do
 		{:plug_crypto, "~> 1.2"},
 
 		# http
-		{:plug_cowboy, "~> 2.5"},
+		{:plug_cowboy, "~> 2.6"},
 		{:mint, "~> 1.4"},
 		{:castore, "~> 0.1"},
 

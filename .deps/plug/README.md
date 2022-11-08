@@ -25,6 +25,8 @@ end
 ## Hello world
 
 ```elixir
+Mix.install([:plug, :plug_cowboy])
+
 defmodule MyPlug do
   import Plug.Conn
 
@@ -39,25 +41,36 @@ defmodule MyPlug do
     |> send_resp(200, "Hello world")
   end
 end
+
+require Logger
+{:ok, _} = Plug.Cowboy.http(MyPlug, [])
+Logger.info("Plug now running on localhost:4000")
 ```
 
-The snippet above shows a very simple example on how to use Plug. Save that snippet to a file and run it inside the plug application with:
+The snippet above shows a very simple example on how to use Plug. Save that snippet to a file and execute it as `elixir --no-halt hello_world.exs`. Access <http://localhost:4000/> and you should be greeted!
 
-    $ iex -S mix
-    iex> c "path/to/file.ex"
-    [MyPlug]
-    iex> {:ok, _} = Plug.Cowboy.http MyPlug, []
-    {:ok, #PID<...>}
-
-Access [http://localhost:4000/](http://localhost:4000/) and we are done! For now, we have directly started the server in our terminal but, for production deployments, you likely want to start it in your supervision tree. See the [Supervised handlers](#supervised-handlers) section next.
+For now, we have directly started the server in a single file but, for production deployments, you likely want to start it in your supervision tree. See the [Supervised handlers](#supervised-handlers) section next.
 
 ## Supervised handlers
 
 On a production system, you likely want to start your Plug pipeline under your application's supervision tree. Start a new Elixir project with the `--sup` flag:
 
-    $ mix new my_app --sup
+```shell
+$ mix new my_app --sup
+```
 
-and then update `lib/my_app/application.ex` as follows:
+Add both `:plug` and `:plug_cowboy` as dependencies in your `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:plug, "~> 1.13"},
+    {:plug_cowboy, "~> 2.0"}
+  ]
+end
+```
+
+Now update `lib/my_app/application.ex` as follows:
 
 ```elixir
 defmodule MyApp.Application do
@@ -81,12 +94,14 @@ defmodule MyApp.Application do
 end
 ```
 
-Now run `mix run --no-halt` and it will start your application with a web server running at `localhost:4001`.
+Finally create `lib/my_app/my_plug.ex` with the `MyPlug` module.
+
+Now run `mix run --no-halt` and it will start your application with a web server running at <http://localhost:4001>.
 
 ## Supported Versions
 
 | Branch | Support                  |
-| ------ | ------------------------ |
+|--------|--------------------------|
 | v1.13  | Bug fixes                |
 | v1.12  | Security patches only    |
 | v1.11  | Security patches only    |

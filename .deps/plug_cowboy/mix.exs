@@ -2,14 +2,14 @@ defmodule Plug.Cowboy.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-plug/plug_cowboy"
-  @version "2.5.2"
+  @version "2.6.0"
   @description "A Plug adapter for Cowboy"
 
   def project do
     [
       app: :plug_cowboy,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.10",
       deps: deps(),
       package: package(),
       description: @description,
@@ -33,13 +33,13 @@ defmodule Plug.Cowboy.MixProject do
 
   def deps do
     [
-      {:plug, "~> 1.7"},
+      {:plug, "~> 1.14"},
       {:cowboy, "~> 2.7"},
       {:cowboy_telemetry, "~> 0.3"},
       {:ex_doc, "~> 0.20", only: :docs},
-      {:hackney, "~> 1.2.0", only: :test},
+      {:hackney, "~> 1.2", only: :test},
       {:kadabra, "0.3.4", only: :test},
-      {:x509, "~> 0.6.0", only: :test}
+      {:x509, "~> 0.6", only: :test}
     ]
   end
 

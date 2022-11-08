@@ -1,15 +1,15 @@
 defmodule Plug.MixProject do
   use Mix.Project
 
-  @version "1.13.6"
+  @version "1.14.0"
   @description "Compose web applications with functions"
-  @xref_exclude [Plug.Cowboy, :telemetry]
+  @xref_exclude [Plug.Cowboy, :telemetry, :ssl]
 
   def project do
     [
       app: :plug,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.10",
       deps: deps(),
       package: package(),
       description: @description,

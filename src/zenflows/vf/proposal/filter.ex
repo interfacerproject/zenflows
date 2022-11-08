@@ -135,15 +135,15 @@ defp all_validate(params) do
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
 	|> Validate.name(:primary_intents_resource_inventoried_as_name)
 	|> Validate.name(:or_primary_intents_resource_inventoried_as_name)
-	|> Validate.exist_xor([:primary_intents_resource_inventoried_as_conforms_to,
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_conforms_to,
 		:or_primary_intents_resource_inventoried_as_conforms_to])
-	|> Validate.exist_xor([:primary_intents_resource_inventoried_as_primary_accountable,
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_primary_accountable,
 		:or_primary_intents_resource_inventoried_as_primary_accountable])
-	|> Validate.exist_xor([:primary_intents_resource_inventoried_as_classified_as,
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_classified_as,
 		:or_primary_intents_resource_inventoried_as_classified_as])
-	|> Validate.exist_xor([:primary_intents_resource_inventoried_as_name,
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_name,
 		:or_primary_intents_resource_inventoried_as_name])
-	|> Validate.exist_xor([:primary_intents_resource_inventoried_as_id,
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_id,
 		:or_primary_intents_resource_inventoried_as_id])
 	|> Validate.escape_like(:primary_intents_resource_inventoried_as_name)
 	|> Validate.escape_like(:or_primary_intents_resource_inventoried)

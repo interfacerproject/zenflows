@@ -16,56 +16,47 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Person.Filter do
-@moduledoc "Filtering logic of Persons."
-
-use Zenflows.DB.Schema
+@moduledoc false
 
 import Ecto.Query
 
-alias Ecto.Query
-alias Zenflows.DB.Filter
-alias Zenflows.VF.{Person, Validate}
+alias Ecto.{Changeset, Queryable}
+alias Zenflows.DB.{Page, Schema, Validate}
+alias Zenflows.VF.Person
 
-@type error() :: Filter.error()
-
-@spec filter(Filter.params()) :: Filter.result()
-def filter(params) do
-	case chgset(params) do
-		%{valid?: true, changes: c} ->
-			{:ok, Enum.reduce(c, where(Person, type: :per), &f(&2, &1))}
-		%{valid?: false} = cset ->
-			{:error, cset}
+@spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def all(%{filter: nil}), do: {:ok, where(Person, type: :per)}
+def all(%{filter: params}) do
+	with {:ok, filters} <- all_validate(params) do
+		Enum.reduce(filters, where(Person, type: :per), &all_f(&2, &1))
 	end
 end
 
-@spec f(Query.t(), {atom(), term()}) :: Query.t()
-defp f(q, {:name, v}),
-	do: where(q, [x], ilike(x.name, ^"%#{Filter.escape_like(v)}%"))
-defp f(q, {:or_name, v}),
-	do: or_where(q, [x], ilike(x.name, ^"%#{Filter.escape_like(v)}%"))
-defp f(q, {:user, v}),
-	do: where(q, [x], ilike(x.user, ^"%#{Filter.escape_like(v)}%"))
-defp f(q, {:or_user, v}),
-	do: or_where(q, [x], ilike(x.user, ^"%#{Filter.escape_like(v)}%"))
+@spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
+defp all_f(q, {:name, v}),
+	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
+defp all_f(q, {:or_name, v}),
+	do: or_where(q, [x], ilike(x.name, ^"%#{v}%"))
+defp all_f(q, {:user, v}),
+	do: where(q, [x], ilike(x.user, ^"%#{v}%"))
+defp all_f(q, {:or_user, v}),
+	do: or_where(q, [x], ilike(x.user, ^"%#{v}"))
 
-embedded_schema do
-	field :name, :string
-	field :or_name, :string
-	field :user, :string
-	field :or_user, :string
-end
-
-@cast ~w[name or_name user or_user]a
-
-@spec chgset(params()) :: Changeset.t()
-defp chgset(params) do
-	%__MODULE__{}
-	|> Changeset.cast(params, @cast)
+@spec all_validate(Schema.params()) ::
+	{:ok, Changeset.data()} | {:error, Changeset.t()}
+defp all_validate(params) do
+	{%{}, %{name: :string, or_name: :string, user: :string, or_user: :string}}
+	|> Changeset.cast(params, ~w[name or_name user or_user]a)
 	|> Validate.name(:name)
 	|> Validate.name(:or_name)
 	|> Validate.name(:user)
 	|> Validate.name(:or_user)
-	|> Filter.check_xor(:name, :or_name)
-	|> Filter.check_xor(:user, :or_user)
+	|> Validate.exist_xor([:name, :or_name])
+	|> Validate.exist_xor([:user, :or_user])
+	|> Validate.escape_like(:name)
+	|> Validate.escape_like(:or_name)
+	|> Validate.escape_like(:user)
+	|> Validate.escape_like(:or_user)
+	|> Changeset.apply_action(nil)
 end
 end

@@ -32,7 +32,7 @@ end
 test "create Appreciation", %{params: params} do
 	assert {:ok, %Appreciation{} = appr} =
 		params
-		|> Appreciation.chgset()
+		|> Appreciation.changeset()
 		|> Repo.insert()
 
 	assert appr.appreciation_of_id == params.appreciation_of_id
@@ -45,7 +45,7 @@ test "update Appreciation", %{params: params} do
 	assert {:ok, %Appreciation{} = appr} =
 		:appreciation
 		|> Factory.insert!()
-		|> Appreciation.chgset(params)
+		|> Appreciation.changeset(params)
 		|> Repo.update()
 
 	assert appr.appreciation_of_id == params.appreciation_of_id

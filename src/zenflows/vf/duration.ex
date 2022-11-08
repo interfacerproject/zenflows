@@ -22,6 +22,8 @@ Represents an interval between two DateTime values.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.Schema
 alias Zenflows.VF.TimeUnitEnum
 
 @type t() :: %__MODULE__{
@@ -44,25 +46,23 @@ and `Zenflows.VF.ScenarioDefinition` modules.
 def cast(cset, key) do
 	case Changeset.fetch_change(cset, key) do
 		{:ok, params} ->
-			case chgset(params) do
+			case changeset(params) do
 				%{valid?: true} = cset_dur ->
 					cset
-					|> Changeset.put_change(field_unit_type(key),
+					|> Changeset.put_change(:"#{key}_unit_type",
 						Changeset.fetch_change!(cset_dur, :unit_type))
-					|> Changeset.put_change(field_numeric_duration(key),
+					|> Changeset.put_change(:"#{key}_numeric_duration",
 						Changeset.fetch_change!(cset_dur, :numeric_duration))
-
 				cset_dur ->
 					cset_dur.errors
 					|> Enum.reduce(cset, fn {field, {msg, _opts}}, acc ->
 						Changeset.add_error(acc, key, "#{field}: #{msg}")
 					end)
 			end
-
 		:error ->
 			# Ecto seems to convert the params' keys to string
 			# whether they were originally string or atom.
-			strkey = Atom.to_string(key)
+			strkey = "#{key}"
 			case cset.params do
 				# If, for example, `key` is
 				# `:has_duration`, and it's set to `nil`,
@@ -70,9 +70,8 @@ def cast(cset, key) do
 				# `nil` as well.
 				%{^strkey => nil} ->
 					cset
-					|> Changeset.force_change(field_unit_type(key), nil)
-					|> Changeset.force_change(field_numeric_duration(key), nil)
-
+					|> Changeset.force_change(:"#{key}_unit_type", nil)
+					|> Changeset.force_change(:"#{key}_numeric_duration", nil)
 				_ ->
 					cset
 			end
@@ -87,29 +86,19 @@ as a %Duration{} struct.  Useful for GraphQL types as can be seen in
 @spec preload(Schema.t(), atom()) :: Schema.t()
 def preload(schema, key) do
 	%{schema | key => %__MODULE__{
-		unit_type: Map.get(schema, field_unit_type(key)),
-		numeric_duration: Map.get(schema, field_numeric_duration(key)),
+		unit_type: Map.get(schema, :"#{key}_unit_type"),
+		numeric_duration: Map.get(schema, :"#{key}_numeric_duration"),
 	}}
 end
 
 @cast ~w[unit_type numeric_duration]a
 @reqr @cast
 
-@spec chgset(params()) :: Changeset.t()
-defp chgset(params) do
+@spec changeset(Schema.params()) :: Changeset.t()
+defp changeset(params) do
 	%__MODULE__{}
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
 	|> Changeset.validate_number(:numeric_duration, greater_than_or_equal_to: 0)
-end
-
-@spec field_unit_type(atom()) :: atom()
-defp field_unit_type(key) do
-	String.to_existing_atom("#{key}_unit_type")
-end
-
-@spec field_numeric_duration(atom()) :: atom()
-defp field_numeric_duration(key) do
-	String.to_existing_atom("#{key}_numeric_duration")
 end
 end

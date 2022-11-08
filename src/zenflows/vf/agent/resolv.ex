@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Agent.Resolv do
-@moduledoc "Resolvers of Agents."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Agent.Domain
 
 def my_agent(_, %{context: %{req_user: user}}) do
@@ -29,7 +30,10 @@ def agent(params, _) do
 end
 
 def agents(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def images(agent, _, _) do

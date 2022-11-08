@@ -33,13 +33,13 @@ embedded_schema do
 	field :quantity_has_numerical_value, :float
 end
 
-def chgset(params) do
+def changeset(params) do
 	%__MODULE__{}
 	|> common(params)
 	|> Map.put(:action, :insert)
 end
 
-def chgset(schema, params) do
+def changeset(schema, params) do
 	schema
 	|> common(params)
 	|> Map.put(:action, :update)
@@ -67,50 +67,50 @@ end
 
 test "insert", %{params: params} do
 	# no changes when params is `%{}`
-	assert %Changeset{valid?: true, changes: %{}} = Dummy.chgset(%{})
+	assert %Changeset{valid?: true, changes: %{}} = Dummy.changeset(%{})
 
 	# fields are nil when `:quantity` is `nil`
-	assert %Changeset{valid?: true, changes: chgs} = Dummy.chgset(%{quantity: nil})
+	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{quantity: nil})
 	assert chgs.quantity_has_unit_id == nil
 	assert chgs.quantity_has_numerical_value == nil
 
 	# fields are properly set when `:quantity` is properly set
-	assert %Changeset{valid?: true, changes: chgs} = Dummy.chgset(%{quantity: params})
+	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
 	assert chgs.quantity_has_numerical_value == params.has_numerical_value
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}
-		= Dummy.chgset(%{quantity: Map.put(params, :has_numerical_value, 0)})
+		= Dummy.changeset(%{quantity: Map.put(params, :has_numerical_value, 0)})
 	assert length(Keyword.get_values(errs, :quantity)) == 1
 	assert %Changeset{valid?: false, errors: errs}
-		= Dummy.chgset(%{quantity: Map.put(params, :has_numerical_value, -1)})
+		= Dummy.changeset(%{quantity: Map.put(params, :has_numerical_value, -1)})
 	assert length(Keyword.get_values(errs, :quantity)) == 1
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
-		= Dummy.chgset(%{quantity: %{}})
+		= Dummy.changeset(%{quantity: %{}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when `:has_unit_id` is `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
-		= Dummy.chgset(%{quantity: %{has_unit_id: nil}})
+		= Dummy.changeset(%{quantity: %{has_unit_id: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when `:has_numerical_value` is `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: %{quantity: _}, errors: errs}
-		= Dummy.chgset(%{quantity: %{has_numerical_value: nil}})
+		= Dummy.changeset(%{quantity: %{has_numerical_value: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when both fields are `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: %{quantity: _}, errors: errs}
-		= Dummy.chgset(%{quantity: %{has_unit_id: nil, has_numerical_value: nil}})
+		= Dummy.changeset(%{quantity: %{has_unit_id: nil, has_numerical_value: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
@@ -118,52 +118,52 @@ end
 
 test "update", %{params:  params, inserted: schema} do
 	# no changes when params is `%{}`
-	assert %Changeset{valid?: true, changes: %{}} = Dummy.chgset(schema, %{})
+	assert %Changeset{valid?: true, changes: %{}} = Dummy.changeset(schema, %{})
 
 	# fields are nil when `:quantity` is `nil`
 	assert %Changeset{valid?: true, changes: %{
 		quantity_has_unit_id: nil,
 		quantity_has_numerical_value: nil,
-	}} = Dummy.chgset(schema, %{quantity: nil})
+	}} = Dummy.changeset(schema, %{quantity: nil})
 
 	# fields are changed when `:quantity` is properly set
 	assert %Changeset{valid?: true, changes: chgs}
-		= Dummy.chgset(schema, %{quantity: params})
+		= Dummy.changeset(schema, %{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
 	assert chgs.quantity_has_numerical_value == params.has_numerical_value
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}
-		= Dummy.chgset(schema, %{quantity: Map.put(params, :has_numerical_value, 0)})
+		= Dummy.changeset(schema, %{quantity: Map.put(params, :has_numerical_value, 0)})
 	assert length(Keyword.get_values(errs, :quantity)) == 1
 	assert %Changeset{valid?: false, errors: errs}
-		= Dummy.chgset(schema, %{quantity: Map.put(params, :has_numerical_value, -1)})
+		= Dummy.changeset(schema, %{quantity: Map.put(params, :has_numerical_value, -1)})
 	assert length(Keyword.get_values(errs, :quantity)) == 1
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
-		= Dummy.chgset(schema, %{quantity: %{}})
+		= Dummy.changeset(schema, %{quantity: %{}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when `:has_unit_id` is `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
-		= Dummy.chgset(schema, %{quantity: %{has_unit_id: nil}})
+		= Dummy.changeset(schema, %{quantity: %{has_unit_id: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when `:has_numerical_value` is `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: %{quantity: _}, errors: errs}
-		= Dummy.chgset(schema, %{quantity: %{has_numerical_value: nil}})
+		= Dummy.changeset(schema, %{quantity: %{has_numerical_value: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)
 
 	# when both fields are `nil`, no fields are set
 	assert %Changeset{valid?: false, changes: %{quantity: _}, errors: errs}
-		= Dummy.chgset(schema, %{quantity: %{has_unit_id: nil, has_numerical_value: nil}})
+		= Dummy.changeset(schema, %{quantity: %{has_unit_id: nil, has_numerical_value: nil}})
 	assert length(Keyword.get_values(errs, :quantity)) == 2
 	refute Map.has_key?(chgs, :quantity_has_unit_id)
 		or Map.has_key?(chgs, :quantity_has_numerical_value)

@@ -18,16 +18,11 @@
 defmodule Zenflows.VF.Unit.Domain do
 @moduledoc "Domain logic of Units."
 
-alias Ecto.Multi
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.{Changeset, Multi}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.Unit
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Unit.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -38,47 +33,103 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(Unit, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: Unit.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-# `repo` is needed since we use that in a migration script.
-@spec create(repo(), params()) :: {:ok, Unit.t()} | {:error, chgset()}
-def create(repo \\ Repo, params) do
+@spec all(Page.t()) :: {:ok, [Unit.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(Unit, page)}
+end
+
+@spec all!(Page.t()) :: [Unit.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params()) :: {:ok, Unit.t()} | {:error, Changeset.t()}
+def create(params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:insert, Unit.chgset(params))
-	|> repo.transaction()
+	|> multi_insert(params)
+	|> Repo.transaction()
 	|> case do
-		{:ok, %{insert: u}} -> {:ok, u}
-		{:error, _, cset, _} -> {:error, cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec update(id(), params())
-	:: {:ok, Unit.t()} | {:error, String.t() | chgset()}
+@spec create!(Schema.params()) :: Unit.t()
+def create!(params) do
+	{:ok, value} = create(params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, Unit.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.update(:update, &Unit.chgset(&1.one, params))
+	|> multi_update(id, params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{update: u}} -> {:ok, u}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec delete(id()) :: {:ok, Unit.t()} | {:error, String.t() | chgset()}
+@spec update!(Schema.id(), Schema.params()) :: Unit.t()
+def update!(id, params) do
+	{:ok, value} = update(id, params)
+	value
+end
+
+@spec delete(Schema.id()) :: {:ok, Unit.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.delete(:delete, & &1.one)
+	|> multi_delete(id)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: u}} -> {:ok, u}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec delete!(Schema.id()) :: Unit.t()
+def delete!(id) do
+	{:ok, value} = delete(id)
+	value
+end
+
+@spec multi_key() :: atom()
+def multi_key(), do: :unit
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
+end
+
+@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, key \\ multi_key(), params) do
+	Multi.insert(m, key, Unit.changeset(params))
+end
+
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&Unit.changeset(Map.fetch!(&1, "#{key}.one"), params))
+end
+
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

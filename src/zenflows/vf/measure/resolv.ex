@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Measure.Resolv do
-@moduledoc "Resolvers of Measures."
+@moduledoc false
 
 alias Zenflows.VF.{Measure, Measure.Domain}
 

@@ -24,13 +24,14 @@ use Zenflows.DB.Schema
 
 require Logger
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Agent,
 	EconomicResource,
 	Intent,
 	RecipeResource,
 	ResourceSpecification,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -78,8 +79,8 @@ end
 	resource_specification_id intent_id
 ]a
 
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

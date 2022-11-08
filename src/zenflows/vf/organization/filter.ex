@@ -16,40 +16,33 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Organization.Filter do
-@moduledoc "Filtering logic of Organizations."
-
-use Zenflows.DB.Schema
+@moduledoc false
 
 import Ecto.Query
 
-alias Ecto.Query
-alias Zenflows.DB.Filter
-alias Zenflows.VF.{Organization, Validate}
+alias Ecto.{Changeset, Queryable}
+alias Zenflows.DB.{Page, Schema, Validate}
+alias Zenflows.VF.Organization
 
-@type error() :: Filter.error()
-
-@spec filter(Filter.params()) :: Filter.result()
-def filter(params) do
-	case chgset(params) do
-		%{valid?: true, changes: c} ->
-			{:ok, Enum.reduce(c, where(Organization, type: :org), &f(&2, &1))}
-		%{valid?: false} = cset ->
-			{:error, cset}
+@spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def all(%{filter: nil}), do: {:ok, where(Organization, type: :org)}
+def all(%{filter: params}) do
+	with {:ok, filters} <- all_validate(params) do
+		Enum.reduce(filters, where(Organization, type: :org), &all_f(&2, &1))
 	end
 end
 
-@spec f(Query.t(), {atom(), term()}) :: Query.t()
-defp f(q, {:name, v}),
-	do: where(q, [x], ilike(x.name, ^"%#{Filter.escape_like(v)}%"))
+@spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
+defp all_f(q, {:name, v}),
+	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
 
-embedded_schema do
-	field :name, :string
-end
-
-@spec chgset(params()) :: Changeset.t()
-defp chgset(params) do
-	%__MODULE__{}
+@spec all_validate(Schema.params())
+	:: {:ok, Changeset.data()} | {:error, Changeset.t()}
+defp all_validate(params) do
+	{%{}, %{name: :string}}
 	|> Changeset.cast(params, [:name])
 	|> Validate.name(:name)
+	|> Validate.escape_like(:name)
+	|> Changeset.apply_action(nil)
 end
 end

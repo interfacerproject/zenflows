@@ -66,7 +66,7 @@ def import_repos(url) do
 					case repo.get_by(ResourceSpecification, params) do
 						nil ->
 							params
-							|> ResourceSpecification.chgset()
+							|> ResourceSpecification.changeset()
 							|> repo.insert()
 						res_spec -> {:ok, res_spec}
 					end
@@ -77,7 +77,7 @@ def import_repos(url) do
 					case repo.get_by(ResourceSpecification, params) do
 						nil ->
 							params
-							|> ResourceSpecification.chgset()
+							|> ResourceSpecification.changeset()
 							|> repo.insert()
 						res_spec -> {:ok, res_spec}
 					end
@@ -88,7 +88,7 @@ def import_repos(url) do
 					case repo.get_by(Unit, params) do
 						nil ->
 							params
-							|> Unit.chgset()
+							|> Unit.changeset()
 							|> repo.insert()
 						unit -> {:ok, unit}
 					end
@@ -99,7 +99,7 @@ def import_repos(url) do
 					case repo.get_by(Process, params) do
 						nil ->
 							params
-							|> Process.chgset()
+							|> Process.changeset()
 							|> repo.insert()
 						proc -> {:ok, proc}
 					end
@@ -112,7 +112,7 @@ def import_repos(url) do
 					case repo.get_by(Person, params) do
 						nil ->
 							params
-							|> Person.chgset()
+							|> Person.changeset()
 							|> repo.insert()
 						per -> {:ok, per}
 					end
@@ -132,7 +132,7 @@ def import_repos(url) do
 						nil ->
 							params
 							|> Map.put(:has_point_in_time, now)
-							|> EconomicEvent.chgset()
+							|> EconomicEvent.changeset()
 							|> repo.insert()
 						evt -> {:ok, evt}
 					end
@@ -165,7 +165,7 @@ def import_repos(url) do
 							has_numerical_value: 1,
 						})
 						|> Map.put(:has_point_in_time, now)
-						|> EconomicEvent.chgset()
+						|> EconomicEvent.changeset()
 						|> repo.insert()
 					evt -> {:ok, evt}
 				end
@@ -185,7 +185,7 @@ def import_repos(url) do
 				case repo.get_by(EconomicResource, params) do
 					nil ->
 						params
-						|> EconomicResource.chgset()
+						|> EconomicResource.changeset()
 						|> repo.insert()
 					res -> {:ok, res}
 				end

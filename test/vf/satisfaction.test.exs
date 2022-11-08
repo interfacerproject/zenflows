@@ -40,7 +40,7 @@ end
 test "create Satisfaction", %{params: params} do
 	assert {:ok, %Satisfaction{} = satis} =
 		params
-		|> Satisfaction.chgset()
+		|> Satisfaction.changeset()
 		|> Repo.insert()
 
 	assert satis.satisfied_by_id == params.satisfied_by_id
@@ -56,7 +56,7 @@ end
 test "update Satisfaction", %{params: params} do
 	assert {:ok, %Satisfaction{} = satis} =
 		Factory.insert!(:satisfaction)
-		|> Satisfaction.chgset(params)
+		|> Satisfaction.changeset(params)
 		|> Repo.update()
 
 	assert satis.satisfied_by_id == params.satisfied_by_id

@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.RoleBehavior.Resolv do
-@moduledoc "Resolvers of RoleBehaviors."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.RoleBehavior.Domain
 
 def role_behavior(params, _info) do
@@ -25,7 +26,10 @@ def role_behavior(params, _info) do
 end
 
 def role_behaviors(params, _info) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_role_behavior(%{role_behavior: params}, _info) do

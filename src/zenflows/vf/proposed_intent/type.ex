@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.ProposedIntent.Type do
-@moduledoc "GraphQL types of ProposedIntent."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

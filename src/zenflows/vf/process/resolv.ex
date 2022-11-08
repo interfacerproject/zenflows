@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Process.Resolv do
-@moduledoc "Resolvers of Process."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Process.Domain
 
 def process(params, _) do
@@ -27,7 +28,10 @@ def process(params, _) do
 end
 
 def processes(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_process(%{process: params}, _) do

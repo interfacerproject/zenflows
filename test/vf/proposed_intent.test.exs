@@ -31,7 +31,7 @@ end
 test "create ProposedIntent", %{params: params} do
 	assert {:ok, %ProposedIntent{} = prop_int} =
 		params
-		|> ProposedIntent.chgset()
+		|> ProposedIntent.changeset()
 		|> Repo.insert()
 
 	assert prop_int.reciprocal == params.reciprocal
@@ -43,7 +43,7 @@ test "update ProposedIntent", %{params: params} do
 	assert {:ok, %ProposedIntent{} = prop_int} =
 		:proposed_intent
 		|> Factory.insert!()
-		|> ProposedIntent.chgset(params)
+		|> ProposedIntent.changeset(params)
 		|> Repo.update()
 
 	assert prop_int.reciprocal == params.reciprocal

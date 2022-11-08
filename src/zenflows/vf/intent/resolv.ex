@@ -16,8 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.Intent.Resolv do
-@moduledoc "Resolvers of Intent."
+@moduledoc false
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.Intent.Domain
 
 def intent(params, _) do
@@ -25,7 +26,10 @@ def intent(params, _) do
 end
 
 def intents(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_intent(%{intent: params}, _) do

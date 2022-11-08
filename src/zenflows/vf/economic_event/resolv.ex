@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.EconomicEvent.Resolv do
-@moduledoc "Resolvers of EconomicEvent."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.EconomicEvent.Domain
 
 def economic_event(params, _) do
@@ -27,26 +28,16 @@ def economic_event(params, _) do
 end
 
 def economic_events(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_economic_event(%{event: evt_params} = params, _) do
 	res_params = params[:new_inventoried_resource]
-
-	case Domain.create(evt_params, res_params) do
-		{:ok, evt, res, nil} ->
-			evt = Map.put(evt, :resource_inventoried_as, res) # tiny optimization
-			{:ok, %{economic_event: evt}}
-
-		{:ok, evt, nil, to_res} ->
-			evt = Map.put(evt, :to_resource_inventoried_as, to_res) # tiny optimization
-			{:ok, %{economic_event: evt}}
-
-		{:ok, evt} ->
-			{:ok, %{economic_event: evt}}
-
-		{:error, err} ->
-			{:error, err}
+	with {:ok, evt} <- Domain.create(evt_params, res_params) do
+		{:ok, %{economic_event: evt}}
 	end
 end
 

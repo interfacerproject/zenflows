@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.EconomicEvent.Type do
-@moduledoc "GraphQL types of EconomicEvents."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 

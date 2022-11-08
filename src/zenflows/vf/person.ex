@@ -20,8 +20,10 @@ defmodule Zenflows.VF.Person do
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.File
-alias Zenflows.VF.{SpatialThing, Validate}
+alias Zenflows.VF.SpatialThing
 
 @type t() :: %__MODULE__{
 	type: :per,
@@ -69,22 +71,22 @@ end
 
 # insert changeset
 @doc false
-@spec chgset(params()) :: Changeset.t()
-def chgset(params) do
+@spec changeset(Schema.params()) :: Changeset.t()
+def changeset(params) do
 	%__MODULE__{}
 	|> Changeset.cast(params, @insert_cast)
 	|> Changeset.validate_required(@insert_reqr)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.name(:email)
-	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
+	|> Changeset.cast_assoc(:images)
 	|> Validate.note(:note)
 	|> Validate.key(:ecdh_public_key)
 	|> Validate.key(:eddsa_public_key)
 	|> Validate.key(:ethereum_address)
 	|> Validate.key(:reflow_public_key)
 	|> Validate.key(:schnorr_public_key)
-	|> check_email()
+	|> Validate.email(:email)
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.unique_constraint(:email)
@@ -93,23 +95,16 @@ end
 
 # update changeset
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema, params) do
 	schema
 	|> Changeset.cast(params, @update_cast)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.note(:note)
-	|> check_email()
+	|> Validate.email(:email)
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.assoc_constraint(:primary_location)
-end
-
-# Validate that :email is a valid email address.
-@spec check_email(Changeset.t()) :: Changeset.t()
-defp check_email(cset) do
-	# works good enough for now
-	Changeset.validate_format(cset, :email, ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/)
 end
 end

@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.RecipeFlow.Resolv do
-@moduledoc "Resolvers of RecipeFlow."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.RecipeFlow.Domain
 
 def recipe_flow(params, _) do
@@ -27,7 +28,10 @@ def recipe_flow(params, _) do
 end
 
 def recipe_flows(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_recipe_flow(%{recipe_flow: params}, _) do

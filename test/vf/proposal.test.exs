@@ -34,7 +34,7 @@ end
 test "create Proposal", %{params: params} do
 	assert {:ok, %Proposal{} = prop} =
 		params
-		|> Proposal.chgset()
+		|> Proposal.changeset()
 		|> Repo.insert()
 
 	assert prop.name == params.name
@@ -49,7 +49,7 @@ test "update Proposal", %{params: params} do
 	assert {:ok, %Proposal{} = prop} =
 		:proposal
 		|> Factory.insert!()
-		|> Proposal.chgset(params)
+		|> Proposal.changeset(params)
 		|> Repo.update()
 
 	assert prop.name == params.name

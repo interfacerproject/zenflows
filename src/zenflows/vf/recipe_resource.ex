@@ -23,12 +23,10 @@ recipe.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.File
-alias Zenflows.VF.{
-	ResourceSpecification,
-	Unit,
-	Validate,
-}
+alias Zenflows.VF.{ResourceSpecification, Unit}
 
 @type t() :: %__MODULE__{
 	name: String.t(),
@@ -60,14 +58,14 @@ end
 ]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
+	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:resource_conforms_to)
 	|> Changeset.assoc_constraint(:unit_of_resource)
 	|> Changeset.assoc_constraint(:unit_of_effort)

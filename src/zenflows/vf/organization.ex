@@ -20,8 +20,10 @@ defmodule Zenflows.VF.Organization do
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.File
-alias Zenflows.VF.{SpatialThing, Validate}
+alias Zenflows.VF.SpatialThing
 
 @type t() :: %__MODULE__{
 	type: :org,
@@ -47,14 +49,14 @@ end
 @cast @reqr ++ ~w[classified_as note primary_location_id]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
+	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:classified_as)
 	|> Changeset.assoc_constraint(:primary_location)
 end

@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.ScenarioDefinition.Resolv do
-@moduledoc "Resolvers of ScenarioDefinition."
+@moduledoc false
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.GQL.Connection
 alias Zenflows.VF.ScenarioDefinition.Domain
 
 def scenario_definition(params, _) do
@@ -27,7 +28,10 @@ def scenario_definition(params, _) do
 end
 
 def scenario_definitions(params, _) do
-	Domain.all(params)
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.all(page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
 def create_scenario_definition(%{scenario_definition: params}, _) do

@@ -18,20 +18,15 @@
 defmodule Zenflows.VF.Intent.Domain do
 @moduledoc "Domain logic of Intents."
 
-alias Ecto.Multi
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.{Changeset, Multi}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
 	Intent,
 	Measure,
 }
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Intent.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -42,47 +37,76 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(Intent, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: Intent.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-@spec create(params()) :: {:ok, Intent.t()} | {:error, chgset()}
+@spec all(Page.t()) :: {:ok, [Intent.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(Intent, page)}
+end
+
+@spec all!(Page.t()) :: [Intent.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params()) :: {:ok, Intent.t()} | {:error, Changeset.t()}
 def create(params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:insert, Intent.chgset(params))
+	|> multi_insert(params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{insert: i}} -> {:ok, i}
+		{:ok, %{^key => value}} -> {:ok, value}
 		{:error, _, cset, _} -> {:error, cset}
 	end
 end
 
-@spec update(id(), params()) ::
-	{:ok, Intent.t()} | {:error, String.t() | chgset()}
+@spec create!(Schema.params()) :: Intent.t()
+def create!(params) do
+	{:ok, value} = create(params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, Intent.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.update(:update, &Intent.chgset(&1.one, params))
+	|> multi_update(id, params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{update: i}} -> {:ok, i}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec delete(id()) :: {:ok, Intent.t()} | {:error, String.t() | chgset()}
+@spec update!(Schema.id(), Schema.params()) :: Intent.t()
+def update!(id, params) do
+	{:ok, value} = update(id, params)
+	value
+end
+
+@spec delete(Schema.id()) :: {:ok, Intent.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.delete(:delete, &(&1.one))
+	|> multi_delete(id)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{delete: i}} -> {:ok, i}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec delete!(Schema.id) :: Intent.t()
+def delete!(id) do
+	{:ok, value} = delete(id)
+	value
 end
 
 @spec preload(Intent.t(), :action | :input_of | :output_of
@@ -91,51 +115,42 @@ end
 		| :resource_quantity | :effort_quantity | :available_quantity
 		| :at_location | :published_in)
 	:: Intent.t()
-def preload(int, :action) do
-	Action.preload(int, :action)
+def preload(int, x) when x in ~w[
+	input_of output_of provider receiver resource_inventoried_as
+	resource_conforms_to at_location published_in
+]a,
+	do: Repo.preload(int, x)
+def preload(int, :action), do: Action.preload(int, :action)
+def preload(int, x) when x in ~w[
+	effort_quantity available_quantity resource_quantity
+]a,
+	do: Measure.preload(int, x)
+
+@spec multi_key() :: atom()
+def multi_key(), do: :intent
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-def preload(int, :input_of) do
-	Repo.preload(int, :input_of)
+@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, key \\ multi_key(), params) do
+	Multi.insert(m, key, Intent.changeset(params))
 end
 
-def preload(int, :output_of) do
-	Repo.preload(int, :output_of)
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&Intent.changeset(Map.fetch!(&1, "#{key}.one"), params))
 end
 
-def preload(int, :provider) do
-	Repo.preload(int, :provider)
-end
-
-def preload(int, :receiver) do
-	Repo.preload(int, :receiver)
-end
-
-def preload(int, :resource_inventoried_as) do
-	Repo.preload(int, :resource_inventoried_as)
-end
-
-def preload(int, :resource_conforms_to) do
-	Repo.preload(int, :resource_conforms_to)
-end
-
-def preload(int, :resource_quantity) do
-	Measure.preload(int, :resource_quantity)
-end
-
-def preload(int, :effort_quantity) do
-	Measure.preload(int, :effort_quantity)
-end
-
-def preload(int, :available_quantity) do
-	Measure.preload(int, :available_quantity)
-end
-
-def preload(int, :at_location) do
-	Repo.preload(int, :at_location)
-end
-
-def preload(int, :published_in) do
-	Repo.preload(int, :published_in)
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

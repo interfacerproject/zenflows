@@ -24,14 +24,15 @@ tasks.
 alias Zenflows.Restroom
 alias Zenflows.VF.Person
 
-def keypairoom_server(false, data) do
-	if Person.Domain.exists?(email: Map.fetch!(data, "email")),
+@spec keypairoom_server(boolean(), map()) :: {:ok, String.t()} | {:error, term()}
+def keypairoom_server(false, %{"email" => email} = data) do
+	if Person.Domain.exists?(email: email),
 		do: Restroom.keypairoom_server(data),
 		else: {:error, "email doesn't exists"}
 end
 
-def keypairoom_server(true, data) do
-	if Person.Domain.exists?(email: Map.fetch!(data, "email")),
+def keypairoom_server(true, %{"email" => email} = data) do
+	if Person.Domain.exists?(email: email),
 		do: {:error, "email exists"},
 		else: Restroom.keypairoom_server(data)
 end

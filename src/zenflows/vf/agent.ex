@@ -20,7 +20,7 @@ defmodule Zenflows.VF.Agent do
 A person or group or organization with economic agency.
 """
 
-use Zenflows.DB.Schema, types?: false
+use Zenflows.DB.Schema
 
 alias Zenflows.File
 alias Zenflows.VF.SpatialThing

@@ -67,7 +67,7 @@ test "works on EconomicResource" do
 	agent = Factory.insert!(:agent)
 	unit = Factory.insert!(:unit)
 	spec = Factory.insert!(:resource_specification)
-	{:ok, %EconomicEvent{}, %EconomicResource{} = res, nil} =
+	{:ok, %EconomicEvent{} = evt} =
 		EconomicEvent.Domain.create(
 			%{
 				action_id: "raise",
@@ -107,6 +107,9 @@ test "works on EconomicResource" do
 					},
 				],
 			})
+
+	evt = EconomicEvent.Domain.preload(evt, :resource_inventoried_as)
+	res = EconomicResource.Domain.preload(evt.resource_inventoried_as, :images)
 
 	[%File{}, %File{}] = res.images
 end
@@ -248,7 +251,7 @@ end
 
 test "doesn't work without a belongs_to field" do
 	{:error, %Changeset{errors: errs}} =
-		File.chgset(%File{}, %{
+		File.changeset(%File{}, %{
 				hash: "asnotehusnatoheusntaoehusntaeohu",
 				name: "satoehusnoaethu",
 				description: "foobaour",

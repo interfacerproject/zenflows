@@ -32,13 +32,13 @@ embedded_schema do
 	field :action, :map, virtual: true
 end
 
-def chgset(params) do
+def changeset(params) do
 	%__MODULE__{}
 	|> common(params)
 	|> Map.put(:action, :insert)
 end
 
-def chgset(schema, params) do
+def changeset(schema, params) do
 	schema
 	|> common(params)
 	|> Map.put(:action, :update)
@@ -56,20 +56,20 @@ end
 test "insert" do
 	# doesn't work with invalid ids
 	assert %Changeset{valid?: false, changes: %{}, errors: errs}
-		= Dummy.chgset(%{action_id: "doesn't exists"})
+		= Dummy.changeset(%{action_id: "doesn't exists"})
 	assert Keyword.has_key?(errs, :action_id)
 
 	# works with all valid ids
 	Enum.each(Action.ID.values(), fn x ->
 		assert %Changeset{valid?: true, changes: %{action_id: ^x}, errors: []}
-			= Dummy.chgset(%{action_id: x})
+			= Dummy.changeset(%{action_id: x})
 	end)
 end
 
 test "update", %{inserted: schema} do
 	# doesn't work with invalid ids
 	assert %Changeset{valid?: false, changes: %{}, errors: errs}
-		= Dummy.chgset(schema, %{action_id: "doesn't exists"})
+		= Dummy.changeset(schema, %{action_id: "doesn't exists"})
 	assert Keyword.has_key?(errs, :action_id)
 
 	# because if the values are the same, there won't be any change
@@ -77,7 +77,7 @@ test "update", %{inserted: schema} do
 	# works with all valid ids
 	Enum.each(all, fn x ->
 		assert %Changeset{valid?: true, changes: %{action_id: ^x}, errors: []}
-			= Dummy.chgset(schema, %{action_id: x})
+			= Dummy.changeset(schema, %{action_id: x})
 	end)
 end
 

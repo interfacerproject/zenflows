@@ -20,6 +20,8 @@ defmodule Zenflows.VF.EconomicResource do
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
@@ -31,7 +33,6 @@ alias Zenflows.VF.{
 	ResourceSpecification,
 	SpatialThing,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -111,8 +112,8 @@ end
 ]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)
@@ -124,8 +125,8 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Validate.name(:version)
 	|> Validate.name(:licensor)
 	|> Validate.name(:license)
-	|> require_quantity_units_same()
-	|> Changeset.cast_assoc(:images, with: &File.chgset/2)
+	|> Validate.value_eq([:accounting_quantity_has_unit_id, :onhand_quantity_has_unit_id])
+	|> Changeset.cast_assoc(:images)
 	|> Changeset.assoc_constraint(:conforms_to)
 	|> Changeset.assoc_constraint(:accounting_quantity_has_unit)
 	|> Changeset.assoc_constraint(:onhand_quantity_has_unit)
@@ -136,22 +137,5 @@ def chgset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:lot)
 	|> Changeset.assoc_constraint(:contained_in)
 	|> Changeset.assoc_constraint(:unit_of_effort)
-end
-
-# Require that `:accounting_quantity_has_unit_id` and
-# `:onhand_quantity_has_unit_id` be the same.
-@spec require_quantity_units_same(Changeset.t()) :: Changeset.t()
-def require_quantity_units_same(cset) do
-	accnt_unit = Changeset.get_field(cset, :accounting_quantity_has_unit_id)
-	onhnd_unit = Changeset.get_field(cset, :onhand_quantity_has_unit_id)
-
-	if accnt_unit != onhnd_unit do
-		msg = "has_unit: quantity units must be same"
-		cset
-		|> Changeset.add_error(:accounting_quantity, msg)
-		|> Changeset.add_error(:onhand_quantity, msg)
-	else
-		cset
-	end
 end
 end

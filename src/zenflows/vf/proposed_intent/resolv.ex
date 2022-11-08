@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Zenflows.VF.ProposedIntent.Resolv do
-@moduledoc "Resolvers of ProposedIntent."
+@moduledoc false
 
 alias Zenflows.VF.ProposedIntent.Domain
 

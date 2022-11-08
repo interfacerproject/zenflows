@@ -24,6 +24,8 @@ resource.
 """
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -35,7 +37,6 @@ alias Zenflows.VF.{
 	ResourceSpecification,
 	SpatialThing,
 	Unit,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -100,18 +101,15 @@ end
 
 # insert changeset
 @doc false
-@spec chgset(params()) :: Changeset.t()
-def chgset(params) do
+@spec changeset(Schema.params()) :: Changeset.t()
+def changeset(params) do
 	%__MODULE__{}
 	|> Changeset.cast(params, @insert_cast)
 	|> Changeset.validate_required(@insert_reqr)
-	|> datetime_check()
-	|> case do
-		%{valid?: true, changes: %{action_id: action}} = cset ->
-			do_chgset(action, Changeset.apply_changes(cset), params)
-		cset ->
-			cset
-	end
+	|> Validate.exist_or([:has_point_in_time, :has_beginning, :has_end])
+	|> Validate.exist_nand([:has_point_in_time, :has_beginning])
+	|> Validate.exist_nand([:has_point_in_time, :has_end])
+	|> do_changeset()
 	|> Validate.uri(:agreed_in)
 	|> Validate.note(:note)
 	|> Validate.class(:resource_classified_as)
@@ -128,50 +126,47 @@ def chgset(params) do
 	|> Changeset.assoc_constraint(:triggered_by)
 end
 
-@spec do_chgset(Action.ID.t(), Schema.t(), params()) :: Changeset.t()
-defp do_chgset("raise", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+@spec do_changeset(Changeset.t()) :: Changeset.t()
+defp do_changeset(%{valid?: false} = cset), do: cset
+defp do_changeset(%{changes: %{action_id: "raise"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		resource_conforms_to_id resource_inventoried_as_id
 		resource_classified_as resource_quantity to_location_id
 	]a)
 	|> Changeset.validate_required([:resource_quantity])
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
-	|> xor_required(:resource_conforms_to_id, :resource_inventoried_as_id)
+	|> Validate.value_eq([:provider_id, :receiver_id])
+	|> Validate.exist_xor([:resource_conforms_to_id, :resource_inventoried_as_id])
 end
-
-defp do_chgset("produce", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: "produce"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		output_of_id resource_conforms_to_id resource_inventoried_as_id
 		resource_classified_as resource_quantity to_location_id
 	]a)
 	|> Changeset.validate_required(~w[output_of_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
-	|> xor_required(:resource_conforms_to_id, :resource_inventoried_as_id)
+	|> Validate.value_eq([:provider_id, :receiver_id])
+	|> Validate.exist_xor([:resource_conforms_to_id, :resource_inventoried_as_id])
 end
-
-defp do_chgset("lower", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[resource_inventoried_as_id resource_quantity]a)
+defp do_changeset(%{changes: %{action_id: "lower"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[resource_inventoried_as_id resource_quantity]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 	|> Measure.cast(:resource_quantity)
 end
-
-defp do_chgset("consume", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[input_of_id resource_inventoried_as_id resource_quantity]a)
+defp do_changeset(%{changes: %{action_id: "consume"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[input_of_id resource_inventoried_as_id resource_quantity]a)
 	|> Changeset.validate_required(~w[input_of_id resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
-
-defp do_chgset("use", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: "use"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		input_of_id effort_quantity
 		resource_inventoried_as_id resource_conforms_to_id
 		resource_quantity
@@ -179,220 +174,108 @@ defp do_chgset("use", schema, params) do
 	|> Changeset.validate_required(~w[input_of_id effort_quantity]a)
 	|> Measure.cast(:effort_quantity)
 	|> Measure.cast(:resource_quantity)
-	|> xor_required(:resource_inventoried_as_id, :resource_conforms_to_id)
+	|> Validate.exist_xor([:resource_inventoried_as_id, :resource_conforms_to_id])
 end
-
-defp do_chgset("work", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[input_of_id effort_quantity resource_conforms_to_id]a)
+defp do_changeset(%{changes: %{action_id: "work"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[input_of_id effort_quantity resource_conforms_to_id]a)
 	|> Changeset.validate_required(~w[input_of_id effort_quantity resource_conforms_to_id]a)
 	|> Measure.cast(:effort_quantity)
 end
-
-defp do_chgset("cite", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: "cite"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		input_of_id resource_quantity
 		resource_inventoried_as_id resource_conforms_to_id
 	]a)
 	|> Changeset.validate_required(~w[input_of_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
-	|> xor_required(:resource_inventoried_as_id, :resource_conforms_to_id)
+	|> Validate.exist_xor([:resource_inventoried_as_id, :resource_conforms_to_id])
 end
-
-defp do_chgset("deliverService", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[input_of_id output_of_id resource_conforms_to_id]a)
+defp do_changeset(%{changes: %{action_id: "deliverService"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[input_of_id output_of_id resource_conforms_to_id]a)
 	|> Changeset.validate_required(~w[resource_conforms_to_id]a)
-	|> require_different_procs()
+	|> Validate.value_ne([:input_of_id, :output_of_id])
 end
-
-defp do_chgset("pickup", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+defp do_changeset(%{changes: %{action_id: "pickup"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Changeset.validate_required(~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
-
-defp do_chgset("dropoff", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[output_of_id resource_quantity resource_inventoried_as_id to_location_id]a)
+defp do_changeset(%{changes: %{action_id: "dropoff"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[output_of_id resource_quantity resource_inventoried_as_id to_location_id]a)
 	|> Changeset.validate_required(~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
-
-defp do_chgset("accept", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+defp do_changeset(%{changes: %{action_id: "accept"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Changeset.validate_required(~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
-
-defp do_chgset("modify", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[output_of_id resource_quantity resource_inventoried_as_id]a)
+defp do_changeset(%{changes: %{action_id: "modify"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Changeset.validate_required(~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
-
-defp do_chgset("combine", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[]a)
+defp do_changeset(%{changes: %{action_id: "combine"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[]a)
 	|> Changeset.validate_required(~w[]a)
 end
-
-defp do_chgset("separate", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[]a)
+defp do_changeset(%{changes: %{action_id: "separate"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[]a)
 	|> Changeset.validate_required(~w[]a)
 end
-
-defp do_chgset("transferAllRights", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: "transferAllRights"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id
 		resource_quantity resource_classified_as
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 end
-
-defp do_chgset(action, schema, params) when action in ~w[transferCustody transfer] do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: id}} = cset)
+		when id in ~w[transferCustody transfer] do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
 		to_location_id resource_classified_as
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 end
-
-defp do_chgset("move", schema, params) do
-	schema
-	|> Changeset.cast(params, ~w[
+defp do_changeset(%{changes: %{action_id: "move"}} = cset) do
+	cset
+	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
 		to_location_id resource_classified_as
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
-	|> require_agents_same()
-end
-
-# Require that `:provider` and `:receiver` be the same agents.
-@spec require_agents_same(Changeset.t()) :: Changeset.t()
-defp require_agents_same(cset) do
-	prov = cset.data.provider_id
-	recv = cset.data.receiver_id
-
-	# since provider and receiver is required, there's no nil case to care
-	if prov != recv do
-		msg = "agents must be the same"
-		cset
-		|> Changeset.add_error(:provider_id, msg)
-		|> Changeset.add_error(:receiver_id, msg)
-	else
-		cset
-	end
-end
-
-# Require either of the given fields `a` xor `b`.
-@spec xor_required(Changeset.t(), atom(), atom()) :: Changeset.t()
-defp xor_required(cset, a, b) do
-	x = Changeset.get_change(cset, a)
-	y = Changeset.get_change(cset, b)
-
-	if (x && !y) || (!x && y) do
-		cset
-	else
-		msg = "these are mutually exclusive and exactly one must be provided"
-
-		cset
-		|> Changeset.add_error(a, msg)
-		|> Changeset.add_error(b, msg)
-	end
-end
-
-# Require that `:input_of` and/or `:output_of` is required, and
-# that they are not the same.
-@spec require_different_procs(Changeset.t()) :: Changeset.t()
-defp require_different_procs(cset) do
-	input = Changeset.get_change(cset, :input_of_id)
-	output = Changeset.get_change(cset, :output_of_id)
-
-	cond do
-		input != nil and output != nil and input == output ->
-			msg = "must have different processes"
-
-			cset
-			|> Changeset.add_error(:input_of_id, msg)
-			|> Changeset.add_error(:output_of_id, msg)
-
-		input == nil and output == nil ->
-			msg = "either of these must not be blank"
-
-			cset
-			|> Changeset.add_error(:input_of_id, msg)
-			|> Changeset.add_error(:output_of_id, msg)
-
-		true ->
-			cset
-	end
+	|> Validate.value_eq([:provider_id, :receiver_id])
 end
 
 @update_cast ~w[note agreed_in realization_of_id triggered_by_id]a
 
 # update changeset
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema, params) do
 	schema
 	|> Changeset.cast(params, @update_cast)
 	|> Validate.note(:note)
 	|> Changeset.assoc_constraint(:realization_of)
 	|> Changeset.assoc_constraint(:triggered_by)
-end
-
-# Validate datetime mutual exclusivity and requirements.
-# In other words, require one of these combinations to be provided:
-#	* only :has_point_in_time
-#   * only :has_beginning and/or :has_end
-#
-# This is only for inserting changeset.
-@spec datetime_check(Changeset.t()) :: Changeset.t()
-defp datetime_check(cset) do
-	point = Changeset.get_change(cset, :has_point_in_time)
-	begin = Changeset.get_change(cset, :has_beginning)
-	endd = Changeset.get_change(cset, :has_end)
-
-	cond do
-		point && begin ->
-			msg = "'has point in time' and 'has beginning' are mutually exclusive"
-
-			cset
-			|> Changeset.add_error(:has_point_in_time, msg)
-			|> Changeset.add_error(:has_beginning, msg)
-
-		point && endd ->
-			msg = "'has point in time' and 'has end' are mutually exclusive"
-
-			cset
-			|> Changeset.add_error(:has_point_in_time, msg)
-			|> Changeset.add_error(:has_end, msg)
-
-		point || begin || endd ->
-			cset
-
-		true ->
-			msg = "'has point in time', 'has beginning', or 'has end' is requried"
-
-			cset
-			|> Changeset.add_error(:has_beginning, msg)
-			|> Changeset.add_error(:has_end, msg)
-			|> Changeset.add_error(:has_point_in_time, msg)
-	end
 end
 end

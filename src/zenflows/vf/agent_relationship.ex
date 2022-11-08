@@ -23,10 +23,11 @@ with another.
 
 use Zenflows.DB.Schema
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	Agent,
 	AgentRelationshipRole,
-	Validate,
 }
 
 @type t() :: %__MODULE__{
@@ -50,8 +51,8 @@ end
 @cast @reqr ++ [:note] # in_scope_of
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

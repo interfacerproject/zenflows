@@ -23,7 +23,9 @@ with defined deliverable(s).
 
 use Zenflows.DB.Schema
 
-alias Zenflows.VF.{Scenario, Validate}
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
+alias Zenflows.VF.Scenario
 
 @type t() :: %__MODULE__{
 	name: String.t(),
@@ -44,8 +46,8 @@ end
 @cast @reqr ++ ~w[due note refinement_of_id]a
 
 @doc false
-@spec chgset(Schema.t(), params()) :: Changeset.t()
-def chgset(schema \\ %__MODULE__{}, params) do
+@spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def changeset(schema \\ %__MODULE__{}, params) do
 	schema
 	|> Changeset.cast(params, @cast)
 	|> Changeset.validate_required(@reqr)

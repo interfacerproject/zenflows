@@ -105,15 +105,17 @@ describe "create/1" do
 		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
 	end
 
-	test "with bad params (without :resource_qunatity and :effort_quantit): doesn't create a RecipeFlow", %{params: params} do
+	test "with bad params (without :resource_qunatity and :effort_quantity): doesn't create a RecipeFlow", %{params: params} do
 		params =
 			params
 			|> Map.delete(:resource_quantity)
 			|> Map.delete(:effort_quantity)
 
 		assert {:error, %Changeset{errors: errs}} = Domain.create(params)
-		assert Keyword.has_key?(errs, :resource_quantity)
-		assert Keyword.has_key?(errs, :effort_quantity)
+		assert Keyword.has_key?(errs, :resource_quantity_has_numerical_value)
+		assert Keyword.has_key?(errs, :resource_quantity_has_unit_id)
+		assert Keyword.has_key?(errs, :effort_quantity_has_numerical_value)
+		assert Keyword.has_key?(errs, :effort_quantity_has_unit_id)
 	end
 
 	test "with bad params: doesn't create a RecipeFlow" do

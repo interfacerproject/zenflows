@@ -18,13 +18,12 @@
 defmodule Zenflows.VF.Agent.Domain do
 @moduledoc "Domain logic of Agents."
 
-alias Zenflows.DB.{Paging, Repo}
+alias Ecto.Changeset
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{Agent, Agent.Filter}
 
-@typep repo() :: Ecto.Repo.t()
-@typep id() :: Zenflows.DB.Schema.id()
-
-@spec one(repo(), id() | map() | Keyword.t()) :: {:ok, Agent.t()} | {:error, String.t()}
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
+	:: {:ok, Agent.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
 def one(repo, clauses) do
@@ -34,19 +33,27 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Filter.error() | Paging.result()
-def all(params \\ %{}) do
-	with {:ok, q} <- Filter.filter(params[:filter] || %{}) do
-		Paging.page(q, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: Agent.t()
+def one!(repo \\ Repo, x) do
+	{:ok, found} = one(repo, x)
+	found
+end
+
+@spec all(Page.t()) :: {:ok, [Agent.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	with {:ok, q} <- Filter.all(page) do
+		{:ok, Page.all(q, page)}
 	end
 end
 
-@spec preload(Agent.t(), :images | :primary_location) :: Agent.t()
-def preload(agent, :images) do
-	Repo.preload(agent, :images)
+@spec all!(Page.t()) :: [Agent.t()]
+def all!(page \\ Page.new()) do
+	{:ok, q} = Filter.all(page)
+	Page.all(q, page)
 end
 
-def preload(agent, :primary_location) do
-	Repo.preload(agent, :primary_location)
+@spec preload(Agent.t(), :images | :primary_location) :: Agent.t()
+def preload(agent, x) when x in ~w[images primary_location]a do
+	Repo.preload(agent, x)
 end
 end

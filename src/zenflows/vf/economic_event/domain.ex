@@ -21,7 +21,7 @@ defmodule Zenflows.VF.EconomicEvent.Domain do
 import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
-alias Zenflows.DB.{Paging, Repo}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
 	EconomicEvent,
@@ -29,12 +29,7 @@ alias Zenflows.VF.{
 	Measure,
 }
 
-@typep repo() :: Ecto.Repo.t()
-@typep chgset() :: Ecto.Changeset.t()
-@typep id() :: Zenflows.DB.Schema.id()
-@typep params() :: Zenflows.DB.Schema.params()
-
-@spec one(repo(), id() | map() | Keyword.t())
+@spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, EconomicEvent.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
@@ -45,52 +40,110 @@ def one(repo, clauses) do
 	end
 end
 
-@spec all(Paging.params()) :: Paging.result()
-def all(params) do
-	Paging.page(EconomicEvent, params)
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
+	:: EconomicEvent.t()
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
-@spec create(params(), params()) :: {:ok, EconomicEvent.t(), EconomicResource.t(), nil}
-	| {:ok, EconomicEvent.t(), nil, EconomicResource.t()}
-	| {:ok, EconomicEvent.t()} | {:error, String.t() | chgset()}
-def create(evt_params, res_params) do
+@spec all(Page.t()) :: {:ok, [EconomicEvent.t()]} | {:error, Changeset.t()}
+def all(page \\ Page.new()) do
+	{:ok, Page.all(EconomicEvent, page)}
+end
+
+@spec all!(Page.t()) :: [EconomicEvent.t()]
+def all!(page \\ Page.new()) do
+	{:ok, value} = all(page)
+	value
+end
+
+@spec create(Schema.params(), nil | Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, String.t() | Changeset.t()}
+def create(evt_params, res_params \\ nil) do
+	key = multi_key()
 	Multi.new()
-	|> Multi.insert(:created_evt, EconomicEvent.chgset(evt_params))
-	|> Multi.merge(fn %{created_evt: evt} ->
-		handle_multi(evt.action_id, evt, res_params || %{}) # since it can be empty
-	end)
+	|> multi_insert(evt_params, res_params)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{updated_evt: evt} = map} ->
-			if map[:eco_res] || map[:to_eco_res] do
-				{:ok, evt, map[:eco_res], map[:to_eco_res]}
-			else
-				{:ok, evt}
-			end
-
-		{:ok, %{created_evt: evt}} ->
-			{:ok, evt}
-
-		{:error, _, msg_or_cset, _} ->
-			{:error, msg_or_cset}
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
 	end
+end
+
+@spec create!(Schema.params(), nil | Schema.params()) :: EconomicEvent.t()
+def create!(evt_params, res_params \\ nil) do
+	{:ok, value} = create(evt_params, res_params)
+	value
+end
+
+@spec update(Schema.id(), Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, String.t() | Changeset.t()}
+def update(id, params) do
+	key = multi_key()
+	Multi.new()
+	|> multi_update(id, params)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
+@spec update!(Schema.id(), Schema.params()) :: EconomicEvent.t()
+def update!(id, params) do
+	# `__MODULE__` because it confilicts with `import Ecto.Query`
+	{:ok, value} = __MODULE__.update(id, params)
+	value
+end
+
+@spec preload(EconomicEvent.t(), :action | :input_of | :output_of
+		| :provider | :receiver
+		| :resource_inventoried_as | :to_resource_inventoried_as
+		| :resource_conforms_to | :resource_quantity | :effort_quantity
+		| :to_location | :at_location | :realization_of | :triggered_by)
+	:: EconomicEvent.t()
+def preload(eco_evt, x) when x in ~w[
+	input_of output_of provider receiver
+	resource_inventoried_as to_resource_inventoried_as
+	resource_conforms_to to_location at_location realization_of
+	triggered_by
+]a do
+	Repo.preload(eco_evt, x)
+end
+def preload(eco_evt, :action),
+	do: Action.preload(eco_evt, :action)
+def preload(eco_evt, x) when x in ~w[resource_quantity effort_quantity]a,
+	do: Measure.preload(eco_evt, x)
+
+@spec multi_key() :: atom()
+def multi_key(), do: :economic_event
+
+@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_one(m, key \\ multi_key(), id) do
+	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
+end
+
+@spec multi_insert(Multi.t(), term(), Schema.params(), nil | Schema.params())
+	:: Multi.t()
+def multi_insert(m, key \\ multi_key(), evt_params, res_params) do
+	m
+	|> Multi.insert("#{key}.created", EconomicEvent.changeset(evt_params))
+	|> Multi.merge(&handle_insert(key, Map.fetch!(&1, "#{key}.created"), res_params))
 end
 
 # Handle the part after the event is created.  These clauses deal with
 # validations, creation of resources, and any other side-effects.
 #
-# If they return a multi named `:updated_evt`, the value (assuming
-# it is a event struct) of it will be passed back as `{:ok, value}`.
-#
-# They can optionally return a multi named `:eco_res` (assuming
-# it is a resource struct) that can be used for a tiny optimization
-# on the resolver (when create a resource, fetch it, etc.).
-@spec handle_multi(Action.ID.t(), EconomicEvent.t(), params() | nil) :: Multi.t()
-defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produce"] do
+# It either returns the given `evt` as it is under the name `key`,
+# or updates `evt` and returns it under the name `key`.
+@spec handle_insert(term(), EconomicEvent.t(), nil | Schema.params()) :: Multi.t()
+defp handle_insert(key, %{action_id: action_id} = evt, res_params)
+		when action_id in ["raise", "produce"] do
 	cond do
 		evt.resource_conforms_to_id != nil ->
 			res_params =
-				res_params
+				(res_params || %{})
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, evt.resource_conforms_to_id)
@@ -102,14 +155,12 @@ defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produ
 				|> Map.put(:classified_as, evt.resource_classified_as)
 
 			Multi.new()
-			|> Multi.insert(:eco_res, EconomicResource.chgset(res_params))
-			|> Multi.update(:updated_evt, fn %{eco_res: res} ->
-				Changeset.change(evt, resource_inventoried_as_id: res.id)
-			end)
-
+			|> EconomicResource.Domain.multi_insert("#{key}.eco_res", res_params)
+			|> Multi.update(key, &Changeset.change(evt,
+				resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.eco_res") |> Map.fetch!(:id)))
 		evt.resource_inventoried_as_id != nil ->
 			Multi.new()
-			|> Multi.run(:checks, fn repo, _ ->
+			|> Multi.run("#{key}.checks", fn repo, _ ->
 				fields = ~w[
 					primary_accountable_id custodian_id
 					accounting_quantity_has_unit_id
@@ -129,30 +180,27 @@ defp handle_multi(action_id, evt, res_params) when action_id in ["raise", "produ
 				cond do
 					evt.provider_id != res.primary_accountable_id or evt.provider_id != res.custodian_id ->
 						{:error, "you don't have ownership over this resource"}
-
 					evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 						{:error, "the unit of resource quantity must match with the unit of this resource"}
-
 					res.contained? ->
 						{:error, "you can't #{action_id} into a contained resource"}
-
 					res.container? ->
 						{:error, "you can't #{action_id} into a container resource"}
-
 					true ->
 						{:ok, nil}
 				end
 			end)
-			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
+			|> Multi.put(key, evt)
 	end
 end
-
-defp handle_multi(action_id, evt, _) when action_id in ["lower", "consume"] do
+defp handle_insert(key, %{action_id: action_id} = evt, _)
+		when action_id in ["lower", "consume"] do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		fields = ~w[
 			primary_accountable_id custodian_id
 			accounting_quantity_has_unit_id
@@ -172,38 +220,33 @@ defp handle_multi(action_id, evt, _) when action_id in ["lower", "consume"] do
 		cond do
 			evt.provider_id != res.primary_accountable_id or evt.provider_id != res.custodian_id ->
 				{:error, "you don't have ownership over this resource"}
-
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource quantity must match with the unit of this resource"}
-
 			res.contained? -> # TODO: study combine-separate
 				{:error, "you can't #{action_id} a contained resource"}
-
 			res.container? ->
 				{:error, "you can't #{action_id} a container resource"}
-
 			true ->
 				{:ok, nil}
 		end
 	end)
-	|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+	|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 		accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 		onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 	])
+	|> Multi.put(key, evt)
 end
-
-defp handle_multi(action_id, _evt, _) when action_id in ~w[work deliverService] do
-	Multi.new()
+defp handle_insert(key, %{action_id: action_id} = evt, _)
+		when action_id in ~w[work deliverService] do
+	Multi.put(Multi.new(), key, evt)
 end
-
-defp handle_multi("use", evt, _) do
+defp handle_insert(key, %{action_id: "use"} = evt, _) do
 	cond do
 		evt.resource_conforms_to_id != nil ->
-			Multi.new()
-
+			Multi.put(Multi.new(), key, evt)
 		evt.resource_inventoried_as_id != nil ->
 			Multi.new()
-			|> Multi.run(:checks, fn repo, _ ->
+			|> Multi.run("#{key}.checks", fn repo, _ ->
 				fields = if evt.resource_quantity != nil,
 					do: [:accounting_quantity_has_unit_id],
 					else: []
@@ -223,28 +266,24 @@ defp handle_multi("use", evt, _) do
 				cond do
 					evt.resource_quantity && (evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id) ->
 						{:error, "the unit of resource quantity must match with the unit of this resource"}
-
 					res.contained? -> # TODO: study combine-separate
 						{:error, "you can't use a contained resource"}
-
 					res.container? ->
 						{:error, "you can't use a container resource"}
-
 					true ->
 						{:ok, nil}
 				end
 			end)
+			|> Multi.put(key, evt)
 	end
 end
-
-defp handle_multi("cite", evt, _) do
+defp handle_insert(key, %{action_id: "cite"} = evt, _) do
 	cond do
 		evt.resource_conforms_to_id != nil ->
-			Multi.new()
-
+			Multi.put(Multi.new(), key, evt)
 		evt.resource_inventoried_as_id != nil ->
 			Multi.new()
-			|> Multi.run(:checks, fn repo, _ ->
+			|> Multi.run("#{key}.checks", fn repo, _ ->
 				res = from(
 					r in EconomicResource,
 					where: [id: ^evt.resource_inventoried_as_id],
@@ -259,23 +298,20 @@ defp handle_multi("cite", evt, _) do
 				cond do
 					evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 						{:error, "the unit of resource quantity must match with the unit of this resource"}
-
 					res.contained? -> # TODO: study combine-separate
 						{:error, "you can't cite a contained resource"}
-
 					res.container? ->
 						{:error, "you can't cite a container resource"}
-
 					true ->
 						{:ok, nil}
 				end
 			end)
+			|> Multi.put(key, evt)
 	end
 end
-
-defp handle_multi("pickup", evt, _) do
+defp handle_insert(key, %{action_id: "pickup"} = evt, _) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		fields = ~w[
 			custodian_id
 			onhand_quantity_has_numerical_value onhand_quantity_has_unit_id
@@ -289,26 +325,22 @@ defp handle_multi("pickup", evt, _) do
 		)
 		|> repo.one!()
 
-		single_ref? = fn ->
+		not_single_ref? = fn ->
 			where(EconomicEvent, [e],
 				e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
 					and e.id != ^evt.id
 					and e.action_id == "pickup"
 					and e.input_of_id == ^evt.input_of_id)
 			|> repo.exists?()
-			|> Kernel.not()
 		end
 
 		cond do
 			evt.provider_id != res.custodian_id ->
 				{:error, "you don't have custody over this resource"}
-
 			res.contained? -> # TODO: study combine-separate
 				{:error, "you can't pickup a contained resource"}
-
 			evt.resource_quantity_has_unit_id != res.onhand_quantity_has_unit_id ->
 				{:error, "the unit of resource quantity must match with the unit of this resource"}
-
 			# This also handles the requirement that the
 			# resource's onhand quantity must be positive.
 			# This is guranteed because of the check below
@@ -316,19 +348,18 @@ defp handle_multi("pickup", evt, _) do
 			# of events must be positive.
 			evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the pickup events need to fully pickup the resource"}
-
-			not single_ref?.() ->
-				{:error, "no more than one pickup event in the same process, referring to the same resource is allowed"}
-
+			not_single_ref?.() ->
+				{:error,
+					"no more than one pickup event in the same process, referring to the same resource is allowed"}
 			true ->
 				{:ok, nil}
 		end
 	end)
+	|> Multi.put(key, evt)
 end
-
-defp handle_multi("dropoff", evt, _) do
+defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		pair_evt =
 			from(e in EconomicEvent,
 				where: e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
@@ -340,14 +371,13 @@ defp handle_multi("dropoff", evt, _) do
 				]a))
 			|> repo.one!()
 
-		single_ref? = fn ->
+		not_single_ref? = fn ->
 			where(EconomicEvent, [e],
 				e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
 					and e.id != ^evt.id
 					and e.action_id == "dropoff"
 					and e.output_of_id == ^evt.output_of_id)
 			|> repo.exists?()
-			|> Kernel.not()
 		end
 
 		container? = fn ->
@@ -358,35 +388,32 @@ defp handle_multi("dropoff", evt, _) do
 		cond do
 			evt.provider_id != pair_evt.provider_id ->
 				{:error, "you don't have custody over this resource"}
-
 			evt.resource_quantity_has_unit_id != pair_evt.resource_quantity_has_unit_id ->
 				{:error, "the unit of resource quantity must match with the unit of the paired event"}
-
 			container?.() && evt.resource_quantity_has_numerical_value != pair_evt.resource_quantity_has_numerical_value ->
 				{:error, "the dropoff events need to fully dropoff the resource"}
-
-			not single_ref?.() ->
-				{:error, "no more than one dropoff event in the same process, referring to the same resource is allowed"}
-
+			not_single_ref?.() ->
+				{:error,
+					"no more than one dropoff event in the same process, referring to the same resource is allowed"}
 			true ->
 				{:ok, nil}
 		end
 	end)
-	|> Multi.run(:set, fn repo, _ ->
+	|> Multi.run("#{key}.set", fn repo, _ ->
 		if evt.to_location_id do
 			q = where(EconomicResource, [r],
-				r.id == ^evt.resource_inventoried_as_id
-					or r.contained_in_id == ^evt.resource_inventoried_as_id)
+					r.id == ^evt.resource_inventoried_as_id
+						or r.contained_in_id == ^evt.resource_inventoried_as_id)
 			{:ok, repo.update_all(q, set: [current_location_id: evt.to_location_id])}
 		else
 			{:ok, nil}
 		end
 	end)
+	|> Multi.put(key, evt)
 end
-
-defp handle_multi("accept", evt, _) do
+defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		fields = ~w[
 			custodian_id
 			onhand_quantity_has_numerical_value onhand_quantity_has_unit_id
@@ -403,14 +430,13 @@ defp handle_multi("accept", evt, _) do
 			where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
 			|> repo.exists?())
 
-		single_ref? = fn ->
+		not_single_ref? = fn ->
 			where(EconomicEvent, [e],
 				e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
 					and e.id != ^evt.id
 					and e.action_id == "accept"
 					and e.input_of_id == ^evt.input_of_id)
 			|> repo.exists?()
-			|> Kernel.not()
 		end
 
 		any_combine_separate? = fn ->
@@ -440,21 +466,21 @@ defp handle_multi("accept", evt, _) do
 			any_combine_separate?.() ->
 				{:error, "you can't add another accept event to the same process where there are at least one combine or separate events"}
 
-			not single_ref?.() ->
+			not_single_ref?.() ->
 				{:error, "no more than one accept event in the same process, referring to the same resource is allowed"}
 
 			true ->
 				{:ok, nil}
 		end
 	end)
-	|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+	|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 		onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 	])
+	|> Multi.put(key, evt)
 end
-
-defp handle_multi("modify", evt, _) do
+defp handle_insert(key, %{action_id: "modify"} = evt, _) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		pair_evt =
 			from(e in EconomicEvent,
 				where: e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
@@ -466,48 +492,43 @@ defp handle_multi("modify", evt, _) do
 				]a))
 			|> repo.one!()
 
-		single_ref? = fn ->
+		not_single_ref? = fn ->
 			where(EconomicEvent, [e],
 				e.resource_inventoried_as_id == ^evt.resource_inventoried_as_id
 					and e.id != ^evt.id
 					and e.action_id == "modify"
 					and e.output_of_id == ^evt.output_of_id)
 			|> repo.exists?()
-			|> Kernel.not()
 		end
 
 		cond do
 			evt.provider_id != pair_evt.provider_id ->
 				{:error, "you don't have custody over this resource"}
-
 			evt.resource_quantity_has_unit_id != pair_evt.resource_quantity_has_unit_id ->
 				{:error, "the unit of resource quantity must match with the unit of the paired event"}
-
 			evt.resource_quantity_has_numerical_value != pair_evt.resource_quantity_has_numerical_value ->
 				{:error, "the modify events need to fully modify the resource"}
-
-			not single_ref?.() ->
+			not_single_ref?.() ->
 				{:error, "no more than one modify event in the same process, referring to the same resource is allowed"}
-
 			true ->
 				{:ok, nil}
 		end
 	end)
-	|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+	|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 		onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 	])
-	|> Multi.update_all(:stage, fn _ ->
+	|> Multi.update_all("#{key}.stage", fn _ ->
 		from(r in EconomicResource,
 			join: e in EconomicEvent, on: e.id == ^evt.id,
 			join: p in assoc(e, :output_of),
 			where: r.id == e.resource_inventoried_as_id,
 			update: [set: [stage_id: p.based_on_id]])
 	end, [])
+	|> Multi.put(key, evt)
 end
-
-defp handle_multi("transferCustody", evt, res_params) do
+defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		%{resource_inventoried_as_id: res_id, to_resource_inventoried_as_id: to_res_id} = evt
 		res_ids =
 			if to_res_id do
@@ -543,51 +564,43 @@ defp handle_multi("transferCustody", evt, res_params) do
 		cond do
 			evt.provider_id != res.custodian_id ->
 				{:error, "you don't have custody over this resource"}
-
 			res.contained? ->
 				{:error, "you can't transfer-custody a contained resource"}
-
 			evt.resource_quantity_has_unit_id != res.onhand_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-
 			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
 				{:error, "the transfer-custody events need container resources to have positive onhand-quantity"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the transfer-custody events need to fully transfer the resource"}
-
 			res.container? && to_res ->
 				{:error, "you can't transfer-custody a container resource into another resource"}
-
 			to_res && to_res.contained? ->
 				{:error, "you can't transfer-custody into a contained resource"}
-
 			to_res && to_res.container? ->
 				{:error, "you can't transfer-custody into a container resource"}
-
 			to_res && evt.resource_quantity_has_unit_id != to_res.onhand_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"}
-
 			to_res && res.conforms_to_id != to_res.conforms_to_id ->
 				{:error, "the resources must conform to the same specification"}
-
 			true ->
 				# some fields of the resource is required for the following multis
 				{:ok, res}
 		end
 	end)
-	|> Multi.merge(fn %{checks: res} ->
+	|> Multi.merge(fn changes ->
+		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
+			|> Multi.put(key, evt)
 		else
 			res_params =
-				res_params
+				(res_params || %{})
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -608,19 +621,19 @@ defp handle_multi("transferCustody", evt, res_params) do
 				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
-			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
-				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
-			end)
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
+			|> Multi.update(key, &Changeset.change(evt,
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.merge(fn %{updated_evt: evt} ->
+			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
-					Multi.update_all(Multi.new(), :set, where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
-						contained_in_id: evt.to_resource_inventoried_as_id,
-						custodian_id: evt.receiver_id,
-					])
+					Multi.update_all(Multi.new(), "#{key}.set",
+						where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
+							contained_in_id: evt.to_resource_inventoried_as_id,
+							custodian_id: evt.receiver_id,
+						])
 				else
 					Multi.new()
 				end
@@ -628,10 +641,9 @@ defp handle_multi("transferCustody", evt, res_params) do
 		end
 	end)
 end
-
-defp handle_multi("transferAllRights", evt, res_params) do
+defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		%{resource_inventoried_as_id: res_id, to_resource_inventoried_as_id: to_res_id} = evt
 		res_ids =
 			if to_res_id do
@@ -667,40 +679,31 @@ defp handle_multi("transferAllRights", evt, res_params) do
 		cond do
 			evt.provider_id != res.primary_accountable_id ->
 				{:error, "you don't have accountability over this resource"}
-
 			res.contained? ->
 				{:error, "you can't transfer-all-rights a contained resource"}
-
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-
 			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
 				{:error, "the transfer-all-rights events need container resources to have positive accounting-quantity"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer-all-rights events need to fully transfer the resource"}
-
 			res.container? && to_res ->
 				{:error, "you can't transfer-all-rights a container resource into another resource"}
-
 			to_res && to_res.contained? ->
 				{:error, "you can't transfer-all-rights into a contained resource"}
-
 			to_res && to_res.container? ->
 				{:error, "you can't transfer-all-rights into a container resource"}
-
 			to_res && evt.resource_quantity_has_unit_id != to_res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"}
-
 			to_res && res.conforms_to_id != to_res.conforms_to_id ->
 				{:error, "the resources must conform to the same specification"}
-
 			true ->
 				# some fields of the resource is required for the following multis
 				{:ok, res}
 		end
 	end)
-	|> Multi.merge(fn %{checks: res} ->
+	|> Multi.merge(fn changes ->
+		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
 			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
@@ -709,9 +712,10 @@ defp handle_multi("transferAllRights", evt, res_params) do
 			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
+			|> Multi.put(key, evt)
 		else
 			res_params =
-				res_params
+				(res_params || %{})
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -731,16 +735,15 @@ defp handle_multi("transferAllRights", evt, res_params) do
 				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
-			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
-				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
-			end)
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
+			|> Multi.update(key, &Changeset.change(evt,
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.merge(fn %{updated_evt: evt} ->
+			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
-					Multi.update_all(Multi.new(), :set, where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
+					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
 						contained_in_id: evt.to_resource_inventoried_as_id,
 						primary_accountable_id: evt.receiver_id,
 					])
@@ -751,10 +754,9 @@ defp handle_multi("transferAllRights", evt, res_params) do
 		end
 	end)
 end
-
-defp handle_multi("transfer", evt, res_params) do
+defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		%{resource_inventoried_as_id: res_id, to_resource_inventoried_as_id: to_res_id} = evt
 		res_ids =
 			if to_res_id do
@@ -791,62 +793,51 @@ defp handle_multi("transfer", evt, res_params) do
 		cond do
 			evt.provider_id != res.primary_accountable_id ->
 				{:error, "you don't have accountability over this resource"}
-
 			evt.provider_id != res.custodian_id ->
 				{:error, "you don't have custody over this resource"}
-
 			res.contained? ->
 				{:error, "you can't transfer a contained resource"}
-
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-
 			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
 				{:error, "the transfer events need container resources to have positive accounting-quantity"}
-
 			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
 				{:error, "the transfer events need container resources to have positive onhand-quantity"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer events need to fully transfer the resource"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the transfer events need to fully transfer the resource"}
-
 			res.container? && to_res ->
 				{:error, "you can't transfer a container resource into another resource"}
-
 			to_res && to_res.contained? ->
 				{:error, "you can't transfer into a contained resource"}
-
 			to_res && to_res.container? ->
 				{:error, "you can't transfer into a container resource"}
-
 			to_res && evt.resource_quantity_has_unit_id != to_res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"}
-
 			to_res && res.conforms_to_id != to_res.conforms_to_id ->
 				{:error, "the resources must conform to the same specification"}
-
 			true ->
 				# some fields of the resource is required for the following multis
 				{:ok, res}
 		end
 	end)
-	|> Multi.merge(fn %{checks: res} ->
+	|> Multi.merge(fn changes ->
+		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
+			|> Multi.put(key, evt)
 		else
 			res_params =
-				res_params
+				(res_params || %{})
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -867,17 +858,16 @@ defp handle_multi("transfer", evt, res_params) do
 				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
-			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
-				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
-			end)
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
+			|> Multi.update(key, &Changeset.change(evt,
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.merge(fn %{updated_evt: evt} ->
+			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
-					Multi.update_all(Multi.new(), :set, where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
+					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
 						contained_in_id: evt.to_resource_inventoried_as_id,
 						primary_accountable_id: evt.receiver_id,
 						custodian_id: evt.receiver_id,
@@ -889,10 +879,9 @@ defp handle_multi("transfer", evt, res_params) do
 		end
 	end)
 end
-
-defp handle_multi("move", evt, res_params) do
+defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 	Multi.new()
-	|> Multi.run(:checks, fn repo, _ ->
+	|> Multi.run("#{key}.checks", fn repo, _ ->
 		%{resource_inventoried_as_id: res_id, to_resource_inventoried_as_id: to_res_id} = evt
 		res_ids =
 			if to_res_id do
@@ -929,68 +918,55 @@ defp handle_multi("move", evt, res_params) do
 		cond do
 			evt.provider_id != res.primary_accountable_id ->
 				{:error, "you don't have accountability over resource-inventoried-as"}
-
 			evt.provider_id != res.custodian_id ->
 				{:error, "you don't have custody over resource-inventoried-as"}
-
 			res.contained? ->
 				{:error, "you can't move a contained resource"}
-
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-
 			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
 				{:error, "the move events need container resources to have positive accounting-quantity"}
-
 			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
 				{:error, "the move events need container resources to have positive onhand-quantity"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the move events need to fully move the resource"}
-
 			res.container? && evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the move events need to fully move the resource"}
-
 			res.container? && to_res ->
 				{:error, "you can't move a container resource into another resource"}
-
 			to_res && evt.provider_id != to_res.primary_accountable_id ->
 				{:error, "you don't have accountability over to-resource-inventoried-as"}
-
 			to_res && evt.provider_id != to_res.custodian_id ->
 				{:error, "you don't have custody over to-resource-inventoried-as"}
-
 			to_res && to_res.contained? ->
 				{:error, "you can't move into a contained resource"}
-
 			to_res && to_res.container? ->
 				{:error, "you can't move into a container resource"}
-
 			to_res && evt.resource_quantity_has_unit_id != to_res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"}
-
 			to_res && res.conforms_to_id != to_res.conforms_to_id ->
 				{:error, "the resources must conform to the same specification"}
-
 			true ->
 				# some fields of the resource is required for the following multis
 				{:ok, res}
 		end
 	end)
-	|> Multi.merge(fn %{checks: res} ->
+	|> Multi.merge(fn changes ->
+		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
+			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
+			|> Multi.put(key, evt)
 		else
 			res_params =
-				res_params
+				(res_params || %{})
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -1011,17 +987,16 @@ defp handle_multi("move", evt, res_params) do
 				|> Map.put_new(:metadata, res.metadata)
 
 			Multi.new()
-			|> Multi.insert(:to_eco_res, EconomicResource.chgset(res_params))
-			|> Multi.update(:updated_evt, fn %{to_eco_res: res} ->
-				Changeset.change(evt, to_resource_inventoried_as_id: res.id)
-			end)
+			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
+			|> Multi.update(key, &Changeset.change(evt,
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
 			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.merge(fn %{updated_evt: evt} ->
+			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
-					Multi.update_all(Multi.new(), :set, where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
+					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
 						contained_in_id: evt.to_resource_inventoried_as_id,
 						primary_accountable_id: evt.receiver_id,
 						custodian_id: evt.receiver_id,
@@ -1034,84 +1009,18 @@ defp handle_multi("move", evt, res_params) do
 	end)
 end
 
-@spec update(id(), params())
-	:: {:ok, EconomicEvent.t()} | {:error, String.t() | chgset()}
-def update(id, params) do
-	Multi.new()
-	|> Multi.put(:id, id)
-	|> Multi.run(:one, &one/2)
-	|> Multi.update(:update, &EconomicEvent.chgset(&1.one, params))
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{update: ee}} -> {:ok, ee}
-		{:error, _, msg_or_cset, _} -> {:error, msg_or_cset}
-	end
+@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, key \\ multi_key(), id, params) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.update(key,
+		&EconomicEvent.changeset(Map.fetch!(&1, "#{key}.one"), params))
 end
 
-@spec preload(EconomicEvent.t(), :action | :input_of | :output_of
-		| :provider | :receiver
-		| :resource_inventoried_as | :to_resource_inventoried_as
-		| :resource_conforms_to | :resource_quantity | :effort_quantity
-		| :to_location | :at_location | :realization_of | :triggered_by
-		| :previous_event)
-	:: EconomicEvent.t()
-def preload(eco_evt, :action) do
-	Action.preload(eco_evt, :action)
-end
-
-def preload(eco_evt, :input_of) do
-	Repo.preload(eco_evt, :input_of)
-end
-
-def preload(eco_evt, :output_of) do
-	Repo.preload(eco_evt, :output_of)
-end
-
-def preload(eco_evt, :provider) do
-	Repo.preload(eco_evt, :provider)
-end
-
-def preload(eco_evt, :receiver) do
-	Repo.preload(eco_evt, :receiver)
-end
-
-def preload(eco_evt, :resource_inventoried_as) do
-	Repo.preload(eco_evt, :resource_inventoried_as)
-end
-
-def preload(eco_evt, :to_resource_inventoried_as) do
-	Repo.preload(eco_evt, :to_resource_inventoried_as)
-end
-
-def preload(eco_evt, :resource_conforms_to) do
-	Repo.preload(eco_evt, :resource_conforms_to)
-end
-
-def preload(eco_evt, :resource_quantity) do
-	Measure.preload(eco_evt, :resource_quantity)
-end
-
-def preload(eco_evt, :effort_quantity) do
-	Measure.preload(eco_evt, :effort_quantity)
-end
-
-def preload(eco_evt, :to_location) do
-	Repo.preload(eco_evt, :to_location)
-end
-
-def preload(eco_evt, :at_location) do
-	Repo.preload(eco_evt, :at_location)
-end
-
-def preload(eco_evt, :realization_of) do
-	Repo.preload(eco_evt, :realization_of)
-end
-
-def preload(eco_evt, :triggered_by) do
-	Repo.preload(eco_evt, :triggered_by)
-end
-
-def preload(eco_evt, :previous_event) do
-	Repo.preload(eco_evt, :previous_event)
+@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, key \\ multi_key(), id) do
+	m
+	|> multi_one("#{key}.one", id)
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

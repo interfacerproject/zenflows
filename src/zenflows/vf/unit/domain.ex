@@ -50,21 +50,22 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec create(Schema.params()) :: {:ok, Unit.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(Ecto.Repo.t(), Schema.params())
+	:: {:ok, Unit.t()} | {:error, Changeset.t()}
+def create(repo \\ Repo, params) do
 	key = multi_key()
 	Multi.new()
 	|> multi_insert(params)
-	|> Repo.transaction()
+	|> repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
 		{:error, _, reason, _} -> {:error, reason}
 	end
 end
 
-@spec create!(Schema.params()) :: Unit.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(Ecto.Repo.t(), Schema.params()) :: Unit.t()
+def create!(repo \\ Repo, params) do
+	{:ok, value} = create(repo, params)
 	value
 end
 

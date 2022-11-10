@@ -37,11 +37,11 @@ def up() do
 
 	execute(fn ->
 		r = repo()
-		{:ok, unit_one} = Unit.Domain.create(r, %{label: "one", symbol: "#"})
-		{:ok, spec_currency} = ResourceSpecification.Domain.create(r, %{name: "currency", default_unit_of_resource_id: unit_one.id})
-		{:ok, spec_design} = ResourceSpecification.Domain.create(r, %{name: "Design", default_unit_of_resource_id: unit_one.id})
-		{:ok, spec_service} = ResourceSpecification.Domain.create(r, %{name: "Service", default_unit_of_resource_id: unit_one.id})
-		{:ok, spec_product} = ResourceSpecification.Domain.create(r, %{name: "Product", default_unit_of_resource_id: unit_one.id})
+		unit_one = Unit.Domain.create!(r, %{label: "one", symbol: "#"})
+		spec_currency = ResourceSpecification.Domain.create!(r, %{name: "currency", default_unit_of_resource_id: unit_one.id})
+		spec_design = ResourceSpecification.Domain.create!(r, %{name: "Design", default_unit_of_resource_id: unit_one.id})
+		spec_service = ResourceSpecification.Domain.create!(r, %{name: "Service", default_unit_of_resource_id: unit_one.id})
+		spec_product = ResourceSpecification.Domain.create!(r, %{name: "Product", default_unit_of_resource_id: unit_one.id})
 
 		r.insert!(%InstVars{
 			unit_one_id: unit_one.id,

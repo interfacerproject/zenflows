@@ -311,7 +311,8 @@ defp handle_insert(key, %{action_id: "cite"} = evt, _) do
 				)
 				|> repo.one!()
 				res = Map.put(res, :container?,
-					where(EconomicResource, contained_in_id: ^res.id) |> repo.exists?())
+					where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id)
+					|> repo.exists?())
 
 				cond do
 					evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->

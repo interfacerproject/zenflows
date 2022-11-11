@@ -164,6 +164,7 @@ defp handle_insert(key, %{action_id: action_id} = evt, res_params)
 				fields = ~w[
 					primary_accountable_id custodian_id
 					accounting_quantity_has_unit_id
+					previous_event_id
 				]a
 				res = from(
 					r in EconomicResource,
@@ -187,14 +188,19 @@ defp handle_insert(key, %{action_id: action_id} = evt, res_params)
 					res.container? ->
 						{:error, "you can't #{action_id} into a container resource"}
 					true ->
-						{:ok, nil}
+						# some fields of the resource is required for the following multis
+						{:ok, res}
 				end
 			end)
-			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
-				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
-			])
-			|> Multi.put(key, evt)
+			|> Multi.update(key, &Changeset.change(evt,
+				previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+			|> Multi.update_all("#{key}.set_and_inc",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
+				])
 	end
 end
 defp handle_insert(key, %{action_id: action_id} = evt, _)
@@ -204,6 +210,7 @@ defp handle_insert(key, %{action_id: action_id} = evt, _)
 		fields = ~w[
 			primary_accountable_id custodian_id
 			accounting_quantity_has_unit_id
+			previous_event_id
 		]a
 		res = from(
 			r in EconomicResource,
@@ -227,14 +234,19 @@ defp handle_insert(key, %{action_id: action_id} = evt, _)
 			res.container? ->
 				{:error, "you can't #{action_id} a container resource"}
 			true ->
-				{:ok, nil}
+				# some fields of the resource is required for the following multis
+				{:ok, res}
 		end
 	end)
-	|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-		accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-		onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-	])
-	|> Multi.put(key, evt)
+	|> Multi.update(key, &Changeset.change(evt,
+		previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+	|> Multi.update_all("#{key}.set_and_dec",
+		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+		set: [previous_event_id: evt.id],
+		inc: [
+			accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+		])
 end
 defp handle_insert(key, %{action_id: action_id} = evt, _)
 		when action_id in ~w[work deliverService] do
@@ -247,9 +259,9 @@ defp handle_insert(key, %{action_id: "use"} = evt, _) do
 		evt.resource_inventoried_as_id != nil ->
 			Multi.new()
 			|> Multi.run("#{key}.checks", fn repo, _ ->
-				fields = if evt.resource_quantity != nil,
-					do: [:accounting_quantity_has_unit_id],
-					else: []
+				fields = if evt.resource_quantity_has_unit_id != nil,
+					do: [:accounting_quantity_has_unit_id, :previous_event_id],
+					else: [:previous_event_id]
 
 				res = from(
 					r in EconomicResource,
@@ -271,10 +283,15 @@ defp handle_insert(key, %{action_id: "use"} = evt, _) do
 					res.container? ->
 						{:error, "you can't use a container resource"}
 					true ->
-						{:ok, nil}
+						# some fields of the resource is required for the following multis
+						{:ok, res}
 				end
 			end)
-			|> Multi.put(key, evt)
+			|> Multi.update(key, &Changeset.change(evt,
+				previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+			|> Multi.update_all("#{key}.set",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id])
 	end
 end
 defp handle_insert(key, %{action_id: "cite"} = evt, _) do
@@ -284,10 +301,11 @@ defp handle_insert(key, %{action_id: "cite"} = evt, _) do
 		evt.resource_inventoried_as_id != nil ->
 			Multi.new()
 			|> Multi.run("#{key}.checks", fn repo, _ ->
+				fields = [:accounting_quantity_has_unit_id, :previous_event_id]
 				res = from(
 					r in EconomicResource,
 					where: [id: ^evt.resource_inventoried_as_id],
-					select: merge(map(r, [:accounting_quantity_has_unit_id]), %{
+					select: merge(map(r, ^fields), %{
 						contained?: not is_nil(r.contained_in_id), # is it contained in something?
 					})
 				)
@@ -303,10 +321,15 @@ defp handle_insert(key, %{action_id: "cite"} = evt, _) do
 					res.container? ->
 						{:error, "you can't cite a container resource"}
 					true ->
-						{:ok, nil}
+						# some fields of the resource is required for the following multis
+						{:ok, res}
 				end
 			end)
-			|> Multi.put(key, evt)
+			|> Multi.update(key, &Changeset.change(evt,
+				previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+			|> Multi.update_all("#{key}.set",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id])
 	end
 end
 defp handle_insert(key, %{action_id: "pickup"} = evt, _) do
@@ -315,6 +338,7 @@ defp handle_insert(key, %{action_id: "pickup"} = evt, _) do
 		fields = ~w[
 			custodian_id
 			onhand_quantity_has_numerical_value onhand_quantity_has_unit_id
+			previous_event_id
 		]a
 		res = from(
 			r in EconomicResource,
@@ -352,10 +376,15 @@ defp handle_insert(key, %{action_id: "pickup"} = evt, _) do
 				{:error,
 					"no more than one pickup event in the same process, referring to the same resource is allowed"}
 			true ->
-				{:ok, nil}
+				# some fields of the resource is required for the following multis
+				{:ok, res}
 		end
 	end)
-	|> Multi.put(key, evt)
+	|> Multi.update(key, &Changeset.change(evt,
+		previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+	|> Multi.update_all("#{key}.set",
+		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+		set: [previous_event_id: evt.id])
 end
 defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 	Multi.new()
@@ -399,7 +428,7 @@ defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 				{:ok, nil}
 		end
 	end)
-	|> Multi.run("#{key}.set", fn repo, _ ->
+	|> Multi.run("#{key}.set_loc", fn repo, _ ->
 		if evt.to_location_id do
 			q = where(EconomicResource, [r],
 					r.id == ^evt.resource_inventoried_as_id
@@ -409,7 +438,17 @@ defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 			{:ok, nil}
 		end
 	end)
-	|> Multi.put(key, evt)
+	|> Multi.run("#{key}.prev_evt_id", fn repo, _ ->
+		{:ok,
+			from(r in EconomicResource, where: r.id == ^evt.resource_inventoried_as_id,
+				select: r.previous_event_id)
+			|> repo.one()}
+	end)
+	|> Multi.update(key, &Changeset.change(evt,
+		previous_event_id: Map.fetch!(&1, "#{key}.prev_evt_id")))
+	|> Multi.update_all("#{key}.set_prev_evt",
+		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+		set: [previous_event_id: evt.id])
 end
 defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 	Multi.new()
@@ -417,6 +456,7 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 		fields = ~w[
 			custodian_id
 			onhand_quantity_has_numerical_value onhand_quantity_has_unit_id
+			previous_event_id
 		]a
 		res = from(
 			r in EconomicResource,
@@ -470,13 +510,18 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 				{:error, "no more than one accept event in the same process, referring to the same resource is allowed"}
 
 			true ->
-				{:ok, nil}
+				# some fields of the resource is required for the following multis
+				{:ok, res}
 		end
 	end)
-	|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-		onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-	])
-	|> Multi.put(key, evt)
+	|> Multi.update(key, &Changeset.change(evt,
+		previous_event_id: &1 |> Map.fetch!("#{key}.checks") |> Map.fetch!(:previous_event_id)))
+	|> Multi.update_all("#{key}.set_and_dec",
+		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+		set: [previous_event_id: evt.id],
+		inc: [
+			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+		])
 end
 defp handle_insert(key, %{action_id: "modify"} = evt, _) do
 	Multi.new()
@@ -514,9 +559,20 @@ defp handle_insert(key, %{action_id: "modify"} = evt, _) do
 				{:ok, nil}
 		end
 	end)
-	|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-		onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
-	])
+	|> Multi.run("#{key}.prev_evt_id", fn repo, _ ->
+		{:ok,
+			from(r in EconomicResource, where: r.id == ^evt.resource_inventoried_as_id,
+				select: r.previous_event_id)
+			|> repo.one()}
+	end)
+	|> Multi.update(key, &Changeset.change(evt,
+		previous_event_id: Map.fetch!(&1, "#{key}.prev_evt_id")))
+	|> Multi.update_all("#{key}.set_and_inc",
+		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+		set: [previous_event_id: evt.id],
+		inc: [
+			onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
+		])
 	|> Multi.update_all("#{key}.stage", fn _ ->
 		from(r in EconomicResource,
 			join: e in EconomicEvent, on: e.id == ^evt.id,
@@ -524,7 +580,6 @@ defp handle_insert(key, %{action_id: "modify"} = evt, _) do
 			where: r.id == e.resource_inventoried_as_id,
 			update: [set: [stage_id: p.based_on_id]])
 	end, [])
-	|> Multi.put(key, evt)
 end
 defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 	Multi.new()
@@ -542,6 +597,8 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 
 			name note tracking_identifier okhv repo version licensor license metadata
 			classified_as
+
+			previous_event_id
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -591,13 +648,16 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.put(key, evt)
 		else
 			res_params =
 				(res_params || %{})
@@ -623,10 +683,14 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
 			|> Multi.update(key, &Changeset.change(evt,
-				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
+				previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
 					Multi.update_all(Multi.new(), "#{key}.set",
@@ -657,6 +721,8 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 
 			name note tracking_identifier okhv repo version licensor license metadata
 			classified_as
+
+			previous_event_id
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -706,13 +772,16 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
+			|> Multi.update_all(:set_and_dec,
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.put(key, evt)
 		else
 			res_params =
 				(res_params || %{})
@@ -737,10 +806,14 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
 			|> Multi.update(key, &Changeset.change(evt,
-				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
+				previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
 					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
@@ -771,6 +844,8 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 
 			name note tracking_identifier okhv repo version licensor license metadata
 			classified_as
+
+			previous_event_id
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -826,15 +901,18 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.put(key, evt)
 		else
 			res_params =
 				(res_params || %{})
@@ -860,11 +938,15 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
 			|> Multi.update(key, &Changeset.change(evt,
-				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
+				previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
 					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [
@@ -896,6 +978,8 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 
 			name note tracking_identifier okhv repo version licensor license metadata
 			classified_as
+
+			previous_event_id
 		]a
 		{res, to_res} =
 			from(r in EconomicResource,
@@ -955,15 +1039,18 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 		res = Map.fetch!(changes, "#{key}.checks")
 		if evt.to_resource_inventoried_as_id do
 			Multi.new()
-			|> Multi.update_all("#{key}.dec", where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
+			|> Multi.update_all("#{key}.set_and_dec",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
 			])
-			|> Multi.put(key, evt)
 		else
 			res_params =
 				(res_params || %{})
@@ -989,11 +1076,15 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
 			|> Multi.update(key, &Changeset.change(evt,
-				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id)))
-			|> Multi.update_all(:dec, where(EconomicResource, id: ^evt.resource_inventoried_as_id), inc: [
-				accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-				onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			])
+				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
+				previous_event_id: res.previous_event_id))
+			|> Multi.update_all(:set_and_dec,
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [previous_event_id: evt.id],
+				inc: [
+					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
 					Multi.update_all(Multi.new(), "#{key}.set", where(EconomicResource, contained_in_id: ^evt.resource_inventoried_as_id), set: [

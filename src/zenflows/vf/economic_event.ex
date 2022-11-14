@@ -61,6 +61,7 @@ alias Zenflows.VF.{
 	# in_scope_of:
 	agreed_in: String.t() | nil,
 	triggered_by: EconomicEvent.t() | nil,
+	previous_event: nil | EconomicEvent.t(),
 }
 
 schema "vf_economic_event" do
@@ -90,13 +91,14 @@ schema "vf_economic_event" do
 	# field :in_scope_of
 	field :agreed_in, :string
 	belongs_to :triggered_by, EconomicEvent
+	belongs_to :previous_event, EconomicEvent
 	timestamps()
 end
 
 @insert_reqr ~w[action_id provider_id receiver_id]a
 @insert_cast @insert_reqr ++ ~w[
-	has_beginning has_end has_point_in_time note
-	at_location_id realization_of_id agreed_in triggered_by_id
+	has_beginning has_end has_point_in_time note at_location_id
+	realization_of_id agreed_in triggered_by_id previous_event_id
 ]a
 
 # insert changeset
@@ -124,6 +126,7 @@ def changeset(params) do
 	|> Changeset.assoc_constraint(:at_location)
 	|> Changeset.assoc_constraint(:realization_of)
 	|> Changeset.assoc_constraint(:triggered_by)
+	|> Changeset.assoc_constraint(:previous_event)
 end
 
 @spec do_changeset(Changeset.t()) :: Changeset.t()

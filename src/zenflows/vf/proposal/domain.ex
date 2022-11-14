@@ -20,7 +20,7 @@ defmodule Zenflows.VF.Proposal.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
-alias Zenflows.VF.{Proposal, Proposal.Filter}
+alias Zenflows.VF.{Proposal, Proposal.Query}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Proposal.t()} | {:error, String.t()}
@@ -41,7 +41,7 @@ end
 
 @spec all(Page.t()) :: {:ok, [Proposal.t()]} | {:error, Changeset.t()}
 def all(page \\ Page.new()) do
-	with {:ok, q} <- Filter.all(page) do
+	with {:ok, q} <- Query.all(page) do
 		{:ok, Page.all(q, page)}
 	end
 end

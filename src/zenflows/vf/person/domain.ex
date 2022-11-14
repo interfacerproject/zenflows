@@ -22,7 +22,7 @@ import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
-alias Zenflows.VF.{Person, Person.Filter}
+alias Zenflows.VF.{Person, Person.Query}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Person.t()} | {:error, String.t()}
@@ -43,7 +43,7 @@ end
 
 @spec all(Page.t()) :: {:ok, [Person.t()]} | {:error, Changeset.t()}
 def all(page \\ Page.new()) do
-	with {:ok, q} <- Filter.all(page) do
+	with {:ok, q} <- Query.all(page) do
 		{:ok, Page.all(q, page)}
 	end
 end

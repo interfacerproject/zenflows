@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.VF.Person.Filter do
+defmodule Zenflows.VF.Person.Query do
 @moduledoc false
 
 import Ecto.Query

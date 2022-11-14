@@ -562,4 +562,3 @@ def insert_economic_resource!() do
 	Zenflows.VF.EconomicResource.Domain.one!(id)
 end
 end
-

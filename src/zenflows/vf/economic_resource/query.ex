@@ -35,35 +35,80 @@ end
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
 defp all_f(q, {:classified_as, v}),
 	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
+defp all_f(q, {:or_classified_as, v}),
+	do: or_where(q, [x], fragment("? @> ?", x.classified_as, ^v))
 defp all_f(q, {:primary_accountable, v}),
 	do: where(q, [x], x.primary_accountable_id in ^v)
+defp all_f(q, {:or_primary_accountable, v}),
+	do: or_where(q, [x], x.primary_accountable_id in ^v)
 defp all_f(q, {:custodian, v}),
 	do: where(q, [x], x.custodian_id in ^v)
+defp all_f(q, {:or_custodian, v}),
+	do: or_where(q, [x], x.custodian_id in ^v)
 defp all_f(q, {:conforms_to, v}),
 	do: where(q, [x], x.conforms_to_id in ^v)
+defp all_f(q, {:or_conforms_to, v}),
+	do: or_where(q, [x], x.conforms_to_id in ^v)
 defp all_f(q, {:gt_onhand_quantity_has_numerical_value, v}),
 	do: where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
+defp all_f(q, {:or_gt_onhand_quantity_has_numerical_value, v}),
+	do: or_where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
+defp all_f(q, {:name, v}),
+	do: where(q, [x], ilike(x.name, ^v))
+defp all_f(q, {:namen, v}),
+	do: or_where(q, [x], ilike(x.name, ^v))
 
 @spec all_validate(Schema.params()) ::
 	{:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
 	{%{}, %{
 		classified_as: {:array, :string},
+		or_classified_as: {:array, :string},
 		primary_accountable: {:array, ID},
+		or_primary_accountable: {:array, ID},
 		custodian: {:array, ID},
+		or_custodian: {:array, ID},
 		conforms_to: {:array, ID},
+		or_conforms_to: {:array, ID},
 		gt_onhand_quantity_has_numerical_value: :float,
+		or_gt_onhand_quantity_has_numerical_value: :float,
+		name: :string,
+		or_name: :string,
 	}}
 	|> Changeset.cast(params, ~w[
-		classified_as primary_accountable custodian conforms_to
+		classified_as or_classified_as
+		primary_accountable or_primary_accountable
+		custodian or_custodian
+		conforms_to or_conforms_to
 		gt_onhand_quantity_has_numerical_value
+		or_gt_onhand_quantity_has_numerical_value
+		name or_name
 	]a)
 	|> Validate.class(:classified_as)
+	|> Validate.class(:or_classified_as)
+	|> Validate.exist_nand([:classified_as, :or_classified_as])
 	|> Validate.class(:primary_accountable)
+	|> Validate.class(:or_primary_accountable)
+	|> Validate.exist_nand([:primary_accountable, :or_primary_accountable])
 	|> Validate.class(:custodian)
+	|> Validate.class(:or_custodian)
+	|> Validate.exist_nand([:custodian, :or_custodian])
 	|> Validate.class(:conforms_to)
+	|> Validate.class(:or_conforms_to)
+	|> Validate.exist_nand([:conforms_to, :or_conforms_to])
 	|> Changeset.validate_number(:gt_onhand_quantity_has_numerical_value,
 		greater_than_or_equal_to: 0)
+	|> Changeset.validate_number(:or_gt_onhand_quantity_has_numerical_value,
+		greater_than_or_equal_to: 0)
+	|> Validate.exist_nand([
+		:gt_onhand_quantity_has_numerical_value,
+		:or_gt_onhand_quantity_has_numerical_value,
+	])
+	|> Validate.name(:name)
+	|> Validate.name(:or_name)
+	|> Validate.exist_nand([:name, :or_name])
+	|> Validate.escape_like(:name)
+	|> Validate.escape_like(:or_name)
 	|> Changeset.apply_action(nil)
 end
 

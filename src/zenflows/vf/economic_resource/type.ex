@@ -243,10 +243,17 @@ end
 
 input_object :economic_resource_filter_params do
 	field :classified_as, list_of(non_null(:uri))
+	field :or_classified_as, list_of(non_null(:uri))
 	field :conforms_to, list_of(non_null(:id))
+	field :or_conforms_to, list_of(non_null(:id))
 	field :primary_accountable, list_of(non_null(:id))
+	field :or_primary_accountable, list_of(non_null(:id))
 	field :custodian, list_of(non_null(:id))
+	field :or_custodian, list_of(non_null(:id))
 	field :gt_onhand_quantity_has_numerical_value, :float
+	field :or_gt_onhand_quantity_has_numerical_value, :float
+	field :name, list_of(non_null(:string))
+	field :or_name, list_of(non_null(:string))
 end
 
 object :query_economic_resource do

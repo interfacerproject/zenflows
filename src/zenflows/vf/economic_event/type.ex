@@ -20,7 +20,12 @@ defmodule Zenflows.VF.EconomicEvent.Type do
 
 use Absinthe.Schema.Notation
 
-alias Zenflows.VF.EconomicEvent.Resolv
+alias Zenflows.VF.{
+	EconomicEvent,
+	EconomicEvent.Resolv,
+	EconomicResource,
+	Process,
+}
 
 @action """
 Relates an economic event to a verb, such as consume, produce, work,
@@ -95,6 +100,15 @@ policies or calculations which govern this economic event.
 """
 @triggered_by "References another economic event that implied this economic event, often based on a prior agreement."
 @triggered_by_id "(`EconomicEvent`) #{@triggered_by}"
+
+union :production_flow_item do
+	types [:process, :economic_event, :economic_resource]
+	resolve_type fn
+		%Process{}, _ -> :process
+		%EconomicEvent{}, _ -> :economic_event
+		%EconomicResource{}, _ -> :economic_resource
+	end
+end
 
 @desc """
 An observed economic flow, as opposed to a flow planned to happen in
@@ -171,6 +185,9 @@ object :economic_event do
 	@desc @triggered_by
 	field :triggered_by, :economic_event,
 		resolve: &Resolv.triggered_by/3
+
+	field :previous, :production_flow_item,
+		resolve: &Resolv.previous/3
 end
 
 input_object :economic_event_create_params do

@@ -41,6 +41,7 @@ def change() do
 		add :at_location_id, references("vf_spatial_thing")
 		add :realization_of_id, references("vf_agreement")
 		add :triggered_by_id, references("vf_economic_event")
+		add :previous_event_id, references("vf_economic_event")
 		# add :in_scope_of
 		add :agreed_in, :text
 		timestamps()

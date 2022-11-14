@@ -22,6 +22,7 @@ alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
+	EconomicEvent,
 	EconomicResource,
 	EconomicResource.Query,
 	Measure,
@@ -56,6 +57,18 @@ end
 def all!(page \\ Page.new()) do
 	{:ok, value} = all(page)
 	value
+end
+
+@spec previous(EconomicResource.t() | Schema.id()) :: [EconomicEvent.t()]
+def previous(_, _ \\ Page.new())
+def previous(%EconomicResource{id: id}, page), do: previous(id, page)
+def previous(id, page) do
+	Query.previous(id)
+	|> Page.all(page)
+	|> Enum.sort(&(
+		&1.previous_event_id == nil
+		or &1.id == &2.previous_event_id
+		or &1.id <= &2.id))
 end
 
 @spec classifications() :: [String.t()]

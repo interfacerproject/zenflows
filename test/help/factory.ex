@@ -107,14 +107,17 @@ end
 
 @doc "Inserts a schema into the database with field overrides."
 @spec insert!(atom(), %{required(atom()) => term()}) :: struct()
-def insert!(name, attrs \\ %{}) do
-	name |> build!(attrs) |> Repo.insert!()
+def insert!(_, _ \\ %{})
+def insert!(:economic_event, _), do: insert_economic_event!()
+def insert!(:economic_resource, _), do: insert_economic_resource!()
+def insert!(name, params) do
+	name |> build!(params) |> Repo.insert!()
 end
 
 @doc "Builds a schema with field overrides."
 @spec build!(atom(), %{required(atom()) => term()}) :: struct()
-def build!(name, attrs \\ %{}) do
-	name |> build() |> struct!(attrs)
+def build!(name, params \\ %{}) do
+	name |> build() |> struct!(params)
 end
 
 @doc """
@@ -359,42 +362,6 @@ def build(:product_batch) do
 	}
 end
 
-def build(:economic_resource) do
-	recurse? = bool()
-	qty = build(:imeasure)
-
-	%VF.EconomicResource{
-		name: str("some name"),
-		note: str("some note"),
-		images: file_list(),
-		tracking_identifier: str("some tracking identifier"),
-		classified_as: str_list("some uri"),
-		conforms_to: build(:resource_specification),
-		accounting_quantity_has_unit: qty.has_unit,
-		accounting_quantity_has_numerical_value: qty.has_numerical_value,
-		onhand_quantity_has_unit: qty.has_unit,
-		onhand_quantity_has_numerical_value: qty.has_numerical_value,
-		primary_accountable: build(:agent),
-		custodian: build(:agent),
-		stage: build(:process_specification),
-		state_id: build(:action_id),
-		current_location: build(:spatial_thing),
-		lot: build(:product_batch),
-		contained_in: if(recurse?, do: build(:economic_resource)),
-		unit_of_effort: build(:unit),
-		okhv: str("okhv"),
-		repo: uri(),
-		version: str("version"),
-		licensor: str("licensor"),
-		license: str("license"),
-		metadata: %{str("key") => str("val")},
-	}
-end
-
-def build(:economic_event) do
-	%{}
-end
-
 def build(:appreciation) do
 	%VF.Appreciation{
 		appreciation_of: build(:economic_event),
@@ -418,7 +385,7 @@ def build(:intent) do
 		output_of: build(:process),
 		resource_classified_as: str_list("some uri"),
 		resource_conforms_to: build(:resource_specification),
-		resource_inventoried_as: build(:economic_resource),
+		resource_inventoried_as_id: insert_economic_resource!().id,
 		resource_quantity_has_unit: resqty.has_unit,
 		resource_quantity_has_numerical_value: resqty.has_numerical_value,
 		effort_quantity_has_unit: effqty.has_unit,
@@ -452,7 +419,7 @@ def build(:commitment) do
 		output_of: build(:process),
 		resource_classified_as: str_list("some uri"),
 		resource_conforms_to: if(resource_mutex?, do: build(:resource_specification)),
-		resource_inventoried_as: unless(resource_mutex?, do: build(:economic_resource)),
+		resource_inventoried_as_id: unless(resource_mutex?, do: insert_economic_resource!().id),
 		resource_quantity_has_unit: resqty.has_unit,
 		resource_quantity_has_numerical_value: resqty.has_numerical_value,
 		effort_quantity_has_unit: effqty.has_unit,
@@ -572,5 +539,26 @@ def build(:proposed_to) do
 		proposed_to: build(:agent),
 		proposed: build(:proposal),
 	}
+end
+
+def insert_economic_event!() do
+	agent = insert!(:agent)
+	Zenflows.VF.EconomicEvent.Domain.create!(%{
+		action_id: "raise",
+		provider_id: agent.id,
+		receiver_id: agent.id,
+		resource_classified_as: str_list("some uri"),
+		resource_conforms_to_id: insert!(:resource_specification).id,
+		resource_quantity: %{
+			has_numerical_value: float(),
+			has_unit_id: insert!(:unit).id,
+		},
+		has_point_in_time: now(),
+	}, %{name: str("some name")})
+end
+
+def insert_economic_resource!() do
+	%{resource_inventoried_as_id: id} = insert_economic_event!()
+	Zenflows.VF.EconomicResource.Domain.one!(id)
 end
 end

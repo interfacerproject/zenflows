@@ -42,11 +42,9 @@ embedded_schema do
 end
 
 @doc "Preloads the Action struct by the given `key`."
-@spec preload(Ecto.Schema.t(), atom()) :: Ecto.Schema.t()
+@spec preload(Ecto.Schema.t(), atom()) :: nil | Ecto.Schema.t()
 def preload(schema, key) do
-	key_id = String.to_existing_atom("#{key}_id")
-	action = Map.fetch!(map(), Map.fetch!(schema, key_id))
-	%{schema | key => action}
+	%{schema | key => Map.get(map(), Map.fetch!(schema, :"#{key}_id"))}
 end
 
 @doc """

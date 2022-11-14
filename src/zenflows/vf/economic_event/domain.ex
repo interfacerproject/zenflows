@@ -25,8 +25,10 @@ alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
 	EconomicEvent,
+	EconomicEvent.Query,
 	EconomicResource,
 	Measure,
+	Process,
 }
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -56,6 +58,16 @@ end
 def all!(page \\ Page.new()) do
 	{:ok, value} = all(page)
 	value
+end
+
+@spec previous(EconomicEvent.t() | Schema.id())
+	:: nil | Process.t() | EconomicEvent.t() | EconomicResource.t()
+def previous(%EconomicEvent{id: id}), do: previous(id)
+def previous(id) do
+	case Query.previous(id) do
+		nil -> nil
+		q -> Repo.one!(q)
+	end
 end
 
 @spec create(Schema.params(), nil | Schema.params())
@@ -144,6 +156,7 @@ defp handle_insert(key, %{action_id: action_id} = evt, res_params)
 		evt.resource_conforms_to_id != nil ->
 			res_params =
 				(res_params || %{})
+				|> Map.put(:previous_event_id, evt.id)
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, evt.resource_conforms_to_id)
@@ -662,6 +675,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 		else
 			res_params =
 				(res_params || %{})
+				|> Map.put(:previous_event_id, evt.id)
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -786,6 +800,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 		else
 			res_params =
 				(res_params || %{})
+				|> Map.put(:previous_event_id, evt.id)
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -917,6 +932,7 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 		else
 			res_params =
 				(res_params || %{})
+				|> Map.put(:previous_event_id, evt.id)
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)
@@ -1055,6 +1071,7 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 		else
 			res_params =
 				(res_params || %{})
+				|> Map.put(:previous_event_id, evt.id)
 				|> Map.put(:primary_accountable_id, evt.receiver_id)
 				|> Map.put(:custodian_id, evt.receiver_id)
 				|> Map.put(:conforms_to_id, res.conforms_to_id)

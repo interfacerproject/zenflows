@@ -22,7 +22,7 @@ import Ecto.Query
 
 alias Ecto.{Changeset, Queryable}
 alias Zenflows.DB.{ID, Page, Schema, Validate}
-alias Zenflows.VF.EconomicResource
+alias Zenflows.VF.{EconomicEvent, EconomicResource}
 
 @spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
 def all(%{filter: nil}), do: {:ok, EconomicResource}
@@ -65,5 +65,13 @@ defp all_validate(params) do
 	|> Changeset.validate_number(:gt_onhand_quantity_has_numerical_value,
 		greater_than_or_equal_to: 0)
 	|> Changeset.apply_action(nil)
+end
+
+@spec previous(Schema.id()) :: Queryable.t()
+def previous(id) do
+	from e in EconomicEvent,
+		or_where: not is_nil(e.output_of_id) and e.resource_inventoried_as_id == ^id,
+		or_where: e.to_resource_inventoried_as_id == ^id,
+		or_where: e.action_id in ["raise", "lower"] and e.resource_inventoried_as_id == ^id
 end
 end

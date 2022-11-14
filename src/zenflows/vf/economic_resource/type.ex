@@ -177,6 +177,9 @@ object :economic_resource do
 
 	@desc @metadata
 	field :metadata, :json
+
+	field :previous, list_of(non_null(:economic_event)),
+		resolve: &Resolv.previous/3
 end
 
 input_object :economic_resource_create_params do

@@ -109,4 +109,8 @@ def unit_of_effort(eco_res, _, _) do
 	eco_res = Domain.preload(eco_res, :unit_of_effort)
 	{:ok, eco_res.unit_of_effort}
 end
+
+def previous(eco_res, _, _) do
+	{:ok, Domain.previous(eco_res)}
+end
 end

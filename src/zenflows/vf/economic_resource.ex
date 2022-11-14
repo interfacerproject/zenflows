@@ -26,6 +26,7 @@ alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,
+	EconomicEvent,
 	EconomicResource,
 	Measure,
 	ProcessSpecification,
@@ -63,6 +64,7 @@ alias Zenflows.VF.{
 	licensor: String.t() | nil,
 	license: String.t() | nil,
 	metadata: map() | nil,
+	previous_event: nil | EconomicEvent.t(),
 }
 
 schema "vf_economic_resource" do
@@ -93,6 +95,7 @@ schema "vf_economic_resource" do
 	field :licensor, :string
 	field :license, :string
 	field :metadata, :map
+	belongs_to :previous_event, EconomicEvent
 	timestamps()
 end
 
@@ -102,6 +105,7 @@ end
 	primary_accountable_id custodian_id
 	accounting_quantity_has_unit_id accounting_quantity_has_numerical_value
 	onhand_quantity_has_unit_id onhand_quantity_has_numerical_value
+	previous_event_id
 ]a
 @cast @reqr ++ ~w[
 	note tracking_identifier
@@ -137,5 +141,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:lot)
 	|> Changeset.assoc_constraint(:contained_in)
 	|> Changeset.assoc_constraint(:unit_of_effort)
+	|> Changeset.assoc_constraint(:previous_event)
 end
 end

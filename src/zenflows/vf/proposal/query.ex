@@ -66,7 +66,7 @@ end
 defp all_f(q, {:primary_intents_resource_inventoried_as_name, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
-	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
+	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^v))
 end
 defp all_f(q, {:or_primary_intents_resource_inventoried_as_name, v}) do
 	q
@@ -129,24 +129,26 @@ defp all_validate(params) do
 	]a)
 	|> Validate.class(:primary_intents_resource_inventoried_as_conforms_to)
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_conforms_to)
-	|> Validate.class(:primary_intents_resource_inventoried_as_primary_accountable)
-	|> Validate.class(:or_primary_intents_resource_inventoried_as_primary_accountable)
-	|> Validate.class(:primary_intents_resource_inventoried_as_classified_as)
-	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
-	|> Validate.name(:primary_intents_resource_inventoried_as_name)
-	|> Validate.name(:or_primary_intents_resource_inventoried_as_name)
 	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_conforms_to,
 		:or_primary_intents_resource_inventoried_as_conforms_to])
+	|> Validate.class(:primary_intents_resource_inventoried_as_primary_accountable)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_primary_accountable)
 	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_primary_accountable,
 		:or_primary_intents_resource_inventoried_as_primary_accountable])
+	|> Validate.class(:primary_intents_resource_inventoried_as_classified_as)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_classified_as)
 	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_classified_as,
 		:or_primary_intents_resource_inventoried_as_classified_as])
-	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_name,
-		:or_primary_intents_resource_inventoried_as_name])
-	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_id,
-		:or_primary_intents_resource_inventoried_as_id])
 	|> Validate.escape_like(:primary_intents_resource_inventoried_as_name)
 	|> Validate.escape_like(:or_primary_intents_resource_inventoried)
+	|> Validate.name(:primary_intents_resource_inventoried_as_name)
+	|> Validate.name(:or_primary_intents_resource_inventoried_as_name)
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_name,
+		:or_primary_intents_resource_inventoried_as_name])
+	|> Validate.class(:primary_intents_resource_inventoried_as_id)
+	|> Validate.class(:or_primary_intents_resource_inventoried_as_id)
+	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_id,
+		:or_primary_intents_resource_inventoried_as_id])
 	|> Changeset.apply_action(nil)
 end
 end

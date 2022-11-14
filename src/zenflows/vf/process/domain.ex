@@ -20,7 +20,11 @@ defmodule Zenflows.VF.Process.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
-alias Zenflows.VF.Process
+alias Zenflows.VF.{
+	EconomicEvent,
+	Process,
+	Process.Query,
+}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Process.t()} | {:error, String.t()}
@@ -48,6 +52,18 @@ end
 def all!(page \\ Page.new()) do
 	{:ok, value} = all(page)
 	value
+end
+
+@spec previous(Process.t() | Schema.id()) :: [EconomicEvent.t()]
+def previous(_, _ \\ Page.new())
+def previous(%Process{id: id}, page), do: previous(id, page)
+def previous(id, page) do
+	Query.previous(id)
+	|> Page.all(page)
+	|> Enum.sort(&(
+		&1.previous_event_id == nil
+		or &1.id == &2.previous_event_id
+		or &1.id <= &2.id))
 end
 
 @spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}

@@ -89,6 +89,9 @@ object :process do
 
 	@desc @nested_in
 	field :nested_in, :scenario, resolve: &Resolv.nested_in/3
+
+	field :previous, list_of(non_null(:economic_event)),
+		resolve: &Resolv.previous/3
 end
 
 input_object :process_create_params do

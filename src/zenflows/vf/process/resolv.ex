@@ -66,4 +66,8 @@ def nested_in(proc, _, _) do
 	proc = Domain.preload(proc, :nested_in)
 	{:ok, proc.nested_in}
 end
+
+def previous(proc, _, _) do
+	{:ok, Domain.previous(proc)}
+end
 end

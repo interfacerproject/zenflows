@@ -23,7 +23,7 @@ alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
 	EconomicResource,
-	EconomicResource.Filter,
+	EconomicResource.Query,
 	Measure,
 }
 
@@ -47,15 +47,15 @@ end
 
 @spec all(Page.t()) :: {:ok, [EconomicResource.t()]} | {:error, Changeset.t()}
 def all(page \\ Page.new()) do
-	with {:ok, q} <- Filter.all(page) do
+	with {:ok, q} <- Query.all(page) do
 		{:ok, Page.all(q, page)}
 	end
 end
 
 @spec all!(Page.t()) :: [EconomicResource.t()]
 def all!(page \\ Page.new()) do
-	{:ok, q} = Filter.all(page)
-	Page.all(q, page)
+	{:ok, value} = all(page)
+	value
 end
 
 @spec classifications() :: [String.t()]

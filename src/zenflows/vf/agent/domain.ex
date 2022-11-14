@@ -20,7 +20,7 @@ defmodule Zenflows.VF.Agent.Domain do
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Page, Repo, Schema}
-alias Zenflows.VF.{Agent, Agent.Filter}
+alias Zenflows.VF.{Agent, Agent.Query}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, Agent.t()} | {:error, String.t()}
@@ -34,22 +34,22 @@ def one(repo, clauses) do
 end
 
 @spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: Agent.t()
-def one!(repo \\ Repo, x) do
-	{:ok, found} = one(repo, x)
-	found
+def one!(repo \\ Repo, id_or_clauses) do
+	{:ok, value} = one(repo, id_or_clauses)
+	value
 end
 
 @spec all(Page.t()) :: {:ok, [Agent.t()]} | {:error, Changeset.t()}
 def all(page \\ Page.new()) do
-	with {:ok, q} <- Filter.all(page) do
+	with {:ok, q} <- Query.all(page) do
 		{:ok, Page.all(q, page)}
 	end
 end
 
 @spec all!(Page.t()) :: [Agent.t()]
 def all!(page \\ Page.new()) do
-	{:ok, q} = Filter.all(page)
-	Page.all(q, page)
+	{:ok, value} = all(page)
+	value
 end
 
 @spec preload(Agent.t(), :images | :primary_location) :: Agent.t()

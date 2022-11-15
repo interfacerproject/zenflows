@@ -66,12 +66,12 @@ end
 defp all_f(q, {:primary_intents_resource_inventoried_as_name, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
-	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^v))
+	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
 end
 defp all_f(q, {:or_primary_intents_resource_inventoried_as_name, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^v))
+	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
 end
 defp all_f(q, {:primary_intents_resource_inventoried_as_id, v}) do
 	q

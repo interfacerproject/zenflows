@@ -22,6 +22,7 @@ Defines shortcuts for DB testing.
 
 alias Zenflows.DB.Repo
 alias Zenflows.VF
+alias Decimal, as: D
 
 defdelegate id(), to: Zenflows.DB.ID, as: :gen
 
@@ -71,6 +72,15 @@ multiplied by `mul`.
 @spec float() :: float()
 def float(mul \\ 100) do
 	:rand.uniform() * mul
+end
+
+@doc """
+Returns a random float of the from 0 (inclusive) and 1 (exclusive)
+multiplied by `mul`.
+"""
+@spec decimal() :: D.decimal()
+def decimal(mul \\ 100) do
+	D.from_float(float(mul))
 end
 
 @doc "Returns a random boolean."

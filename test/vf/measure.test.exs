@@ -30,7 +30,7 @@ alias Zenflows.VF.{Measure, Unit}
 embedded_schema do
 	field :quantity, :map, virtual: true
 	belongs_to :quantity_has_unit, Unit
-	field :quantity_has_numerical_value, :float
+	field :quantity_has_numerical_value, :decimal
 end
 
 def changeset(params) do
@@ -56,11 +56,11 @@ setup do
 	%{
 		params: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		inserted: %Dummy{
 			quantity_has_unit_id: Factory.insert!(:unit).id,
-			quantity_has_numerical_value: Factory.float(),
+			quantity_has_numerical_value: Factory.decimal(),
 		},
 	}
 end

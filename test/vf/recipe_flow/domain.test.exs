@@ -38,11 +38,11 @@ setup do
 			recipe_flow_resource_id: Factory.insert!(:recipe_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			effort_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			recipe_clause_of_id: Factory.insert!(:recipe_exchange).id,
 			note: Factory.str("some note"),

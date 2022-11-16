@@ -45,10 +45,10 @@ schema "vf_settlement" do
 	belongs_to :settles, Claim
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
-	field :resource_quantity_has_numerical_value, :float
+	field :resource_quantity_has_numerical_value, :decimal
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
-	field :effort_quantity_has_numerical_value, :float
+	field :effort_quantity_has_numerical_value, :decimal
 	field :note, :string
 	timestamps()
 end

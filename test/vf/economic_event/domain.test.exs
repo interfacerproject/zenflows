@@ -41,7 +41,7 @@ setup ctx do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -58,7 +58,7 @@ setup ctx do
 				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_unit_id: Factory.insert!(:unit).id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_end: Factory.now(),
 			}
@@ -98,7 +98,7 @@ describe "`create/2` with raise:" do
 				resource_inventoried_as_id: res.id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
 			}}
@@ -115,7 +115,7 @@ describe "`create/2` with raise:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 			to_location_id: Factory.insert!(:spatial_thing).id,
@@ -211,7 +211,7 @@ describe "`create/2` with produce:" do
 				resource_inventoried_as_id: res.id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_beginning: Factory.now(),
 			}}
@@ -229,7 +229,7 @@ describe "`create/2` with produce:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 			to_location_id: Factory.insert!(:spatial_thing).id,
@@ -320,7 +320,7 @@ describe "`create/2` with lower:" do
 			resource_inventoried_as_id: res.id,
 			resource_quantity: %{
 				has_unit_id: res.accounting_quantity_has_unit_id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}}
@@ -373,7 +373,7 @@ describe "`create/2` with consume:" do
 			resource_inventoried_as_id: res.id,
 			resource_quantity: %{
 				has_unit_id: res.accounting_quantity_has_unit_id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_beginning: Factory.now(),
 			has_end: Factory.now(),
@@ -428,11 +428,11 @@ describe "`create/2` with use:" do
 			resource_inventoried_as_id: res.id,
 			resource_quantity: %{
 				has_unit_id: res.accounting_quantity_has_unit_id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			effort_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_point_in_time: Factory.now(),
 		}}
@@ -754,7 +754,7 @@ describe "`create/2` with transferCustody:" do
 				resource_conforms_to_id: res.conforms_to_id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
 			}
@@ -801,7 +801,7 @@ describe "`create/2` with transferCustody:" do
 				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_unit_id: Factory.insert!(:unit).id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_end: Factory.now(),
 			}
@@ -947,7 +947,7 @@ describe "`create/2` with transferCustody:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -973,7 +973,7 @@ describe "`create/2` with transferCustody:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1021,7 +1021,7 @@ describe "`create/2` with transferAllRights:" do
 				resource_conforms_to_id: res.conforms_to_id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
 			}
@@ -1067,7 +1067,7 @@ describe "`create/2` with transferAllRights:" do
 				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_unit_id: Factory.insert!(:unit).id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_end: Factory.now(),
 			}
@@ -1212,7 +1212,7 @@ describe "`create/2` with transferAllRights:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1238,7 +1238,7 @@ describe "`create/2` with transferAllRights:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1286,7 +1286,7 @@ describe "`create/2` with transfer:" do
 				resource_conforms_to_id: res.conforms_to_id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
 			}
@@ -1332,7 +1332,7 @@ describe "`create/2` with transfer:" do
 				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_unit_id: Factory.insert!(:unit).id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_end: Factory.now(),
 			}
@@ -1525,7 +1525,7 @@ describe "`create/2` with transfer:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1551,7 +1551,7 @@ describe "`create/2` with transfer:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1588,7 +1588,7 @@ describe "`create/2` with move:" do
 				resource_conforms_to_id: res.conforms_to_id,
 				resource_quantity: %{
 					has_unit_id: res.accounting_quantity_has_unit_id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
 			}
@@ -1634,7 +1634,7 @@ describe "`create/2` with move:" do
 				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_unit_id: Factory.insert!(:unit).id,
-					has_numerical_value: Factory.float(),
+					has_numerical_value: Factory.decimal(),
 				},
 				has_end: Factory.now(),
 			}
@@ -1843,7 +1843,7 @@ describe "`create/2` with move:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}
@@ -1869,7 +1869,7 @@ describe "`create/2` with move:" do
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: Factory.now(),
 		}

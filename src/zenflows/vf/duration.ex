@@ -25,16 +25,17 @@ use Zenflows.DB.Schema
 alias Ecto.Changeset
 alias Zenflows.DB.Schema
 alias Zenflows.VF.TimeUnitEnum
+alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	unit_type: TimeUnitEnum.t(),
-	numeric_duration: float(),
+	numeric_duration: D.decimal(),
 }
 
 @primary_key false
 embedded_schema do
 	field :unit_type, TimeUnitEnum
-	field :numeric_duration, :float
+	field :numeric_duration, :decimal
 end
 
 @doc """

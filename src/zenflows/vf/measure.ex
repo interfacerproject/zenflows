@@ -26,16 +26,17 @@ use Zenflows.DB.Schema
 alias Ecto.Changeset
 alias Zenflows.DB.Schema
 alias Zenflows.VF.Unit
+alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	has_unit_id: Zenflows.DB.ID.t(),
-	has_numerical_value: float(),
+	has_numerical_value: D.decimal(),
 }
 
 @primary_key false
 embedded_schema do
 	belongs_to :has_unit, Unit
-	field :has_numerical_value, :float
+	field :has_numerical_value, :decimal
 end
 
 @doc """

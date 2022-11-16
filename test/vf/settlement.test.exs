@@ -27,11 +27,11 @@ setup do
 		settles_id: Factory.insert!(:claim).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		effort_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 	}}
 end

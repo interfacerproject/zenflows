@@ -28,11 +28,11 @@ setup do
 			"recipeFlowResource" => Factory.insert!(:recipe_resource).id,
 			"resourceQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"effortQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"recipeClauseOf" => Factory.insert!(:recipe_exchange).id,
 		},

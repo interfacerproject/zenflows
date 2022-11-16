@@ -46,13 +46,13 @@ object :spatial_thing do
 	field :mappable_address, :string
 
 	@desc @lat
-	field :lat, :float
+	field :lat, :decimal
 
 	@desc @long
-	field :long, :float
+	field :long, :decimal
 
 	@desc @alt
-	field :alt, :float
+	field :alt, :decimal
 
 	@desc @note
 	field :note, :string
@@ -66,13 +66,13 @@ input_object :spatial_thing_create_params do
 	field :mappable_address, :string
 
 	@desc @lat
-	field :lat, :float
+	field :lat, :decimal
 
 	@desc @long
-	field :long, :float
+	field :long, :decimal
 
 	@desc @alt
-	field :alt, :float
+	field :alt, :decimal
 
 	@desc @note
 	field :note, :string
@@ -88,13 +88,13 @@ input_object :spatial_thing_update_params do
 	field :mappable_address, :string
 
 	@desc @lat
-	field :lat, :float
+	field :lat, :decimal
 
 	@desc @long
-	field :long, :float
+	field :long, :decimal
 
 	@desc @alt
-	field :alt, :float
+	field :alt, :decimal
 
 	@desc @note
 	field :note, :string

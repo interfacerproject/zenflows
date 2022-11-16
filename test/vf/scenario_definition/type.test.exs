@@ -25,7 +25,7 @@ setup do
 			"note" => Factory.str("note"),
 			"hasDuration" => %{
 				"unitType" => Factory.build(:time_unit) |> to_string(),
-				"numericDuration" => Factory.float(),
+				"numericDuration" => Factory.decimal(),
 			},
 		},
 		inserted: Factory.insert!(:scenario_definition),

@@ -33,7 +33,7 @@ unit.  See http://www.qudt.org/pages/QUDToverviewPage.html .
 """
 object :measure do
 	@desc @has_numerical_value
-	field :has_numerical_value, non_null(:float)
+	field :has_numerical_value, non_null(:decimal)
 
 	@desc @has_unit
 	field :has_unit, :unit, resolve: &Resolv.has_unit/3
@@ -45,7 +45,7 @@ if not present, rather than empty.
 """
 input_object :imeasure, name: "IMeasure" do
 	@desc @has_numerical_value
-	field :has_numerical_value, non_null(:float)
+	field :has_numerical_value, non_null(:decimal)
 
 	@desc "(`Unit`) " <> @has_unit
 	field :has_unit_id, :id, name: "has_unit"

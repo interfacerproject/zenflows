@@ -55,7 +55,7 @@ setup do
 	%{
 		params: %{
 			unit_type: Factory.build(:time_unit),
-			numeric_duration: Factory.float(),
+			numeric_duration: Factory.decimal(),
 		},
 		inserted: %Dummy{
 			has_duration_unit_type: Factory.build(:time_unit),

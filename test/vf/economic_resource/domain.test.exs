@@ -33,7 +33,7 @@ alias Zenflows.VF.{
 
 setup ctx do
 	%{id: unit_id} = Factory.insert!(:unit)
-	num_val = Factory.float()
+	num_val = Factory.decimal()
 	params = %{
 		name: Factory.str("name"),
 		note: Factory.str("note"),

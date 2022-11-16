@@ -24,7 +24,7 @@ setup do
 			"name" => Factory.str("name"),
 			"hasDuration" => %{
 				"unitType" => Factory.build(:time_unit) |> to_string(),
-				"numericDuration" => Factory.float(),
+				"numericDuration" => Factory.decimal(),
 			},
 			"processClassifiedAs" => Factory.str_list("uri"),
 			"processConformsTo" => Factory.insert!(:process_specification).id,

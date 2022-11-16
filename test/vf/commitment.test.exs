@@ -31,11 +31,11 @@ setup do
 		resource_classified_as: Factory.str_list("uri"),
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		effort_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 		resource_conforms_to_id: Factory.insert!(:resource_specification).id,

@@ -30,6 +30,7 @@ alias Zenflows.VF.{
 	Measure,
 	Process,
 }
+alias Decimal, as: D
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
 	:: {:ok, EconomicEvent.t()} | {:error, String.t()}
@@ -257,8 +258,8 @@ defp handle_insert(key, %{action_id: action_id} = evt, _)
 		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 		set: [previous_event_id: evt.id],
 		inc: [
-			accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+			accounting_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
+			onhand_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 		])
 end
 defp handle_insert(key, %{action_id: action_id} = evt, _)
@@ -534,7 +535,7 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 		set: [previous_event_id: evt.id],
 		inc: [
-			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+			onhand_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 		])
 end
 defp handle_insert(key, %{action_id: "modify"} = evt, _) do
@@ -704,7 +705,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -828,7 +829,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -961,8 +962,8 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -1100,8 +1101,8 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: D.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do

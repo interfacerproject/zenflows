@@ -33,15 +33,15 @@ setup do
 			"resourceClassifiedAs" => Factory.str_list("uri"),
 			"resourceQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"effortQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"availableQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"hasBeginning" => Factory.iso_now(),
 			"hasEnd" => Factory.iso_now(),

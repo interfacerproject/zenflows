@@ -29,7 +29,6 @@ alias Zenflows.VF.{
 	ProcessSpecification,
 	TimeUnitEnum,
 }
-alias Decimal, as: D
 
 
 @type t() :: %__MODULE__{
@@ -39,7 +38,7 @@ alias Decimal, as: D
 	process_classified_as: [String.t()] | nil,
 	has_duration: Duration.t() | nil,
 	has_duration_unit_type: TimeUnitEnum.t() | nil,
-	has_duration_numeric_duration: D.decimal() | nil,
+	has_duration_numeric_duration: Decimal.t() | nil,
 }
 
 schema "vf_recipe_process" do

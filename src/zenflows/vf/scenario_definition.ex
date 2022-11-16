@@ -28,13 +28,12 @@ alias Zenflows.VF.{
 	Duration,
 	TimeUnitEnum,
 }
-alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	name: String.t(),
 	note: String.t() | nil,
 	has_duration_unit_type: TimeUnitEnum.t() | nil,
-	has_duration_numeric_duration: D.decimal() | nil,
+	has_duration_numeric_duration: Decimal.t() | nil,
 	has_duration: Duration.t() | nil,
 }
 

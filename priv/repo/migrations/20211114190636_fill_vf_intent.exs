@@ -30,11 +30,11 @@ def change() do
 		add :resource_conforms_to_id, references("vf_resource_specification")
 		add :resource_inventoried_as_id, references("vf_economic_resource")
 		add :resource_quantity_has_unit_id, references("vf_unit")
-		add :resource_quantity_has_numerical_value, :float
+		add :resource_quantity_has_numerical_value, :decimal
 		add :effort_quantity_has_unit_id, references("vf_unit")
-		add :effort_quantity_has_numerical_value, :float
+		add :effort_quantity_has_numerical_value, :decimal
 		add :available_quantity_has_unit_id, references("vf_unit")
-		add :available_quantity_has_numerical_value, :float
+		add :available_quantity_has_numerical_value, :decimal
 		add :at_location_id, references("vf_spatial_thing")
 		add :has_beginning, :timestamptz
 		add :has_end, :timestamptz

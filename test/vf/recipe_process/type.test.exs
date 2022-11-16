@@ -64,7 +64,7 @@ describe "Query" do
 		assert data["processClassifiedAs"] == new.process_classified_as
 		assert data["processConformsTo"]["id"] == new.process_conforms_to_id
 		assert data["hasDuration"]["unitType"] == to_string(new.has_duration_unit_type)
-		assert data["hasDuration"]["numericDuration"] == new.has_duration_numeric_duration
+		assert data["hasDuration"]["numericDuration"] == to_string(new.has_duration_numeric_duration)
 	end
 end
 

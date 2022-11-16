@@ -35,7 +35,6 @@ alias Zenflows.VF.{
 	SpatialThing,
 	Unit,
 }
-alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	name: String.t(),
@@ -46,10 +45,10 @@ alias Decimal, as: D
 	conforms_to: ResourceSpecification.t(),
 	accounting_quantity: Measure.t() | nil,
 	accounting_quantity_has_unit: Unit.t(),
-	accounting_quantity_has_numerical_value: D.decimal(),
+	accounting_quantity_has_numerical_value: Decimal.t(),
 	onhand_quantity: Measure.t() | nil,
 	onhand_quantity_has_unit: Unit.t(),
-	onhand_quantity_has_numerical_value: D.decimal(),
+	onhand_quantity_has_numerical_value: Decimal.t(),
 	primary_accountable: Agent.t(),
 	custodian: Agent.t(),
 	stage: ProcessSpecification.t() | nil,

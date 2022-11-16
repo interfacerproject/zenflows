@@ -101,7 +101,7 @@ test "previous/2 works" do
 			has_unit_id: unit.id,
 		},
 		effort_quantity: %{
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 			has_unit_id: Factory.insert!(:unit).id,
 		},
 		has_point_in_time: Factory.now(),

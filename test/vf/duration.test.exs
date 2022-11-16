@@ -29,7 +29,7 @@ alias Zenflows.VF.{Duration, TimeUnit}
 embedded_schema do
 	field :has_duration, :map, virtual: true
 	field :has_duration_unit_type, TimeUnit
-	field :has_duration_numeric_duration, :float
+	field :has_duration_numeric_duration, :decimal
 end
 
 def changeset(params) do
@@ -59,7 +59,7 @@ setup do
 		},
 		inserted: %Dummy{
 			has_duration_unit_type: Factory.build(:time_unit),
-			has_duration_numeric_duration: Factory.float(),
+			has_duration_numeric_duration: Factory.decimal(),
 		},
 	}
 end

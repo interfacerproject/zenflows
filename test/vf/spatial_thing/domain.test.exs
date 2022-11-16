@@ -26,9 +26,9 @@ setup do
 		params: %{
 			name: Factory.str("name"),
 			mappable_address: Factory.str("address"),
-			lat: Factory.float(),
-			long: Factory.float(),
-			alt: Factory.float(),
+			lat: Factory.decimal(),
+			long: Factory.decimal(),
+			alt: Factory.decimal(),
 			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:spatial_thing),

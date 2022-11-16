@@ -24,15 +24,14 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	id: String.t(),
 	name: String.t(),
 	mappable_address: String.t() | nil,
-	lat: D.decimal() | nil,
-	long: D.decimal() | nil,
-	alt: D.decimal() | nil,
+	lat: Decimal.t() | nil,
+	long: Decimal.t() | nil,
+	alt: Decimal.t() | nil,
 	note: String.t() | nil,
 }
 

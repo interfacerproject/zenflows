@@ -75,7 +75,7 @@ def float(mul \\ 100) do
 end
 
 @doc """
-Returns a random float of the from 0 (inclusive) and 1 (exclusive)
+Returns a random decimal of the from 0 (inclusive) and 1 (exclusive)
 multiplied by `mul`.
 """
 @spec decimal() :: D.decimal()
@@ -148,7 +148,7 @@ end
 def build(:iduration) do
 	%{
 		unit_type: build(:time_unit),
-		numeric_duration: float(),
+		numeric_duration: decimal(),
 	}
 end
 
@@ -162,7 +162,7 @@ end
 def build(:imeasure) do
 	%VF.Measure{
 		has_unit: build(:unit),
-		has_numerical_value: float(),
+		has_numerical_value: decimal(),
 	}
 end
 
@@ -170,9 +170,9 @@ def build(:spatial_thing) do
 	%VF.SpatialThing{
 		name: str("some name"),
 		mappable_address: str("some mappable_address"),
-		lat: float(),
-		long: float(),
-		alt: float(),
+		lat: decimal(),
+		long: decimal(),
+		alt: decimal(),
 		note: str("some note"),
 	}
 end
@@ -560,7 +560,7 @@ def insert_economic_event!() do
 		resource_classified_as: str_list("some uri"),
 		resource_conforms_to_id: insert!(:resource_specification).id,
 		resource_quantity: %{
-			has_numerical_value: float(),
+			has_numerical_value: decimal(),
 			has_unit_id: insert!(:unit).id,
 		},
 		has_point_in_time: now(),

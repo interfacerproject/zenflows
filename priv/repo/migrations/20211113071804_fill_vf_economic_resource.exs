@@ -26,9 +26,9 @@ def change() do
 		add :classified_as, {:array, :text}
 		add :conforms_to_id, references("vf_resource_specification"), null: false
 		add :accounting_quantity_has_unit_id, references("vf_unit"), null: false
-		add :accounting_quantity_has_numerical_value, :float, null: false
+		add :accounting_quantity_has_numerical_value, :decimal, null: false
 		add :onhand_quantity_has_unit_id, references("vf_unit"), null: false
-		add :onhand_quantity_has_numerical_value, :float, nulL: false
+		add :onhand_quantity_has_numerical_value, :decimal, nulL: false
 		add :primary_accountable_id, references("vf_agent"), null: false
 		add :custodian_id, references("vf_agent"), null: false
 		add :stage_id, references("vf_process_specification")

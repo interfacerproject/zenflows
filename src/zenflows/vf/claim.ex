@@ -33,7 +33,6 @@ alias Zenflows.VF.{
 	ResourceSpecification,
 	Unit,
 }
-alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	action: Action.t(),

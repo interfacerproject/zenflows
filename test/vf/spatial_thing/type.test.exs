@@ -23,9 +23,9 @@ setup do
 		params: %{
 			"name" => Factory.str("name"),
 			"mappableAddress" => Factory.str("address"),
-			"lat" => Factory.float(),
-			"long" => Factory.float(),
-			"alt" => Factory.float(),
+			"lat" => Factory.decimal(),
+			"long" => Factory.decimal(),
+			"alt" => Factory.decimal(),
 			"note" => Factory.str("note"),
 		},
 		inserted: Factory.insert!(:spatial_thing),
@@ -57,9 +57,9 @@ describe "Query" do
 		assert data["id"] == new.id
 		assert data["name"] == new.name
 		assert data["mappableAddress"] == new.mappable_address
-		assert data["lat"] == new.lat
-		assert data["long"] == new.long
-		assert data["alt"] == new.alt
+		assert data["lat"] == to_string(new.lat)
+		assert data["long"] == to_string(new.long)
+		assert data["alt"] == to_string(new.alt)
 		assert data["note"] == new.note
 	end
 end

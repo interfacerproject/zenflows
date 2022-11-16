@@ -29,11 +29,11 @@ setup do
 		resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		effort_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		triggered_by_id: Factory.insert!(:economic_event).id,
 		due: Factory.now(),

@@ -26,11 +26,10 @@ use Zenflows.DB.Schema
 alias Ecto.Changeset
 alias Zenflows.DB.Schema
 alias Zenflows.VF.Unit
-alias Decimal, as: D
 
 @type t() :: %__MODULE__{
 	has_unit_id: Zenflows.DB.ID.t(),
-	has_numerical_value: D.decimal(),
+	has_numerical_value: Decimal.t(),
 }
 
 @primary_key false

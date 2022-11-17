@@ -57,9 +57,9 @@ describe "Query" do
 		assert data["id"] == new.id
 		assert data["name"] == new.name
 		assert data["mappableAddress"] == new.mappable_address
-		assert data["lat"] == to_string(new.lat)
-		assert data["long"] == to_string(new.long)
-		assert data["alt"] == to_string(new.alt)
+		assert Decimal.eq?(data["lat"], new.lat)
+		assert Decimal.eq?(data["long"], new.long)
+		assert Decimal.eq?(data["alt"], new.alt)
 		assert data["note"] == new.note
 	end
 end

@@ -502,7 +502,7 @@ describe "`create/2` with pickup:" do
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the pickup events need to fully pickup the resource"} =
 			Domain.create(params)
 	end
@@ -571,7 +571,7 @@ describe "`create/2` with dropoff:" do
 
 	@tag :want_container
 	test "fail when the resource is a container and event's quantity value and resource's onhand-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the dropoff events need to fully dropoff the resource"} =
 			Domain.create(params)
 	end
@@ -633,7 +633,7 @@ describe "`create/2` with accept:" do
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the accept events need to fully accept the resource"} =
 			Domain.create(params)
 	end
@@ -727,7 +727,7 @@ describe "`create/2` with modify:" do
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the modify events need to fully modify the resource"} =
 			Domain.create(params)
 	end
@@ -925,7 +925,7 @@ describe "`create/2` with transferCustody:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the transfer-custody events need to fully transfer the resource"} =
 			Domain.create(params)
 	end
@@ -1190,7 +1190,7 @@ describe "`create/2` with transferAllRights:" do
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's accounting-quantity value differ", %{params: params} do
-		params = update_in(params.resource_quantity.has_numerical_value, &(Decimal.add(&1, 1)))
+		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the transfer-all-rights events need to fully transfer the resource"} =
 			Domain.create(params)
 	end

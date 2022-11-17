@@ -252,8 +252,8 @@ input_object :economic_resource_filter_params do
 	field :or_custodian, list_of(non_null(:id))
 	field :gt_onhand_quantity_has_numerical_value, :float
 	field :or_gt_onhand_quantity_has_numerical_value, :float
-	field :name, list_of(non_null(:string))
-	field :or_name, list_of(non_null(:string))
+	field :name, :string
+	field :or_name, :string
 end
 
 object :query_economic_resource do

@@ -55,7 +55,7 @@ defp all_f(q, {:or_gt_onhand_quantity_has_numerical_value, v}),
 	do: or_where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
 defp all_f(q, {:name, v}),
 	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
-defp all_f(q, {:namen, v}),
+defp all_f(q, {:or_name, v}),
 	do: or_where(q, [x], ilike(x.name, ^"%#{v}%"))
 
 @spec all_validate(Schema.params()) ::

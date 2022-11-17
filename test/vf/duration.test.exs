@@ -76,7 +76,7 @@ test "insert", %{params: params} do
 	# fields are properly set when `:has_duration` is properly set
 	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{has_duration: params})
 	assert chgs.has_duration_unit_type == params.unit_type
-	assert chgs.has_duration_numeric_duration == params.numeric_duration
+	assert Decimal.eq?(chgs.has_duration_numeric_duration, params.numeric_duration)
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
@@ -123,7 +123,7 @@ test "update", %{params:  params, inserted: schema} do
 	# since ecto won't change it if it is already there
 	if schema.has_duration_unit_type != params.unit_type,
 		do: assert chgs.has_duration_unit_type == params.unit_type
-	assert chgs.has_duration_numeric_duration == params.numeric_duration
+	assert Decimal.eq?(chgs.has_duration_numeric_duration, params.numeric_duration)
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}

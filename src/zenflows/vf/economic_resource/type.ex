@@ -254,6 +254,8 @@ input_object :economic_resource_filter_params do
 	field :or_gt_onhand_quantity_has_numerical_value, :float
 	field :name, :string
 	field :or_name, :string
+	field :note, :string
+	field :or_note, :string
 end
 
 object :query_economic_resource do

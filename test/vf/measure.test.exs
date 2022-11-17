@@ -77,7 +77,7 @@ test "insert", %{params: params} do
 	# fields are properly set when `:quantity` is properly set
 	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
-	assert chgs.quantity_has_numerical_value == params.has_numerical_value
+	assert Decimal.eq?(chgs.quantity_has_numerical_value, params.has_numerical_value)
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}
@@ -130,7 +130,7 @@ test "update", %{params:  params, inserted: schema} do
 	assert %Changeset{valid?: true, changes: chgs}
 		= Dummy.changeset(schema, %{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
-	assert chgs.quantity_has_numerical_value == params.has_numerical_value
+	assert Decimal.eq?(chgs.quantity_has_numerical_value, params.has_numerical_value)
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}

@@ -1181,10 +1181,10 @@ describe "`create/2` with transferAllRights:" do
 		err = "the transfer-all-rights events need container resources to have positive accounting-quantity"
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new("0.0")) |> Repo.update!()
+		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(0)) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 
-		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new("-1.0")) |> Repo.update!()
+		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(-1)) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 	end
 
@@ -1467,11 +1467,11 @@ describe "`create/2` with transfer:" do
 		err = "the transfer events need container resources to have positive accounting-quantity"
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new("0.0"))
+		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(0))
 		|> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 
-		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new("-1.0")) |> Repo.update!()
+		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(-1)) |> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 	end
 
@@ -1480,11 +1480,11 @@ describe "`create/2` with transfer:" do
 		err = "the transfer events need container resources to have positive onhand-quantity"
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new("0.0"))
+		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new(0))
 		|> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 
-		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new("-1.0"))
+		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new(-1))
 		|> Repo.update!()
 		assert {:error, ^err} = Domain.create(params)
 	end

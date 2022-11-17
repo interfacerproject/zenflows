@@ -853,7 +853,7 @@ describe "`create/2` with transferCustody:" do
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
-		assert to_string(to_res.accounting_quantity_has_numerical_value) == "0"
+		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, 0)
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
 		assert to_res.onhand_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
@@ -1121,7 +1121,7 @@ describe "`create/2` with transferAllRights:" do
 		assert to_res.custodian_id == params.receiver_id
 		assert to_res.accounting_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert to_string(to_res.onhand_quantity_has_numerical_value) == "0"
+		assert Decimal.eq?(to_res.onhand_quantity_has_numerical_value, 0)
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
 
 		from(r in EconomicResource,

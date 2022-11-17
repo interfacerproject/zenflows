@@ -161,8 +161,8 @@ defp all_validate(params) do
 		:or_primary_intents_resource_inventoried_as_name])
 	|> Validate.escape_like(:primary_intents_resource_inventoried_as_note)
 	|> Validate.escape_like(:or_primary_intents_resource_inventoried)
-	|> Validate.name(:primary_intents_resource_inventoried_as_note)
-	|> Validate.name(:or_primary_intents_resource_inventoried_as_note)
+	|> Validate.note(:primary_intents_resource_inventoried_as_note)
+	|> Validate.note(:or_primary_intents_resource_inventoried_as_note)
 	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_note,
 		:or_primary_intents_resource_inventoried_as_note])
 	|> Validate.class(:primary_intents_resource_inventoried_as_id)

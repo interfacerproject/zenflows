@@ -152,9 +152,9 @@ describe "`create/2` with raise:" do
 
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
-		assert res.accounting_quantity_has_numerical_value == evt_params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(res.accounting_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
 		assert res.accounting_quantity_has_unit_id == evt_params.resource_quantity.has_unit_id
-		assert res.onhand_quantity_has_numerical_value == evt_params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(res.onhand_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
 		assert res.onhand_quantity_has_unit_id == evt_params.resource_quantity.has_unit_id
 		assert res.current_location_id == evt_params.to_location_id
 	end
@@ -164,10 +164,10 @@ describe "`create/2` with raise:" do
 		assert {:ok, %EconomicEvent{}} = Domain.create(params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.add(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.add(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when the agent doesn't have ownership over the resource", %{params: params} do
@@ -266,9 +266,9 @@ describe "`create/2` with produce:" do
 
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
-		assert res.accounting_quantity_has_numerical_value == evt_params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(res.accounting_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
 		assert res.accounting_quantity_has_unit_id == evt_params.resource_quantity.has_unit_id
-		assert res.onhand_quantity_has_numerical_value == evt_params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(res.onhand_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
 		assert res.onhand_quantity_has_unit_id == evt_params.resource_quantity.has_unit_id
 		assert res.current_location_id == evt_params.to_location_id
 	end
@@ -278,10 +278,10 @@ describe "`create/2` with produce:" do
 		assert {:ok, %EconomicEvent{}} = Domain.create(params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.add(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.add(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when the agent doesn't have ownership over the resource", %{params: params} do
@@ -330,10 +330,10 @@ describe "`create/2` with lower:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		assert {:ok, %EconomicEvent{}} = Domain.create(params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when the agent doesn't have ownership over the resource", %{params: params} do
@@ -385,10 +385,10 @@ describe "`create/2` with consume:" do
 		assert {:ok, %EconomicEvent{}} = Domain.create(params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when the agent doesn't have ownership over the resource", %{params: params} do
@@ -604,10 +604,10 @@ describe "`create/2` with accept:" do
 		assert {:ok, %EconomicEvent{}} = Domain.create(params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			res_before.accounting_quantity_has_numerical_value
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			res_before.accounting_quantity_has_numerical_value)
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -702,10 +702,10 @@ describe "`create/2` with modify:" do
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		proc = Process.Domain.one!(params.output_of_id)
 		assert res_after.stage_id == proc.based_on_id
-		assert res_after.accounting_quantity_has_numerical_value ==
-			res_before.accounting_quantity_has_numerical_value
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			res_before.accounting_quantity_has_numerical_value)
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -834,10 +834,10 @@ describe "`create/2` with transferCustody:" do
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			res_before.accounting_quantity_has_numerical_value
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			res_before.accounting_quantity_has_numerical_value)
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
@@ -855,7 +855,7 @@ describe "`create/2` with transferCustody:" do
 		assert to_res.custodian_id == params.receiver_id
 		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, 0)
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert to_res.onhand_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
 		assert to_res.current_location_id == params.to_location_id
 
@@ -878,15 +878,15 @@ describe "`create/2` with transferCustody:" do
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			res_before.accounting_quantity_has_numerical_value
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			res_before.accounting_quantity_has_numerical_value)
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
-		assert to_res_after.accounting_quantity_has_numerical_value ==
-			to_res_before.accounting_quantity_has_numerical_value
-		assert to_res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(to_res_after.accounting_quantity_has_numerical_value,
+			to_res_before.accounting_quantity_has_numerical_value)
+		assert Decimal.eq?(to_res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -1100,10 +1100,10 @@ describe "`create/2` with transferAllRights:" do
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			res_before.onhand_quantity_has_numerical_value
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			res_before.onhand_quantity_has_numerical_value)
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
@@ -1119,7 +1119,7 @@ describe "`create/2` with transferAllRights:" do
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
-		assert to_res.accounting_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
 		assert Decimal.eq?(to_res.onhand_quantity_has_numerical_value, 0)
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
@@ -1143,15 +1143,15 @@ describe "`create/2` with transferAllRights:" do
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			res_before.onhand_quantity_has_numerical_value
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			res_before.onhand_quantity_has_numerical_value)
 
-		assert to_res_after.accounting_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert to_res_after.onhand_quantity_has_numerical_value ==
-			to_res_before.onhand_quantity_has_numerical_value
+		assert Decimal.eq?(to_res_after.accounting_quantity_has_numerical_value,
+			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(to_res_after.onhand_quantity_has_numerical_value,
+			to_res_before.onhand_quantity_has_numerical_value)
 	end
 
 	test "fail when provider doesn't have accountability over the resource", %{params: params} do
@@ -1367,10 +1367,10 @@ describe "`create/2` with transfer:" do
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
@@ -1386,9 +1386,9 @@ describe "`create/2` with transfer:" do
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
-		assert to_res.accounting_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert to_res.onhand_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
 
 		from(r in EconomicResource,
@@ -1411,15 +1411,15 @@ describe "`create/2` with transfer:" do
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
-		assert to_res_after.accounting_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert to_res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(to_res_after.accounting_quantity_has_numerical_value,
+			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(to_res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when provider doesn't have accountability over the resource", %{params: params} do
@@ -1667,10 +1667,10 @@ describe "`create/2` with move:" do
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
 		assert to_res.name == res_params.name
 		assert to_res.note == res_params.note
@@ -1686,9 +1686,9 @@ describe "`create/2` with move:" do
 
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
-		assert to_res.accounting_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.accounting_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert to_res.onhand_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(to_res.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert to_res.onhand_quantity_has_unit_id == params.resource_quantity.has_unit_id
 
 		from(r in EconomicResource,
@@ -1711,15 +1711,15 @@ describe "`create/2` with move:" do
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert res_after.accounting_quantity_has_numerical_value ==
-			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert res_after.onhand_quantity_has_numerical_value ==
-			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
+			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(res_after.onhand_quantity_has_numerical_value,
+			Decimal.sub(res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 
-		assert to_res_after.accounting_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
-		assert to_res_after.onhand_quantity_has_numerical_value ==
-			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
+		assert Decimal.eq?(to_res_after.accounting_quantity_has_numerical_value,
+			Decimal.add(to_res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
+		assert Decimal.eq?(to_res_after.onhand_quantity_has_numerical_value,
+			Decimal.add(to_res_before.onhand_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
 	end
 
 	test "fail when provider doesn't have accountability over the resource", %{params: params} do

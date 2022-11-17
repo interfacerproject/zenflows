@@ -514,7 +514,7 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 			evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the accept events need to fully accept the resource"}
 
-			res.container? and Decimal.compare(res.onhand_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the accept events need container resources to have positive onhand quantity"}
 
 			any_combine_separate?.() ->
@@ -639,7 +639,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				{:error, "you can't transfer-custody a contained resource"}
 			evt.resource_quantity_has_unit_id != res.onhand_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and Decimal.compare(res.onhand_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer-custody events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the transfer-custody events need to fully transfer the resource"}
@@ -764,7 +764,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				{:error, "you can't transfer-all-rights a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and Decimal.compare(res.accounting_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer-all-rights events need container resources to have positive accounting-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer-all-rights events need to fully transfer the resource"}
@@ -890,9 +890,9 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				{:error, "you can't transfer a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and Decimal.compare(res.accounting_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer events need container resources to have positive accounting-quantity"}
-			res.container? and Decimal.compare(res.onhand_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer events need to fully transfer the resource"}
@@ -1025,9 +1025,9 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				{:error, "you can't move a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and Decimal.compare(res.accounting_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the move events need container resources to have positive accounting-quantity"}
-			res.container? and Decimal.compare(res.onhand_quantity_has_numerical_value, 0) != :gt ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the move events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the move events need to fully move the resource"}

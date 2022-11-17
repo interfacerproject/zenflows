@@ -22,7 +22,6 @@ Defines shortcuts for DB testing.
 
 alias Zenflows.DB.Repo
 alias Zenflows.VF
-alias Decimal, as: D
 
 defdelegate id(), to: Zenflows.DB.ID, as: :gen
 
@@ -66,8 +65,8 @@ def int(max \\ 100) do
 end
 
 @doc """
-Returns a random float of the from 0 (inclusive) and 1 (exclusive)
-multiplied by `mul`.
+Returns a random float between 0 (inclusive) and 1 (exclusive)
+multiplied by `mul`, which is 100 by default.
 """
 @spec float() :: float()
 def float(mul \\ 100) do
@@ -75,12 +74,12 @@ def float(mul \\ 100) do
 end
 
 @doc """
-Returns a random decimal of the from 0 (inclusive) and 1 (exclusive)
-multiplied by `mul`.
+Returns a `t:Decimal.t()` between 0 (inclusive) and 1 (exclusive)
+multiplied by `mul`, which is 100 by default.
 """
-@spec decimal() :: D.decimal()
+@spec decimal() :: Decimal.t()
 def decimal(mul \\ 100) do
-	D.from_float(float(mul))
+	Decimal.from_float(float(mul))
 end
 
 @doc "Returns a random boolean."

@@ -74,11 +74,21 @@ def float(mul \\ 100) do
 end
 
 @doc """
+Returns a string that represents a `t:Decimal.t()` between 0
+(inclusive) and 1 (exclusive) multiplied by `mul`, which is 100 by
+default.
+"""
+@spec decimal() :: String.t()
+def decimal(mul \\ 100) do
+	to_string(decimald(mul))
+end
+
+@doc """
 Returns a `t:Decimal.t()` between 0 (inclusive) and 1 (exclusive)
 multiplied by `mul`, which is 100 by default.
 """
-@spec decimal() :: Decimal.t()
-def decimal(mul \\ 100) do
+@spec decimald() :: Decimal.t()
+def decimald(mul \\ 100) do
 	Decimal.from_float(float(mul))
 end
 
@@ -147,7 +157,7 @@ end
 def build(:iduration) do
 	%{
 		unit_type: build(:time_unit),
-		numeric_duration: decimal(),
+		numeric_duration: decimald(),
 	}
 end
 
@@ -161,7 +171,7 @@ end
 def build(:imeasure) do
 	%VF.Measure{
 		has_unit: build(:unit),
-		has_numerical_value: decimal(),
+		has_numerical_value: decimald(),
 	}
 end
 
@@ -169,9 +179,9 @@ def build(:spatial_thing) do
 	%VF.SpatialThing{
 		name: str("some name"),
 		mappable_address: str("some mappable_address"),
-		lat: decimal(),
-		long: decimal(),
-		alt: decimal(),
+		lat: decimald(),
+		long: decimald(),
+		alt: decimald(),
 		note: str("some note"),
 	}
 end
@@ -559,7 +569,7 @@ def insert_economic_event!() do
 		resource_classified_as: str_list("some uri"),
 		resource_conforms_to_id: insert!(:resource_specification).id,
 		resource_quantity: %{
-			has_numerical_value: decimal(),
+			has_numerical_value: decimald(),
 			has_unit_id: insert!(:unit).id,
 		},
 		has_point_in_time: now(),

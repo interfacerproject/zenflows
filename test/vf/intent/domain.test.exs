@@ -95,11 +95,11 @@ describe "create/1" do
 		assert Map.take(int, keys) == Map.take(params, keys)
 
 		assert int.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert int.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(int.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert int.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert int.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(int.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert int.available_quantity_has_unit_id == params.available_quantity.has_unit_id
-		assert int.available_quantity_has_numerical_value == params.available_quantity.has_numerical_value
+		assert Decimal.eq?(int.available_quantity_has_numerical_value, params.available_quantity.has_numerical_value)
 	end
 
 	test "with good params (with only :receiver): creates an Intent", %{params: params} do
@@ -117,11 +117,11 @@ describe "create/1" do
 		assert Map.take(int, keys) == Map.take(params, keys)
 
 		assert int.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert int.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(int.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert int.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert int.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(int.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert int.available_quantity_has_unit_id == params.available_quantity.has_unit_id
-		assert int.available_quantity_has_numerical_value == params.available_quantity.has_numerical_value
+		assert Decimal.eq?(int.available_quantity_has_numerical_value, params.available_quantity.has_numerical_value)
 	end
 
 	test "with bad params (with both :provider and :receiver): doesn't create an Intent", %{params: params} do
@@ -152,11 +152,11 @@ describe "update/2" do
 		assert Map.take(new, keys) == Map.take(params, keys)
 
 		assert new.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert new.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert new.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert new.available_quantity_has_unit_id == params.available_quantity.has_unit_id
-		assert new.available_quantity_has_numerical_value == params.available_quantity.has_numerical_value
+		assert Decimal.eq?(new.available_quantity_has_numerical_value, params.available_quantity.has_numerical_value)
 	end
 
 	test "with good params (with only :receiver): updates the Intent", %{params: params} do
@@ -175,11 +175,11 @@ describe "update/2" do
 		assert Map.take(new, keys) == Map.take(params, keys)
 
 		assert new.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert new.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert new.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert new.available_quantity_has_unit_id == params.available_quantity.has_unit_id
-		assert new.available_quantity_has_numerical_value == params.available_quantity.has_numerical_value
+		assert Decimal.eq?(new.available_quantity_has_numerical_value, params.available_quantity.has_numerical_value)
 	end
 
 	test "with bad params (with both :provider and :receiver): updates the Intent", %{params: params} do

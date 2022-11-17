@@ -109,11 +109,11 @@ describe "Query" do
 		assert data["resourceInventoriedAs"]["id"] == int.resource_inventoried_as_id
 		assert data["resourceConformsTo"]["id"] == int.resource_conforms_to_id
 		assert data["resourceClassifiedAs"] == int.resource_classified_as
-		assert data["resourceQuantity"]["hasNumericalValue"] == to_string(int.resource_quantity_has_numerical_value)
+		assert Decimal.eq?(data["resourceQuantity"]["hasNumericalValue"], int.resource_quantity_has_numerical_value)
 		assert data["resourceQuantity"]["hasUnit"]["id"] == int.resource_quantity_has_unit_id
-		assert data["effortQuantity"]["hasNumericalValue"] == to_string(int.effort_quantity_has_numerical_value)
+		assert Decimal.eq?(data["effortQuantity"]["hasNumericalValue"], int.effort_quantity_has_numerical_value)
 		assert data["effortQuantity"]["hasUnit"]["id"] == int.effort_quantity_has_unit_id
-		assert data["availableQuantity"]["hasNumericalValue"] == to_string(int.available_quantity_has_numerical_value)
+		assert Decimal.eq?(data["availableQuantity"]["hasNumericalValue"], int.available_quantity_has_numerical_value)
 		assert data["availableQuantity"]["hasUnit"]["id"] == int.available_quantity_has_unit_id
 		assert data["hasBeginning"] == DateTime.to_iso8601(int.has_beginning)
 		assert data["hasEnd"] == DateTime.to_iso8601(int.has_end)

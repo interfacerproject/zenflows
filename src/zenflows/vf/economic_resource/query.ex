@@ -57,6 +57,10 @@ defp all_f(q, {:name, v}),
 	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
 defp all_f(q, {:or_name, v}),
 	do: or_where(q, [x], ilike(x.name, ^"%#{v}%"))
+defp all_f(q, {:note, v}),
+	do: where(q, [x], ilike(x.note, ^"%#{v}%"))
+defp all_f(q, {:or_note, v}),
+	do: or_where(q, [x], ilike(x.note, ^"%#{v}%"))
 
 @spec all_validate(Schema.params()) ::
 	{:ok, Changeset.data()} | {:error, Changeset.t()}
@@ -74,6 +78,8 @@ defp all_validate(params) do
 		or_gt_onhand_quantity_has_numerical_value: :float,
 		name: :string,
 		or_name: :string,
+		note: :string,
+		or_note: :string,
 	}}
 	|> Changeset.cast(params, ~w[
 		classified_as or_classified_as
@@ -82,7 +88,7 @@ defp all_validate(params) do
 		conforms_to or_conforms_to
 		gt_onhand_quantity_has_numerical_value
 		or_gt_onhand_quantity_has_numerical_value
-		name or_name
+		name or_name note or_note
 	]a)
 	|> Validate.class(:classified_as)
 	|> Validate.class(:or_classified_as)
@@ -106,9 +112,14 @@ defp all_validate(params) do
 	])
 	|> Validate.name(:name)
 	|> Validate.name(:or_name)
+	|> Validate.note(:note)
+	|> Validate.note(:or_note)
 	|> Validate.exist_nand([:name, :or_name])
+	|> Validate.exist_nand([:note, :or_note])
 	|> Validate.escape_like(:name)
 	|> Validate.escape_like(:or_name)
+	|> Validate.escape_like(:note)
+	|> Validate.escape_like(:or_note)
 	|> Changeset.apply_action(nil)
 end
 

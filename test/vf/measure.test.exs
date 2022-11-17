@@ -30,7 +30,7 @@ alias Zenflows.VF.{Measure, Unit}
 embedded_schema do
 	field :quantity, :map, virtual: true
 	belongs_to :quantity_has_unit, Unit
-	field :quantity_has_numerical_value, :float
+	field :quantity_has_numerical_value, :decimal
 end
 
 def changeset(params) do
@@ -56,11 +56,11 @@ setup do
 	%{
 		params: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		inserted: %Dummy{
 			quantity_has_unit_id: Factory.insert!(:unit).id,
-			quantity_has_numerical_value: Factory.float(),
+			quantity_has_numerical_value: Factory.decimal(),
 		},
 	}
 end
@@ -77,7 +77,7 @@ test "insert", %{params: params} do
 	# fields are properly set when `:quantity` is properly set
 	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
-	assert chgs.quantity_has_numerical_value == params.has_numerical_value
+	assert Decimal.eq?(chgs.quantity_has_numerical_value, params.has_numerical_value)
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}
@@ -130,7 +130,7 @@ test "update", %{params:  params, inserted: schema} do
 	assert %Changeset{valid?: true, changes: chgs}
 		= Dummy.changeset(schema, %{quantity: params})
 	assert chgs.quantity_has_unit_id == params.has_unit_id
-	assert chgs.quantity_has_numerical_value == params.has_numerical_value
+	assert Decimal.eq?(chgs.quantity_has_numerical_value, params.has_numerical_value)
 
 	# `:has_numerical_value` must be positive
 	assert %Changeset{valid?: false, errors: errs}

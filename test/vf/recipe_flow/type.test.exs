@@ -28,11 +28,11 @@ setup do
 			"recipeFlowResource" => Factory.insert!(:recipe_resource).id,
 			"resourceQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"effortQuantity" => %{
 				"hasUnit" => Factory.insert!(:unit).id,
-				"hasNumericalValue" => Factory.float(),
+				"hasNumericalValue" => Factory.decimal(),
 			},
 			"recipeClauseOf" => Factory.insert!(:recipe_exchange).id,
 		},
@@ -74,9 +74,9 @@ describe "Query" do
 		assert data["note"] == new.note
 		assert data["action"]["id"] == new.action_id
 		assert data["resourceQuantity"]["hasUnit"]["id"] == new.resource_quantity_has_unit_id
-		assert data["resourceQuantity"]["hasNumericalValue"] == new.resource_quantity_has_numerical_value
+		assert Decimal.eq?(data["resourceQuantity"]["hasNumericalValue"], new.resource_quantity_has_numerical_value)
 		assert data["effortQuantity"]["hasUnit"]["id"] == new.effort_quantity_has_unit_id
-		assert data["effortQuantity"]["hasNumericalValue"] == new.effort_quantity_has_numerical_value
+		assert Decimal.eq?(data["effortQuantity"]["hasNumericalValue"], new.effort_quantity_has_numerical_value)
 		assert data["recipeFlowResource"]["id"] == new.recipe_flow_resource_id
 		assert data["recipeInputOf"]["id"] == new.recipe_input_of_id
 		assert data["recipeOutputOf"]["id"] == new.recipe_output_of_id

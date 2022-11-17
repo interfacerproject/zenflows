@@ -31,11 +31,11 @@ setup do
 		resource_classified_as: Factory.str_list("uri"),
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		effort_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 		resource_conforms_to_id: Factory.insert!(:resource_specification).id,
@@ -102,9 +102,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == params.resource_conforms_to_id
 		assert comm.resource_inventoried_as_id == nil
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == nil
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == params.has_point_in_time
@@ -138,9 +138,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == params.resource_conforms_to_id
 		assert comm.resource_inventoried_as_id == nil
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == params.has_beginning
 		assert comm.has_end == nil
 		assert comm.has_point_in_time == nil
@@ -174,9 +174,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == params.resource_conforms_to_id
 		assert comm.resource_inventoried_as_id ==  nil
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == nil
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil
@@ -209,9 +209,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == params.resource_conforms_to_id
 		assert comm.resource_inventoried_as_id == nil
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == params.has_beginning
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil
@@ -256,9 +256,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == params.resource_conforms_to_id
 		assert comm.resource_inventoried_as_id == nil
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == params.has_beginning
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil
@@ -291,9 +291,9 @@ describe "create Commitment" do
 		assert comm.resource_conforms_to_id == nil
 		assert comm.resource_inventoried_as_id == params.resource_inventoried_as_id
 		assert comm.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert comm.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(comm.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert comm.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert comm.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(comm.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 		assert comm.has_beginning == params.has_beginning
 		assert comm.has_end == params.has_end
 		assert comm.has_point_in_time == nil

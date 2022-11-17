@@ -31,7 +31,7 @@ def change() do
 		add :process_conforms_to_id, references("vf_process_specification"), null: false
 		add :process_classified_as, {:array, :text}
 		add :has_duration_unit_type, :vf_time_unit
-		add :has_duration_numeric_duration, :float
+		add :has_duration_numeric_duration, :decimal
 		timestamps()
 	end
 

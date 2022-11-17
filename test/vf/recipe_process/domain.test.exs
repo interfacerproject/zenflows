@@ -99,7 +99,7 @@ describe "create/1" do
 		assert {:error, %Changeset{errors: errs}} = Domain.create(params)
 		assert Keyword.has_key?(errs, :has_duration)
 
-		params = Map.put(params, :has_duration, %{numeric_duration: Factory.float()})
+		params = Map.put(params, :has_duration, %{numeric_duration: Factory.decimal()})
 		assert {:error, %Changeset{errors: errs}} = Domain.create(params)
 		assert Keyword.has_key?(errs, :has_duration)
 	end

@@ -45,10 +45,10 @@ alias Zenflows.VF.{
 	conforms_to: ResourceSpecification.t(),
 	accounting_quantity: Measure.t() | nil,
 	accounting_quantity_has_unit: Unit.t(),
-	accounting_quantity_has_numerical_value: float(),
+	accounting_quantity_has_numerical_value: Decimal.t(),
 	onhand_quantity: Measure.t() | nil,
 	onhand_quantity_has_unit: Unit.t(),
-	onhand_quantity_has_numerical_value: float(),
+	onhand_quantity_has_numerical_value: Decimal.t(),
 	primary_accountable: Agent.t(),
 	custodian: Agent.t(),
 	stage: ProcessSpecification.t() | nil,
@@ -76,10 +76,10 @@ schema "vf_economic_resource" do
 	belongs_to :conforms_to, ResourceSpecification
 	field :accounting_quantity, :map, virtual: true
 	belongs_to :accounting_quantity_has_unit, Unit
-	field :accounting_quantity_has_numerical_value, :float
+	field :accounting_quantity_has_numerical_value, :decimal
 	field :onhand_quantity, :map, virtual: true
 	belongs_to :onhand_quantity_has_unit, Unit
-	field :onhand_quantity_has_numerical_value, :float
+	field :onhand_quantity_has_numerical_value, :decimal
 	belongs_to :primary_accountable, Agent
 	belongs_to :custodian, Agent
 	belongs_to :stage, ProcessSpecification

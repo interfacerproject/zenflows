@@ -65,12 +65,31 @@ def int(max \\ 100) do
 end
 
 @doc """
-Returns a random float of the from 0 (inclusive) and 1 (exclusive)
-multiplied by `mul`.
+Returns a random float between 0 (inclusive) and 1 (exclusive)
+multiplied by `mul`, which is 100 by default.
 """
 @spec float() :: float()
 def float(mul \\ 100) do
 	:rand.uniform() * mul
+end
+
+@doc """
+Returns a string that represents a `t:Decimal.t()` between 0
+(inclusive) and 1 (exclusive) multiplied by `mul`, which is 100 by
+default.
+"""
+@spec decimal() :: String.t()
+def decimal(mul \\ 100) do
+	to_string(decimald(mul))
+end
+
+@doc """
+Returns a `t:Decimal.t()` between 0 (inclusive) and 1 (exclusive)
+multiplied by `mul`, which is 100 by default.
+"""
+@spec decimald() :: Decimal.t()
+def decimald(mul \\ 100) do
+	Decimal.from_float(float(mul))
 end
 
 @doc "Returns a random boolean."
@@ -138,7 +157,7 @@ end
 def build(:iduration) do
 	%{
 		unit_type: build(:time_unit),
-		numeric_duration: float(),
+		numeric_duration: decimald(),
 	}
 end
 
@@ -152,7 +171,7 @@ end
 def build(:imeasure) do
 	%VF.Measure{
 		has_unit: build(:unit),
-		has_numerical_value: float(),
+		has_numerical_value: decimald(),
 	}
 end
 
@@ -160,9 +179,9 @@ def build(:spatial_thing) do
 	%VF.SpatialThing{
 		name: str("some name"),
 		mappable_address: str("some mappable_address"),
-		lat: float(),
-		long: float(),
-		alt: float(),
+		lat: decimald(),
+		long: decimald(),
+		alt: decimald(),
 		note: str("some note"),
 	}
 end
@@ -550,7 +569,7 @@ def insert_economic_event!() do
 		resource_classified_as: str_list("some uri"),
 		resource_conforms_to_id: insert!(:resource_specification).id,
 		resource_quantity: %{
-			has_numerical_value: float(),
+			has_numerical_value: decimald(),
 			has_unit_id: insert!(:unit).id,
 		},
 		has_point_in_time: now(),

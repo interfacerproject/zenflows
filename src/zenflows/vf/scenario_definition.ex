@@ -33,7 +33,7 @@ alias Zenflows.VF.{
 	name: String.t(),
 	note: String.t() | nil,
 	has_duration_unit_type: TimeUnitEnum.t() | nil,
-	has_duration_numeric_duration: float() | nil,
+	has_duration_numeric_duration: Decimal.t() | nil,
 	has_duration: Duration.t() | nil,
 }
 
@@ -42,7 +42,7 @@ schema "vf_scenario_definition" do
 	field :note, :string
 	field :has_duration, :map, virtual: true
 	field :has_duration_unit_type, TimeUnitEnum
-	field :has_duration_numeric_duration, :float
+	field :has_duration_numeric_duration, :decimal
 	timestamps()
 end
 

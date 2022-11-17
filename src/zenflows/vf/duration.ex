@@ -28,13 +28,13 @@ alias Zenflows.VF.TimeUnitEnum
 
 @type t() :: %__MODULE__{
 	unit_type: TimeUnitEnum.t(),
-	numeric_duration: float(),
+	numeric_duration: Decimal.t(),
 }
 
 @primary_key false
 embedded_schema do
 	field :unit_type, TimeUnitEnum
-	field :numeric_duration, :float
+	field :numeric_duration, :decimal
 end
 
 @doc """

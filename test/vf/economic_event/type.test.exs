@@ -27,7 +27,7 @@ setup do
 			receiver_id: agent_id,
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 			resource_quantity_has_unit_id: Factory.insert!(:unit).id,
-			resource_quantity_has_numerical_value: Factory.float(),
+			resource_quantity_has_numerical_value: Factory.decimal(),
 			has_end: DateTime.utc_now(),
 		},
 		inserted: %{},

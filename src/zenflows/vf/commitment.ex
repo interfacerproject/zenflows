@@ -74,10 +74,10 @@ schema "vf_commitment" do
 	belongs_to :resource_inventoried_as, EconomicResource
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
-	field :resource_quantity_has_numerical_value, :float
+	field :resource_quantity_has_numerical_value, :decimal
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
-	field :effort_quantity_has_numerical_value, :float
+	field :effort_quantity_has_numerical_value, :decimal
 	field :has_beginning, :utc_datetime_usec
 	field :has_end, :utc_datetime_usec
 	field :has_point_in_time, :utc_datetime_usec

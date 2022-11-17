@@ -29,9 +29,9 @@ alias Zenflows.DB.{Schema, Validate}
 	id: String.t(),
 	name: String.t(),
 	mappable_address: String.t() | nil,
-	lat: float() | nil,
-	long: float() | nil,
-	alt: float() | nil,
+	lat: Decimal.t() | nil,
+	long: Decimal.t() | nil,
+	alt: Decimal.t() | nil,
 	note: String.t() | nil,
 }
 
@@ -41,9 +41,9 @@ alias Zenflows.DB.{Schema, Validate}
 schema "vf_spatial_thing" do
 	field :name, :string
 	field :mappable_address, :string
-	field :lat, :float
-	field :long, :float
-	field :alt, :float
+	field :lat, :decimal
+	field :long, :decimal
+	field :alt, :decimal
 	field :note, :string
 	timestamps()
 end

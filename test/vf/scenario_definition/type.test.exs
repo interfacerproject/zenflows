@@ -25,7 +25,7 @@ setup do
 			"note" => Factory.str("note"),
 			"hasDuration" => %{
 				"unitType" => Factory.build(:time_unit) |> to_string(),
-				"numericDuration" => Factory.float(),
+				"numericDuration" => Factory.decimal(),
 			},
 		},
 		inserted: Factory.insert!(:scenario_definition),
@@ -58,7 +58,7 @@ describe "Query" do
 		assert data["name"] == new.name
 		assert data["note"] == new.note
 		assert data["hasDuration"]["unitType"] == to_string(new.has_duration_unit_type)
-		assert data["hasDuration"]["numericDuration"] == new.has_duration_numeric_duration
+		assert Decimal.eq?(data["hasDuration"]["numericDuration"], new.has_duration_numeric_duration)
 	end
 end
 

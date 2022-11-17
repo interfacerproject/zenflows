@@ -23,9 +23,9 @@ def change() do
 		add :name, :text, null: false
 		add :note, :text
 		add :mappable_address, :text
-		add :lat, :float
-		add :long, :float
-		add :alt, :float
+		add :lat, :decimal
+		add :long, :decimal
+		add :alt, :decimal
 		timestamps()
 	end
 end

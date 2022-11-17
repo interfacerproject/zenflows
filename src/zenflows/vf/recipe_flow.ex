@@ -53,10 +53,10 @@ schema "vf_recipe_flow" do
 	belongs_to :recipe_flow_resource, RecipeResource
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
-	field :resource_quantity_has_numerical_value, :float
+	field :resource_quantity_has_numerical_value, :decimal
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
-	field :effort_quantity_has_numerical_value, :float
+	field :effort_quantity_has_numerical_value, :decimal
 	belongs_to :recipe_clause_of, RecipeExchange
 	timestamps()
 end

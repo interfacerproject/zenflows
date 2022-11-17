@@ -24,7 +24,7 @@ setup do
 			"name" => Factory.str("name"),
 			"hasDuration" => %{
 				"unitType" => Factory.build(:time_unit) |> to_string(),
-				"numericDuration" => Factory.float(),
+				"numericDuration" => Factory.decimal(),
 			},
 			"processClassifiedAs" => Factory.str_list("uri"),
 			"processConformsTo" => Factory.insert!(:process_specification).id,
@@ -64,8 +64,7 @@ describe "Query" do
 		assert data["processClassifiedAs"] == new.process_classified_as
 		assert data["processConformsTo"]["id"] == new.process_conforms_to_id
 		assert data["hasDuration"]["unitType"] == to_string(new.has_duration_unit_type)
-		assert data["hasDuration"]["numericDuration"] == new.has_duration_numeric_duration
-	end
+		assert Decimal.eq?(data["hasDuration"]["numericDuration"], new.has_duration_numeric_duration) end
 end
 
 describe "Mutation" do

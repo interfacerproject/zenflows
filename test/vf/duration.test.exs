@@ -29,7 +29,7 @@ alias Zenflows.VF.{Duration, TimeUnit}
 embedded_schema do
 	field :has_duration, :map, virtual: true
 	field :has_duration_unit_type, TimeUnit
-	field :has_duration_numeric_duration, :float
+	field :has_duration_numeric_duration, :decimal
 end
 
 def changeset(params) do
@@ -55,11 +55,11 @@ setup do
 	%{
 		params: %{
 			unit_type: Factory.build(:time_unit),
-			numeric_duration: Factory.float(),
+			numeric_duration: Factory.decimal(),
 		},
 		inserted: %Dummy{
 			has_duration_unit_type: Factory.build(:time_unit),
-			has_duration_numeric_duration: Factory.float(),
+			has_duration_numeric_duration: Factory.decimal(),
 		},
 	}
 end
@@ -76,7 +76,7 @@ test "insert", %{params: params} do
 	# fields are properly set when `:has_duration` is properly set
 	assert %Changeset{valid?: true, changes: chgs} = Dummy.changeset(%{has_duration: params})
 	assert chgs.has_duration_unit_type == params.unit_type
-	assert chgs.has_duration_numeric_duration == params.numeric_duration
+	assert Decimal.eq?(chgs.has_duration_numeric_duration, params.numeric_duration)
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}
@@ -123,7 +123,7 @@ test "update", %{params:  params, inserted: schema} do
 	# since ecto won't change it if it is already there
 	if schema.has_duration_unit_type != params.unit_type,
 		do: assert chgs.has_duration_unit_type == params.unit_type
-	assert chgs.has_duration_numeric_duration == params.numeric_duration
+	assert Decimal.eq?(chgs.has_duration_numeric_duration, params.numeric_duration)
 
 	# when no fields are provided, no fields are set
 	assert %Changeset{valid?: false, changes: chgs, errors: errs}

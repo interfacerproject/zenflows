@@ -81,9 +81,9 @@ describe "Query" do
 		assert data["classifiedAs"] == new.classified_as
 		assert data["conformsTo"]["id"] == new.conforms_to_id
 		assert data["accountingQuantity"]["hasUnit"]["id"] == new.accounting_quantity_has_unit_id
-		assert data["accountingQuantity"]["hasNumericalValue"] == new.accounting_quantity_has_numerical_value
+		assert Decimal.eq?(data["accountingQuantity"]["hasNumericalValue"], new.accounting_quantity_has_numerical_value)
 		assert data["onhandQuantity"]["hasUnit"]["id"] == new.onhand_quantity_has_unit_id
-		assert data["onhandQuantity"]["hasNumericalValue"] == new.onhand_quantity_has_numerical_value
+		assert Decimal.eq?(data["onhandQuantity"]["hasNumericalValue"], new.onhand_quantity_has_numerical_value)
 		assert data["primaryAccountable"]["id"] == new.primary_accountable_id
 		assert data["custodian"]["id"] == new.custodian_id
 		assert data["stage"]["id"] == new.stage_id

@@ -26,9 +26,9 @@ setup do
 		params: %{
 			name: Factory.str("name"),
 			mappable_address: Factory.str("address"),
-			lat: Factory.float(),
-			long: Factory.float(),
-			alt: Factory.float(),
+			lat: Factory.decimal(),
+			long: Factory.decimal(),
+			alt: Factory.decimal(),
 			note: Factory.str("note"),
 		},
 		inserted: Factory.insert!(:spatial_thing),
@@ -50,9 +50,9 @@ describe "create/1" do
 		assert {:ok, %SpatialThing{} = new} = Domain.create(params)
 		assert new.name == params.name
 		assert new.mappable_address == params.mappable_address
-		assert new.lat == params.lat
-		assert new.long == params.long
-		assert new.alt == params.alt
+		assert Decimal.eq?(new.lat, params.lat)
+		assert Decimal.eq?(new.long, params.long)
+		assert Decimal.eq?(new.alt, params.alt)
 		assert new.note == params.note
 	end
 
@@ -66,9 +66,9 @@ describe "update/2" do
 		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, params)
 		assert new.name == params.name
 		assert new.mappable_address == params.mappable_address
-		assert new.lat == params.lat
-		assert new.long == params.long
-		assert new.alt == params.alt
+		assert Decimal.eq?(new.lat, params.lat)
+		assert Decimal.eq?(new.long, params.long)
+		assert Decimal.eq?(new.alt, params.alt)
 		assert new.note == params.note
 	end
 
@@ -76,9 +76,9 @@ describe "update/2" do
 		assert {:ok, %SpatialThing{} = new} = Domain.update(old.id, %{})
 		assert new.name == old.name
 		assert new.mappable_address == old.mappable_address
-		assert new.lat == old.lat
-		assert new.long == old.long
-		assert new.alt == old.alt
+		assert Decimal.eq?(new.lat, old.lat)
+		assert Decimal.eq?(new.long, old.long)
+		assert Decimal.eq?(new.alt, old.alt)
 		assert new.note == old.note
 	end
 end

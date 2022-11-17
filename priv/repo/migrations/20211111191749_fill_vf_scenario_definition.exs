@@ -29,7 +29,7 @@ def change() do
 		add :name, :text, null: false
 		add :note, :text
 		add :has_duration_unit_type, :vf_time_unit
-		add :has_duration_numeric_duration, :float
+		add :has_duration_numeric_duration, :decimal
 		timestamps()
 	end
 

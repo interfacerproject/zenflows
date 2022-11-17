@@ -38,11 +38,11 @@ setup do
 			recipe_flow_resource_id: Factory.insert!(:recipe_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			effort_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			recipe_clause_of_id: Factory.insert!(:recipe_exchange).id,
 			note: Factory.str("some note"),
@@ -72,7 +72,7 @@ describe "create/1" do
 		assert new.recipe_flow_resource_id == params.recipe_flow_resource_id
 		assert new.recipe_clause_of_id == params.recipe_clause_of_id
 		assert new.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert new.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert new.effort_quantity_has_unit_id == nil
 		assert new.effort_quantity_has_numerical_value == nil
 	end
@@ -89,7 +89,7 @@ describe "create/1" do
 		assert new.resource_quantity_has_unit_id == nil
 		assert new.resource_quantity_has_numerical_value == nil
 		assert new.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 	end
 
 	test "with good params (with :resource_quantity and :effort_quantity): creates a RecipeFlow", %{params: params} do
@@ -100,9 +100,9 @@ describe "create/1" do
 		assert new.recipe_output_of_id == params.recipe_output_of_id
 		assert new.recipe_flow_resource_id == params.recipe_flow_resource_id
 		assert new.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert new.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert new.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 	end
 
 	test "with bad params (without :resource_qunatity and :effort_quantity): doesn't create a RecipeFlow", %{params: params} do
@@ -134,9 +134,9 @@ describe "update/2" do
 		assert new.recipe_flow_resource_id == params.recipe_flow_resource_id
 		assert new.recipe_clause_of_id == params.recipe_clause_of_id
 		assert new.resource_quantity_has_unit_id == params.resource_quantity.has_unit_id
-		assert new.resource_quantity_has_numerical_value == params.resource_quantity.has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
 		assert new.effort_quantity_has_unit_id == old.effort_quantity_has_unit_id
-		assert new.effort_quantity_has_numerical_value == old.effort_quantity_has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, old.effort_quantity_has_numerical_value)
 	end
 
 	test "with good params (with :effort_quantity): updates the RecipeFlow", %{params: params, inserted: old} do
@@ -149,9 +149,9 @@ describe "update/2" do
 		assert new.recipe_flow_resource_id == params.recipe_flow_resource_id
 		assert new.recipe_clause_of_id == params.recipe_clause_of_id
 		assert new.resource_quantity_has_unit_id == old.resource_quantity_has_unit_id
-		assert new.resource_quantity_has_numerical_value == old.resource_quantity_has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, old.resource_quantity_has_numerical_value)
 		assert new.effort_quantity_has_unit_id == params.effort_quantity.has_unit_id
-		assert new.effort_quantity_has_numerical_value == params.effort_quantity.has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, params.effort_quantity.has_numerical_value)
 	end
 
 	test "with good params (with :resource_quantity set to nil): updates the RecipeFlow", %{params: params, inserted: old} do
@@ -170,7 +170,7 @@ describe "update/2" do
 		assert new.resource_quantity_has_unit_id == nil
 		assert new.resource_quantity_has_numerical_value == nil
 		assert new.effort_quantity_has_unit_id == old.effort_quantity_has_unit_id
-		assert new.effort_quantity_has_numerical_value == old.effort_quantity_has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, old.effort_quantity_has_numerical_value)
 	end
 
 	test "with good params (with :effort_quantity set to nil): updates the RecipeFlow", %{params: params, inserted: old} do
@@ -187,7 +187,7 @@ describe "update/2" do
 		assert new.recipe_flow_resource_id == params.recipe_flow_resource_id
 		assert new.recipe_clause_of_id == params.recipe_clause_of_id
 		assert new.resource_quantity_has_unit_id == old.resource_quantity_has_unit_id
-		assert new.resource_quantity_has_numerical_value == old.resource_quantity_has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, old.resource_quantity_has_numerical_value)
 		assert new.effort_quantity_has_unit_id == nil
 		assert new.effort_quantity_has_numerical_value == nil
 	end
@@ -201,9 +201,9 @@ describe "update/2" do
 		assert new.recipe_flow_resource_id == old.recipe_flow_resource_id
 		assert new.recipe_clause_of_id == old.recipe_clause_of_id
 		assert new.resource_quantity_has_unit_id == old.resource_quantity_has_unit_id
-		assert new.resource_quantity_has_numerical_value == old.resource_quantity_has_numerical_value
+		assert Decimal.eq?(new.resource_quantity_has_numerical_value, old.resource_quantity_has_numerical_value)
 		assert new.effort_quantity_has_unit_id == old.effort_quantity_has_unit_id
-		assert new.effort_quantity_has_numerical_value == old.effort_quantity_has_numerical_value
+		assert Decimal.eq?(new.effort_quantity_has_numerical_value, old.effort_quantity_has_numerical_value)
 	end
 
 	test "with bad params (with :resource_quantity and :effort_quantity set to nil): doesn't update the RecipeFlow", %{params: params, inserted: old} do

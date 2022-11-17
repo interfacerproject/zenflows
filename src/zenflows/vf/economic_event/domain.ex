@@ -257,8 +257,8 @@ defp handle_insert(key, %{action_id: action_id} = evt, _)
 		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 		set: [previous_event_id: evt.id],
 		inc: [
-			accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+			accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
+			onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 		])
 end
 defp handle_insert(key, %{action_id: action_id} = evt, _)
@@ -514,7 +514,7 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 			evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the accept events need to fully accept the resource"}
 
-			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the accept events need container resources to have positive onhand quantity"}
 
 			any_combine_separate?.() ->
@@ -534,7 +534,7 @@ defp handle_insert(key, %{action_id: "accept"} = evt, _) do
 		where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 		set: [previous_event_id: evt.id],
 		inc: [
-			onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+			onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 		])
 end
 defp handle_insert(key, %{action_id: "modify"} = evt, _) do
@@ -639,7 +639,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				{:error, "you can't transfer-custody a contained resource"}
 			evt.resource_quantity_has_unit_id != res.onhand_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer-custody events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.onhand_quantity_has_numerical_value ->
 				{:error, "the transfer-custody events need to fully transfer the resource"}
@@ -667,7 +667,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				onhand_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
@@ -704,7 +704,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -764,7 +764,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				{:error, "you can't transfer-all-rights a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer-all-rights events need container resources to have positive accounting-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer-all-rights events need to fully transfer the resource"}
@@ -792,7 +792,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.update_all(:inc, where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
@@ -828,7 +828,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -890,9 +890,9 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				{:error, "you can't transfer a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer events need container resources to have positive accounting-quantity"}
-			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the transfer events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the transfer events need to fully transfer the resource"}
@@ -922,8 +922,8 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
@@ -961,8 +961,8 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do
@@ -1025,9 +1025,9 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				{:error, "you can't move a contained resource"}
 			evt.resource_quantity_has_unit_id != res.accounting_quantity_has_unit_id ->
 				{:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"}
-			res.container? and res.accounting_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.accounting_quantity_has_numerical_value, 0) ->
 				{:error, "the move events need container resources to have positive accounting-quantity"}
-			res.container? and res.onhand_quantity_has_numerical_value <= 0 ->
+			res.container? and not Decimal.gt?(res.onhand_quantity_has_numerical_value, 0) ->
 				{:error, "the move events need container resources to have positive onhand-quantity"}
 			res.container? && evt.resource_quantity_has_numerical_value != res.accounting_quantity_has_numerical_value ->
 				{:error, "the move events need to fully move the resource"}
@@ -1061,8 +1061,8 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.update_all("#{key}.inc", where(EconomicResource, id: ^evt.to_resource_inventoried_as_id), inc: [
 				accounting_quantity_has_numerical_value: evt.resource_quantity_has_numerical_value,
@@ -1100,8 +1100,8 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
 				set: [previous_event_id: evt.id],
 				inc: [
-					accounting_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
-					onhand_quantity_has_numerical_value: -evt.resource_quantity_has_numerical_value,
+					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
+					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
 			|> Multi.merge(fn %{^key => evt} ->
 				if res.container? do

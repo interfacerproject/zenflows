@@ -59,10 +59,10 @@ schema "vf_claim" do
 	belongs_to :resource_conforms_to, ResourceSpecification
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
-	field :resource_quantity_has_numerical_value, :float
+	field :resource_quantity_has_numerical_value, :decimal
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
-	field :effort_quantity_has_numerical_value, :float
+	field :effort_quantity_has_numerical_value, :decimal
 	belongs_to :triggered_by, EconomicEvent
 	field :due, :utc_datetime_usec
 	field :finished, :boolean

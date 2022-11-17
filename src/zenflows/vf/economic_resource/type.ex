@@ -250,8 +250,8 @@ input_object :economic_resource_filter_params do
 	field :or_primary_accountable, list_of(non_null(:id))
 	field :custodian, list_of(non_null(:id))
 	field :or_custodian, list_of(non_null(:id))
-	field :gt_onhand_quantity_has_numerical_value, :float
-	field :or_gt_onhand_quantity_has_numerical_value, :float
+	field :gt_onhand_quantity_has_numerical_value, :decimal
+	field :or_gt_onhand_quantity_has_numerical_value, :decimal
 	field :name, :string
 	field :or_name, :string
 	field :note, :string

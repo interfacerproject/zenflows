@@ -43,9 +43,9 @@ def change() do
 		add :recipe_clause_of_id, references("vf_recipe_exchange")
 		add :recipe_flow_resource_id, references("vf_recipe_resource"), null: false
 		add :resource_quantity_has_unit_id, references("vf_unit")
-		add :resource_quantity_has_numerical_value, :float
+		add :resource_quantity_has_numerical_value, :decimal
 		add :effort_quantity_has_unit_id, references("vf_unit")
-		add :effort_quantity_has_numerical_value, :float
+		add :effort_quantity_has_numerical_value, :decimal
 		timestamps()
 	end
 

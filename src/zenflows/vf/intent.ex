@@ -77,13 +77,13 @@ schema "vf_intent" do
 	belongs_to :resource_inventoried_as, EconomicResource
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
-	field :resource_quantity_has_numerical_value, :float
+	field :resource_quantity_has_numerical_value, :decimal
 	field :effort_quantity, :map, virtual: true
 	belongs_to :effort_quantity_has_unit, Unit
-	field :effort_quantity_has_numerical_value, :float
+	field :effort_quantity_has_numerical_value, :decimal
 	field :available_quantity, :map, virtual: true
 	belongs_to :available_quantity_has_unit, Unit
-	field :available_quantity_has_numerical_value, :float
+	field :available_quantity_has_numerical_value, :decimal
 	belongs_to :at_location, SpatialThing
 	field :has_beginning, :utc_datetime_usec
 	field :has_end, :utc_datetime_usec

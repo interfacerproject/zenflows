@@ -86,7 +86,7 @@ describe "`chgset/1` with raise:" do
 			receiver_id: agent.id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_point_in_time: DateTime.utc_now(),
 		}}
@@ -168,7 +168,7 @@ describe "`chgset/1` with produce:" do
 			receiver_id: agent.id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_beginning: DateTime.utc_now(),
 		}}
@@ -250,7 +250,7 @@ describe "`chgset/1` with lower:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: DateTime.utc_now(),
 		}}
@@ -295,7 +295,7 @@ describe "`chgset/1` with consume:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
@@ -338,7 +338,7 @@ describe "`chgset/1` with use:" do
 			receiver_id: Factory.insert!(:agent).id,
 			effort_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_point_in_time: DateTime.utc_now(),
 		}}
@@ -394,7 +394,7 @@ test "`chgset/1` with work: pass when all good" do
 		resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 		effort_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		has_beginning: DateTime.utc_now(),
 	})
@@ -409,7 +409,7 @@ describe "`chgset/1` with cite:" do
 			receiver_id: Factory.insert!(:agent).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: DateTime.utc_now(),
 		}}
@@ -513,7 +513,7 @@ describe "`chgset/1` with pickup:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_point_in_time: DateTime.utc_now(),
 		}}
@@ -558,7 +558,7 @@ describe "`chgset/1` with dropoff:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			to_location_id: Factory.insert!(:spatial_thing).id,
 			has_beginning: DateTime.utc_now(),
@@ -604,7 +604,7 @@ describe "`chgset/1` with accept:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_end: DateTime.utc_now(),
 		}}
@@ -649,7 +649,7 @@ describe "`chgset/1` with modify:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
@@ -691,7 +691,7 @@ test "`chgset/1` with transferCustody: pass when all good" do
 		resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		has_beginning: DateTime.utc_now(),
 	})
@@ -705,7 +705,7 @@ test "`chgset/1` with transferAllRights: pass when all good" do
 		resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		to_location_id: Factory.insert!(:spatial_thing).id,
 		has_end: DateTime.utc_now(),
@@ -720,7 +720,7 @@ test "`chgset/1` with transfer: pass when all good" do
 		resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,
-			has_numerical_value: Factory.float(),
+			has_numerical_value: Factory.decimal(),
 		},
 		to_location_id: Factory.insert!(:spatial_thing).id,
 		has_beginning: DateTime.utc_now(),
@@ -738,7 +738,7 @@ describe "`chgset/1` with move:" do
 			resource_inventoried_as_id: Factory.insert!(:economic_resource).id,
 			resource_quantity: %{
 				has_unit_id: Factory.insert!(:unit).id,
-				has_numerical_value: Factory.float(),
+				has_numerical_value: Factory.decimal(),
 			},
 			has_point_in_time: DateTime.utc_now(),
 		}}

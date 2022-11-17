@@ -30,7 +30,6 @@ alias Zenflows.VF.{
 	TimeUnitEnum,
 }
 
-
 @type t() :: %__MODULE__{
 	name: String.t(),
 	note: String.t() | nil,

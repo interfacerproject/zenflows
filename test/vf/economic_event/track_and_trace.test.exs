@@ -10,7 +10,7 @@ alias Zenflows.VF.{
 test "previous/2 works" do
 	agent = Factory.insert!(:agent)
 	unit = Factory.insert!(:unit)
-	amount = 42
+	amount = Factory.decimal()
 
 	evt0 = Domain.create!(%{
 			action_id: "raise",

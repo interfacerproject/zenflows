@@ -113,4 +113,8 @@ end
 def previous(eco_res, _, _) do
 	{:ok, Domain.previous(eco_res)}
 end
+
+def trace(eco_res, _, _) do
+	{:ok, Domain.trace(eco_res)}
+end
 end

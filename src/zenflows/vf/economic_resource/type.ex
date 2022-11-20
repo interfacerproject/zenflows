@@ -180,6 +180,9 @@ object :economic_resource do
 
 	field :previous, list_of(non_null(:economic_event)),
 		resolve: &Resolv.previous/3
+
+	field :trace, list_of(non_null(:track_trace_item)),
+		resolve: &Resolv.trace/3
 end
 
 input_object :economic_resource_create_params do

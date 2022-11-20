@@ -110,6 +110,15 @@ union :production_flow_item do
 	end
 end
 
+union :track_trace_item do
+	types [:process, :economic_event, :economic_resource]
+	resolve_type fn
+		%Process{}, _ -> :process
+		%EconomicEvent{}, _ -> :economic_event
+		%EconomicResource{}, _ -> :economic_resource
+	end
+end
+
 @desc """
 An observed economic flow, as opposed to a flow planned to happen in
 the future.  This could reflect a change in the quantity of an economic

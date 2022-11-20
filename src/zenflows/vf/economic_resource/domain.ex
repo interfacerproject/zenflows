@@ -26,6 +26,7 @@ alias Zenflows.VF.{
 	EconomicResource,
 	EconomicResource.Query,
 	Measure,
+	Process,
 }
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -70,6 +71,111 @@ def previous(id, page) do
 		or &1.id == &2.previous_event_id
 		or &1.id <= &2.id))
 end
+
+@spec trace(EconomicResource.t() | EconomicEvent.t() | Process.t(), Page.t())
+	:: [EconomicResource.t() | EconomicEvent.t() | Process.t()]
+def trace(item, _page \\ Page.new()) do
+	flows = [item]
+	visited = MapSet.new([{item.__struct__, item.id}])
+	{contained, modified, delivered} =
+		case item do
+			%EconomicEvent{action_id: "unpack"} ->
+				{MapSet.new([item.resource_inventoried_as_id]), %MapSet{}, %MapSet{}}
+			%EconomicEvent{action_id: "modify"} ->
+				{%MapSet{}, MapSet.new([item.resource_inventoried_as_id]), %MapSet{}}
+			%EconomicEvent{action_id: "dropoff"} ->
+				{%MapSet{}, %MapSet{}, MapSet.new([item.resource_inventoried_as_id])}
+			_ ->
+				{%MapSet{}, %MapSet{}, %MapSet{}}
+		end
+	{flows, _, _, _, _, _} = trace_depth_first_search(flows, visited, contained, modified, delivered, nil)
+	Enum.reverse(flows)
+end
+
+@spec trace_depth_first_search([EconomicResource.t() | EconomicEvent.t() | Process.t()],
+		MapSet.t(), MapSet.t(), MapSet.t(), MapSet.t(), nil | EconomicResource.t())
+	:: {[EconomicResource.t() | EconomicEvent.t() | Process.t()],
+		MapSet.t(), MapSet.t(), MapSet.t(), MapSet.t(), nil | EconomicResource.t()}
+defp trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event) do
+	dbg {flows, visited, contained, modified, delivered, saved_event}
+	[last | _] = flows
+	previous =
+		case last do
+			%EconomicResource{} -> EconomicResource.Domain.previous(last)
+			%EconomicEvent{} -> [EconomicEvent.Domain.previous(last)]
+			%Process{} -> Process.Domain.previous(last)
+		end
+	saved_event = if match?(%EconomicEvent{}, last),
+		do: EconomicEvent.Domain.preload(last, :previous_event).previous_event,
+		else: saved_event
+	previous =
+		case {previous, saved_event} do
+			# ensure that:
+			# * `previous` has at least one item that is not `nil` (events' previous can return `nil`)
+			# * `saved_event` is not `nil` (events like raise have nullable previous_event)
+			{[%{id: _} | _], %{id: id}} ->
+				case Enum.split_while(previous, &(&1.id != id)) do
+					{[], right} -> right
+					{left, [found | right]} -> [found | left] ++ right
+				end
+			_ ->
+				previous
+		end
+	Enum.reduce(previous, {flows, visited, contained, modified, delivered, saved_event},
+		fn item, {flows, visited, contained, modified, delivered, saved_event} ->
+			if item != nil and not MapSet.member?(visited, {item.__struct__, item.id}) do
+				{flows, visited, contained, modified, delivered, saved_event} =
+					handle_set(:delivered, item, flows, visited, contained, modified, delivered, saved_event)
+				{flows, visited, contained, modified, delivered, saved_event} =
+					handle_set(:modified, item, flows, visited, contained, modified, delivered, saved_event)
+				{flows, visited, contained, modified, delivered, saved_event} =
+					handle_set(:contained, item, flows, visited, contained, modified, delivered, saved_event)
+				if item.action_id in ~w[pickup dropoff accept modify pack unpack] do
+					{flows, visited, contained, modified, delivered, saved_event}
+				else
+					visited = MapSet.put(visited, {EconomicEvent, item.id})
+					flows = [item | flows]
+					trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
+				end
+			else
+				{flows, visited, contained, modified, delivered, saved_event}
+			end
+		end)
+end
+
+@spec handle_set(:delivered | :modified | :contained, EconomicEvent.t(),
+		[EconomicResource.t() | EconomicEvent.t() | Process.t()],
+		MapSet.t(), MapSet.t(), MapSet.t(), MapSet.t(), nil | EconomicEvent.t())
+	:: {[EconomicResource.t() | EconomicEvent.t() | Process.t()],
+		MapSet.t(), MapSet.t(), MapSet.t(), MapSet.t(), nil | EconomicEvent.t()}
+for name <- [:delivered, :modified, :contained] do
+	set = Macro.var(name, nil)
+	{action0, action1} = case name do
+		:delivered -> {"pickup", "dropoff"}
+		:modified -> {"accept", "modify"}
+		:contained -> {"pack", "unpack"}
+	end
+	defp handle_set(unquote(name), %EconomicEvent{action_id: unquote(action0)} = evt,
+			flows, visited, contained, modified, delivered, saved_event) do
+		if MapSet.member?(unquote(set), {EconomicResource, evt.resource_inventoried_as_id}) do
+			unquote(set) = MapSet.delete(unquote(set), {EconomicResource, evt.resource_inventoried_as_id})
+			visited = MapSet.put(visited, {EconomicEvent, evt.id})
+			flows = [evt | flows]
+			trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
+		else
+			{flows, visited, contained, modified, delivered, saved_event}
+		end
+	end
+	defp handle_set(unquote(name), %EconomicEvent{action_id: unquote(action1)} = evt,
+			flows, visited, contained, modified, delivered, saved_event) do
+		unquote(set) = MapSet.put(unquote(set), {EconomicResource, evt.resource_inventoried_as_id})
+		visited = MapSet.put(visited, {EconomicEvent, evt.id})
+		flows = [evt | flows]
+		trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
+	end
+end
+defp handle_set(_, _, flows, visited, contained, modified, delivered, saved_event),
+	do: {flows, visited, contained, modified, delivered, saved_event}
 
 @spec classifications() :: [String.t()]
 def classifications() do

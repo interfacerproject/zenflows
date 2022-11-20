@@ -122,11 +122,11 @@ end
 		| :conforms_to | :accounting_quantity
 		| :onhand_quantity | :primary_accountable | :custodian
 		| :stage | :state | :current_location | :lot | :contained_in
-		| :unit_of_effort)
+		| :unit_of_effort | :previous_event)
 	:: EconomicResource.t()
 def preload(eco_res, x) when x in ~w[
 	images conforms_to primary_accountable custodian lot
-	stage current_location contained_in unit_of_effort
+	stage current_location contained_in unit_of_effort previous_event
 ]a,
 	do: Repo.preload(eco_res, x)
 def preload(eco_res, x) when x in ~w[accounting_quantity onhand_quantity]a,

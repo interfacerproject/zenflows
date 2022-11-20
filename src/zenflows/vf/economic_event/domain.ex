@@ -113,13 +113,14 @@ end
 		| :provider | :receiver
 		| :resource_inventoried_as | :to_resource_inventoried_as
 		| :resource_conforms_to | :resource_quantity | :effort_quantity
-		| :to_location | :at_location | :realization_of | :triggered_by)
+		| :to_location | :at_location | :realization_of | :triggered_by
+		| :previous_event)
 	:: EconomicEvent.t()
 def preload(eco_evt, x) when x in ~w[
 	input_of output_of provider receiver
 	resource_inventoried_as to_resource_inventoried_as
 	resource_conforms_to to_location at_location realization_of
-	triggered_by
+	triggered_by previous_event
 ]a do
 	Repo.preload(eco_evt, x)
 end

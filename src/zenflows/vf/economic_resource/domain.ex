@@ -117,6 +117,7 @@ defp trace_depth_first_search(flows, visited, contained, modified, delivered, sa
 				case Enum.split_while(previous, &(&1.id != id)) do
 					{[], right} -> right
 					{left, [found | right]} -> [found | left] ++ right
+					{left, right} -> left ++ right
 				end
 			_ ->
 				previous

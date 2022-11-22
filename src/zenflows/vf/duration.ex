@@ -85,10 +85,16 @@ as a %Duration{} struct.  Useful for GraphQL types as can be seen in
 """
 @spec preload(Schema.t(), atom()) :: Schema.t()
 def preload(schema, key) do
-	%{schema | key => %__MODULE__{
-		unit_type: Map.get(schema, :"#{key}_unit_type"),
-		numeric_duration: Map.get(schema, :"#{key}_numeric_duration"),
-	}}
+	unit_type = Map.get(schema, :"#{key}_unit_type")
+	numeric_duration = Map.get(schema, :"#{key}_numeric_duration")
+	if unit_type && numeric_duration do
+		%{schema | key => %__MODULE__{
+			unit_type: unit_type,
+			numeric_duration: numeric_duration,
+		}}
+	else
+		schema
+	end
 end
 
 @cast ~w[unit_type numeric_duration]a

@@ -97,10 +97,16 @@ as a %Measure{} struct.  Useful for GraphQL types as can be seen in
 """
 @spec preload(Schema.t(), atom()) :: Schema.t()
 def preload(schema, key) do
-	%{schema | key => %__MODULE__{
-		has_unit_id: Map.get(schema, :"#{key}_has_unit_id"),
-		has_numerical_value: Map.get(schema, :"#{key}_has_numerical_value"),
-	}}
+	has_unit_id = Map.get(schema, :"#{key}_has_unit_id")
+	has_numerical_value = Map.get(schema, :"#{key}_has_numerical_value")
+	if has_unit_id && has_numerical_value do
+		%{schema | key => %__MODULE__{
+			has_unit_id: has_unit_id,
+			has_numerical_value: has_numerical_value,
+		}}
+	else
+		schema
+	end
 end
 
 @cast ~w[has_unit_id has_numerical_value]a

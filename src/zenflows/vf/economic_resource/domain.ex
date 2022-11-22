@@ -97,7 +97,6 @@ end
 	:: {[EconomicResource.t() | EconomicEvent.t() | Process.t()],
 		MapSet.t(), MapSet.t(), MapSet.t(), MapSet.t(), nil | EconomicResource.t()}
 defp trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event) do
-	dbg {flows, visited, contained, modified, delivered, saved_event}
 	[last | _] = flows
 	previous =
 		case last do

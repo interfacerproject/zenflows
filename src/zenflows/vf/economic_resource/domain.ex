@@ -131,12 +131,14 @@ defp trace_depth_first_search(flows, visited, contained, modified, delivered, sa
 					handle_set(:modified, item, flows, visited, contained, modified, delivered, saved_event)
 				{flows, visited, contained, modified, delivered, saved_event} =
 					handle_set(:contained, item, flows, visited, contained, modified, delivered, saved_event)
-				if item.action_id in ~w[pickup dropoff accept modify pack unpack] do
-					{flows, visited, contained, modified, delivered, saved_event}
-				else
-					visited = MapSet.put(visited, {EconomicEvent, item.id})
-					flows = [item | flows]
-					trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
+				case item do
+					%EconomicEvent{action_id: id}
+							when id in ~w[pickup dropoff accept modify pack unpack] ->
+						{flows, visited, contained, modified, delivered, saved_event}
+					_ ->
+						visited = MapSet.put(visited, {EconomicEvent, item.id})
+						flows = [item | flows]
+						trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
 				end
 			else
 				{flows, visited, contained, modified, delivered, saved_event}

@@ -666,7 +666,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
 			|> Multi.update_all("#{key}.set_and_dec",
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
-				set: [previous_event_id: evt.id],
+				set: [previous_event_id: evt.id, custodian_id: evt.receiver_id],
 				inc: [
 					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
@@ -791,7 +791,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
 			|> Multi.update_all(:set_and_dec,
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
-				set: [previous_event_id: evt.id],
+				set: [previous_event_id: evt.id, primary_accountable_id: evt.receiver_id],
 				inc: [
 					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 				])
@@ -921,7 +921,11 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 			|> Multi.update(key, Changeset.change(evt, previous_event_id: res.previous_event_id))
 			|> Multi.update_all("#{key}.set_and_dec",
 				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
-				set: [previous_event_id: evt.id],
+				set: [
+					previous_event_id: evt.id,
+					primary_accountable_id: evt.receiver_id,
+					custodian_id: evt.receiver_id,
+				],
 				inc: [
 					accounting_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),
 					onhand_quantity_has_numerical_value: Decimal.negate(evt.resource_quantity_has_numerical_value),

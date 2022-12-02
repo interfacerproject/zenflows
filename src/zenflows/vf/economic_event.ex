@@ -197,8 +197,9 @@ defp do_changeset(%{changes: %{action_id: "cite"}} = cset) do
 end
 defp do_changeset(%{changes: %{action_id: "deliverService"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id output_of_id resource_conforms_to_id]a)
-	|> Changeset.validate_required(~w[resource_conforms_to_id]a)
+	|> Changeset.cast(cset.params, ~w[input_of_id output_of_id resource_conforms_to_id resource_quantity]a)
+	|> Changeset.validate_required(~w[resource_conforms_to_id resource_quantity]a)
+	|> Measure.cast(:resource_quantity)
 	|> Validate.value_ne([:input_of_id, :output_of_id])
 end
 defp do_changeset(%{changes: %{action_id: "pickup"}} = cset) do

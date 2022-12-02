@@ -117,6 +117,11 @@ def triggered_by(eco_evt, _, _) do
 	{:ok, eco_evt.triggered_by}
 end
 
+def previous_event(eco_evt, _, _) do
+	eco_evt = Domain.preload(eco_evt, :previous_event)
+	{:ok, eco_evt.previous_event}
+end
+
 def previous(eco_evt, _, _) do
 	{:ok, Domain.previous(eco_evt)}
 end

@@ -195,6 +195,9 @@ object :economic_event do
 	field :triggered_by, :economic_event,
 		resolve: &Resolv.triggered_by/3
 
+	field :previous_event, :economic_event,
+		resolve: &Resolv.previous_event/3
+
 	field :previous, :production_flow_item,
 		resolve: &Resolv.previous/3
 end

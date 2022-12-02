@@ -64,6 +64,7 @@ def previous(id, page) do
 		&1.previous_event_id == nil
 		or &1.id == &2.previous_event_id
 		or &1.id <= &2.id))
+	|> Enum.reverse()
 end
 
 @spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}

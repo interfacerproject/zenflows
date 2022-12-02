@@ -70,6 +70,7 @@ def previous(id, page) do
 		&1.previous_event_id == nil
 		or &1.id == &2.previous_event_id
 		or &1.id <= &2.id))
+	|> Enum.reverse()
 end
 
 @spec trace(EconomicResource.t() | EconomicEvent.t() | Process.t(), Page.t())
@@ -112,11 +113,13 @@ defp trace_depth_first_search(flows, visited, contained, modified, delivered, sa
 			# ensure that:
 			# * `previous` has at least one item that is not `nil` (events' previous can return `nil`)
 			# * `saved_event` is not `nil` (events like raise have nullable previous_event)
+			{[%EconomicResource{}], %EconomicEvent{}} ->
+				[saved_event | previous]
+
 			{[%{id: _} | _], %{id: id}} ->
 				case Enum.split_while(previous, &(&1.id != id)) do
-					{[], right} -> right
 					{left, [found | right]} -> [found | left] ++ right
-					{left, right} -> left ++ right
+					{left, []} -> left
 				end
 			_ ->
 				previous
@@ -135,7 +138,7 @@ defp trace_depth_first_search(flows, visited, contained, modified, delivered, sa
 							when id in ~w[pickup dropoff accept modify pack unpack] ->
 						{flows, visited, contained, modified, delivered, saved_event}
 					_ ->
-						visited = MapSet.put(visited, {EconomicEvent, item.id})
+						visited = MapSet.put(visited, {item.__struct__, item.id})
 						flows = [item | flows]
 						trace_depth_first_search(flows, visited, contained, modified, delivered, saved_event)
 				end

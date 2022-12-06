@@ -247,6 +247,8 @@ object :economic_resource_connection do
 end
 
 input_object :economic_resource_filter_params do
+	field :id, list_of(non_null(:id))
+	field :or_id, list_of(non_null(:id))
 	field :classified_as, list_of(non_null(:uri))
 	field :or_classified_as, list_of(non_null(:uri))
 	field :conforms_to, list_of(non_null(:id))

@@ -41,10 +41,14 @@ defp all_f(q, {:primary_accountable, v}),
 	do: where(q, [x], x.primary_accountable_id in ^v)
 defp all_f(q, {:or_primary_accountable, v}),
 	do: or_where(q, [x], x.primary_accountable_id in ^v)
+defp all_f(q, {:not_primary_accountable, v}),
+	do: where(q, [x], x.primary_accountable_id not in ^v)
 defp all_f(q, {:custodian, v}),
 	do: where(q, [x], x.custodian_id in ^v)
 defp all_f(q, {:or_custodian, v}),
 	do: or_where(q, [x], x.custodian_id in ^v)
+defp all_f(q, {:not_custodian, v}),
+	do: where(q, [x], x.custodian_id not in ^v)
 defp all_f(q, {:conforms_to, v}),
 	do: where(q, [x], x.conforms_to_id in ^v)
 defp all_f(q, {:or_conforms_to, v}),
@@ -70,8 +74,10 @@ defp all_validate(params) do
 		or_classified_as: {:array, :string},
 		primary_accountable: {:array, ID},
 		or_primary_accountable: {:array, ID},
+		not_primary_accountable: {:array, ID},
 		custodian: {:array, ID},
 		or_custodian: {:array, ID},
+		not_custodian: {:array, ID},
 		conforms_to: {:array, ID},
 		or_conforms_to: {:array, ID},
 		gt_onhand_quantity_has_numerical_value: :decimal,
@@ -83,8 +89,8 @@ defp all_validate(params) do
 	}}
 	|> Changeset.cast(params, ~w[
 		classified_as or_classified_as
-		primary_accountable or_primary_accountable
-		custodian or_custodian
+		primary_accountable or_primary_accountable not_primary_accountable
+		custodian or_custodian not_custodian
 		conforms_to or_conforms_to
 		gt_onhand_quantity_has_numerical_value
 		or_gt_onhand_quantity_has_numerical_value
@@ -95,9 +101,11 @@ defp all_validate(params) do
 	|> Validate.exist_nand([:classified_as, :or_classified_as])
 	|> Validate.class(:primary_accountable)
 	|> Validate.class(:or_primary_accountable)
+	|> Validate.class(:not_primary_accountable)
 	|> Validate.exist_nand([:primary_accountable, :or_primary_accountable])
 	|> Validate.class(:custodian)
 	|> Validate.class(:or_custodian)
+	|> Validate.class(:not_custodian)
 	|> Validate.exist_nand([:custodian, :or_custodian])
 	|> Validate.class(:conforms_to)
 	|> Validate.class(:or_conforms_to)

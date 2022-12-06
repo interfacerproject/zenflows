@@ -33,6 +33,10 @@ def all(%{filter: params}) do
 end
 
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
+defp all_f(q, {:id, v}),
+	do: where(q, [x], x.id_id in ^v)
+defp all_f(q, {:or_id, v}),
+	do: or_where(q, [x], x.id_id in ^v)
 defp all_f(q, {:classified_as, v}),
 	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
 defp all_f(q, {:or_classified_as, v}),
@@ -70,6 +74,8 @@ defp all_f(q, {:or_note, v}),
 	{:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
 	{%{}, %{
+		id: {:array, ID},
+		or_id: {:array, ID},
 		classified_as: {:array, :string},
 		or_classified_as: {:array, :string},
 		primary_accountable: {:array, ID},
@@ -88,6 +94,7 @@ defp all_validate(params) do
 		or_note: :string,
 	}}
 	|> Changeset.cast(params, ~w[
+		id or_id
 		classified_as or_classified_as
 		primary_accountable or_primary_accountable not_primary_accountable
 		custodian or_custodian not_custodian
@@ -96,6 +103,9 @@ defp all_validate(params) do
 		or_gt_onhand_quantity_has_numerical_value
 		name or_name note or_note
 	]a)
+	|> Validate.class(:id)
+	|> Validate.class(:or_id)
+	|> Validate.exist_nand([:id, :or_id])
 	|> Validate.class(:classified_as)
 	|> Validate.class(:or_classified_as)
 	|> Validate.exist_nand([:classified_as, :or_classified_as])

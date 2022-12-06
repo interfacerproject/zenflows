@@ -251,8 +251,10 @@ input_object :economic_resource_filter_params do
 	field :or_conforms_to, list_of(non_null(:id))
 	field :primary_accountable, list_of(non_null(:id))
 	field :or_primary_accountable, list_of(non_null(:id))
+	field :not_primary_accountable, list_of(non_null(:id))
 	field :custodian, list_of(non_null(:id))
 	field :or_custodian, list_of(non_null(:id))
+	field :not_custodian, list_of(non_null(:id))
 	field :gt_onhand_quantity_has_numerical_value, :decimal
 	field :or_gt_onhand_quantity_has_numerical_value, :decimal
 	field :name, :string

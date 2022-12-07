@@ -64,6 +64,24 @@ alias Zenflows.VF.{
 	previous_event: nil | EconomicEvent.t(),
 }
 
+@derive {Jason.Encoder, only: ~w[
+	id
+	action_id
+	resource_classified_as
+	resource_quantity_has_numerical_value
+	effort_quantity_has_numerical_value
+	has_beginning has_end has_point_in_time
+	note agreed_in
+	input_of_id output_of_id
+	provider_id receiver_id
+	resource_inventoried_as_id to_resource_inventoried_as_id
+	resource_conforms_to_id
+	resource_quantity_has_unit_id effort_quantity_has_unit_id
+	to_location_id at_location_id
+	realization_of_id
+	triggered_by_id
+	previous_event_id
+]a}
 schema "vf_economic_event" do
 	field :action_id, Action.ID
 	field :action, :map, virtual: true

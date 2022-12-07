@@ -117,4 +117,8 @@ end
 def trace(eco_res, _, _) do
 	{:ok, Domain.trace(eco_res)}
 end
+
+def trace_dpp(eco_res, _, _) do
+	{:ok, Domain.trace_dpp(eco_res)}
+end
 end

@@ -45,6 +45,14 @@ alias Zenflows.VF.{
 	nested_in: Scenario.t() | nil,
 }
 
+@derive {Jason.Encoder, only: ~w[
+	id
+	name note
+	has_beginning has_end
+	finished deletable
+	classified_as
+	based_on_id planned_within_id
+]a}
 schema "vf_process" do
 	field :name, :string
 	field :note, :string

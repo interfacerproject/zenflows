@@ -353,7 +353,6 @@ end
 @spec trace_dpp(EconomicResource.t(), Page.t()) :: map()
 def trace_dpp(item, _page \\ Page.new()) do
 	{_, dpp} = trace_dpp_er_before(item, MapSet.new(), 0)
-	dpp.children |> IO.inspect
 	dpp
 end
 end

@@ -21,7 +21,7 @@ use Ecto.Migration
 @mutex """
 satisfied_by_event_id IS NOT NULL
 OR
-satisfied_by_commitment IS NOT NULL
+satisfied_by_commitment_id IS NOT NULL
 """
 
 def change() do

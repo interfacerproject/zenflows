@@ -108,7 +108,6 @@ query do
 	import_fields :query_intent
 	#import_fields :query_commitment
 	#import_fields :query_fulfillment
-	#import_fields :query_event_or_commitment
 	#import_fields :query_satisfaction
 	#import_fields :query_claim
 	#import_fields :query_settlement
@@ -155,7 +154,6 @@ mutation do
 	import_fields :mutation_intent
 	#import_fields :mutation_commitment
 	#import_fields :mutation_fulfillment
-	#import_fields :mutation_event_or_commitment
 	#import_fields :mutation_satisfaction
 	#import_fields :mutation_claim
 	#import_fields :mutation_settlement

@@ -71,7 +71,7 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Validate.note(:note)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)
-	|> Validate.xor(~w[satisfied_by_event_id satisfied_by_commitment_id]a)
+	|> Validate.exist_xor(~w[satisfied_by_event_id satisfied_by_commitment_id]a)
 	|> Changeset.assoc_constraint(:satisfied_by_event)
 	|> Changeset.assoc_constraint(:satisfied_by_commitment)
 	|> Changeset.assoc_constraint(:satisfies)

@@ -23,7 +23,7 @@ alias Zenflows.VF.Satisfaction
 setup do
 	%{params: %{
 		note: Factory.str("note"),
-		satisfied_by_id: Factory.insert!(:event_or_commitment).id,
+		satisfied_by_event_id: Factory.insert!(:economic_event).id,
 		satisfies_id: Factory.insert!(:intent).id,
 		resource_quantity: %{
 			has_unit_id: Factory.insert!(:unit).id,

@@ -472,21 +472,14 @@ def build(:fulfillment) do
 	}
 end
 
-def build(:event_or_commitment) do
-	mutex? = bool()
-
-	%VF.EventOrCommitment{
-		event: if(mutex?, do: build(:economic_event)),
-		commitment: unless(mutex?, do: build(:commitment)),
-	}
-end
-
 def build(:satisfaction) do
 	resqty = build(:imeasure)
 	effqty = build(:imeasure)
+	mutex? = bool()
 
 	%VF.Satisfaction{
-		satisfied_by: build(:event_or_commitment),
+		satisfied_by_commitment: if(mutex?, do: build(:commitment)),
+		satisfied_by_event: unless(mutex?, do: build(:economic_event)),
 		satisfies: build(:intent),
 		resource_quantity_has_unit: resqty.has_unit,
 		resource_quantity_has_numerical_value: resqty.has_numerical_value,

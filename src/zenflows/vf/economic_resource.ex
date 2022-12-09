@@ -69,15 +69,15 @@ alias Zenflows.VF.{
 
 @derive {Jason.Encoder, only: ~w[
 	id
-    name note tracking_identifier classified_as state_id okhv
-    repo version licensor license metadata
-    accounting_quantity_has_numerical_value
-    accounting_quantity_has_unit_id
-    onhand_quantity_has_numerical_value
-    onhand_quantity_has_unit_id
-    conforms_to_id primary_accountable_id custodian_id
-    stage_id current_location_id lot_id contained_in_id
-    unit_of_effort_id previous_event_id
+	name note tracking_identifier classified_as state_id okhv
+	repo version licensor license metadata
+	accounting_quantity_has_numerical_value
+	accounting_quantity_has_unit_id
+	onhand_quantity_has_numerical_value
+	onhand_quantity_has_unit_id
+	conforms_to_id primary_accountable_id custodian_id
+	stage_id current_location_id lot_id contained_in_id
+	unit_of_effort_id previous_event_id
 ]a}
 schema "vf_economic_resource" do
 	field :name, :string

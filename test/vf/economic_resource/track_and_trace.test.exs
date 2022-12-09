@@ -515,7 +515,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	}, %{name: "sewing machine"})
-	res_sewing_machine =EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
+	res_sewing_machine = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
 	evt_transfer = EconomicEvent.Domain.create!(%{
 		action_id: "transfer",

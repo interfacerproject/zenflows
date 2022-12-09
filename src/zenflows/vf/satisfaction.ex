@@ -58,8 +58,8 @@ end
 
 @reqr [:satisfies_id]
 @cast @reqr ++ ~w[
-    satisfied_by_event_id satisfied_by_commitment_id
-    resource_quantity effort_quantity note
+	satisfied_by_event_id satisfied_by_commitment_id
+	resource_quantity effort_quantity note
 ]a
 
 @doc false

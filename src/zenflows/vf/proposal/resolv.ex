@@ -93,4 +93,8 @@ def reciprocal_intents(prop, _, _) do
 	prop = Domain.preload(prop, :reciprocal_intents)
 	{:ok, prop.reciprocal_intents}
 end
+
+def state(prop, _, _) do
+	{:ok, Domain.state(prop)}
+end
 end

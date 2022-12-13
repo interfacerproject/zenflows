@@ -33,6 +33,7 @@ alias Zenflows.VF.{
 	Process,
 	ProposedIntent,
 	ResourceSpecification,
+	Satisfaction,
 	SpatialThing,
 	Unit,
 }
@@ -96,6 +97,7 @@ schema "vf_intent" do
 	field :agreed_in, :string
 	timestamps()
 
+	has_many :satisfied_by, Satisfaction, foreign_key: :satisfies_id
 	has_many :published_in, ProposedIntent, foreign_key: :publishes_id
 end
 

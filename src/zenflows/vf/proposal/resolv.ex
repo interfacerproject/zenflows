@@ -95,6 +95,6 @@ def reciprocal_intents(prop, _, _) do
 end
 
 def status(prop, _, _) do
-	{:ok, Domain.status(prop)}
+	Domain.status(prop)
 end
 end

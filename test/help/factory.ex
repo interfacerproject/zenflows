@@ -479,7 +479,7 @@ def build(:satisfaction) do
 
 	%VF.Satisfaction{
 		satisfied_by_commitment: if(mutex?, do: build(:commitment)),
-		satisfied_by_event: unless(mutex?, do: build(:economic_event)),
+		satisfied_by_event_id: unless(mutex?, do: insert_economic_event!().id),
 		satisfies: build(:intent),
 		resource_quantity_has_unit: resqty.has_unit,
 		resource_quantity_has_numerical_value: resqty.has_numerical_value,

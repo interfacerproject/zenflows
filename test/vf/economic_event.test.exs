@@ -465,6 +465,10 @@ describe "`chgset/1` with deliverService:" do
 			provider_id: Factory.insert!(:agent).id,
 			receiver_id: Factory.insert!(:agent).id,
 			resource_conforms_to_id: Factory.insert!(:resource_specification).id,
+			resource_quantity: %{
+				has_numerical_value: Factory.decimal(),
+				has_unit_id: Factory.insert!(:unit).id,
+			},
 			has_beginning: DateTime.utc_now(),
 			has_end: DateTime.utc_now(),
 		}}

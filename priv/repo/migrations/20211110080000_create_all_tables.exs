@@ -50,7 +50,6 @@ def change() do
 	create table("vf_intent")
 	create table("vf_commitment")
 	create table("vf_fulfillment")
-	create table("vf_event_or_commitment")
 	create table("vf_satisfaction")
 	create table("vf_claim")
 	create table("vf_settlement")

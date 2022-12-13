@@ -252,7 +252,7 @@ test "previous/2 works" do
 
 	evts = Domain.previous(proc)
 	left = Enum.map(evts, & &1.id)
-	right = Enum.map([evt4, evt5, evt6, evt7, evt9], & &1.id)
+	right = Enum.map([evt9, evt7, evt6, evt5, evt4], & &1.id)
 	assert left == right
 end
 end

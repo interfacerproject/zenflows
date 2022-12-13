@@ -26,22 +26,25 @@ use Zenflows.DB.Schema
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
-	EventOrCommitment,
+	Commitment,
+	EconomicEvent,
 	Intent,
 	Measure,
 	Unit,
 }
 
 @type t() :: %__MODULE__{
-	satisfied_by: EventOrCommitment.t(),
+	satisfied_by_event: nil | EconomicEvent.t(),
+	satisfied_by_commitment: nil | Commitment.t(),
 	satisfies: Intent.t(),
-	resource_quantity: Measure.t() | nil,
-	effort_quantity: Measure.t() | nil,
-	note: String.t() | nil,
+	resource_quantity: nil | Measure.t(),
+	effort_quantity: nil | Measure.t(),
+	note: nil | String.t(),
 }
 
 schema "vf_satisfaction" do
-	belongs_to :satisfied_by, EventOrCommitment
+	belongs_to :satisfied_by_event, EconomicEvent
+	belongs_to :satisfied_by_commitment, Commitment
 	belongs_to :satisfies, Intent
 	field :resource_quantity, :map, virtual: true
 	belongs_to :resource_quantity_has_unit, Unit
@@ -53,8 +56,11 @@ schema "vf_satisfaction" do
 	timestamps()
 end
 
-@reqr ~w[satisfied_by_id satisfies_id]a
-@cast @reqr ++ ~w[resource_quantity effort_quantity note]a
+@reqr [:satisfies_id]
+@cast @reqr ++ ~w[
+	satisfied_by_event_id satisfied_by_commitment_id
+	resource_quantity effort_quantity note
+]a
 
 @doc false
 @spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
@@ -65,7 +71,9 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Validate.note(:note)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)
-	|> Changeset.assoc_constraint(:satisfied_by)
+	|> Validate.exist_xor(~w[satisfied_by_event_id satisfied_by_commitment_id]a)
+	|> Changeset.assoc_constraint(:satisfied_by_event)
+	|> Changeset.assoc_constraint(:satisfied_by_commitment)
 	|> Changeset.assoc_constraint(:satisfies)
 end
 end

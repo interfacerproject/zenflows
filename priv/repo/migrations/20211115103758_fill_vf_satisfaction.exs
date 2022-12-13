@@ -18,10 +18,17 @@
 defmodule Zenflows.DB.Repo.Migrations.Fill_vf_satisfaction do
 use Ecto.Migration
 
+@mutex """
+satisfied_by_event_id IS NOT NULL
+OR
+satisfied_by_commitment_id IS NOT NULL
+"""
+
 def change() do
 	alter table("vf_satisfaction") do
 		add :satisfies_id, references("vf_intent"), null: false
-		add :satisfied_by_id, references("vf_event_or_commitment"), null: false
+		add :satisfied_by_event_id, references("vf_economic_event")
+		add :satisfied_by_commitment_id, references("vf_commitment")
 		add :resource_quantity_has_unit_id, references("vf_unit")
 		add :resource_quantity_has_numerical_value, :decimal
 		add :effort_quantity_has_unit_id, references("vf_unit")
@@ -29,5 +36,6 @@ def change() do
 		add :note, :text
 		timestamps()
 	end
+	create constraint("vf_satisfaction", :mutex, check: @mutex)
 end
 end

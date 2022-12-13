@@ -62,7 +62,7 @@ import_types VF.Intent.Type
 #import_types VF.Commitment.Type
 #import_types VF.Fulfillment.Type
 #import_types VF.EventOrCommitment.Type
-#import_types VF.Satisfaction.Type
+import_types VF.Satisfaction.Type
 #import_types VF.Claim.Type
 #import_types VF.Settlement.Type
 import_types VF.Proposal.Type
@@ -108,8 +108,7 @@ query do
 	import_fields :query_intent
 	#import_fields :query_commitment
 	#import_fields :query_fulfillment
-	#import_fields :query_event_or_commitment
-	#import_fields :query_satisfaction
+	import_fields :query_satisfaction
 	#import_fields :query_claim
 	#import_fields :query_settlement
 	import_fields :query_proposal
@@ -155,8 +154,7 @@ mutation do
 	import_fields :mutation_intent
 	#import_fields :mutation_commitment
 	#import_fields :mutation_fulfillment
-	#import_fields :mutation_event_or_commitment
-	#import_fields :mutation_satisfaction
+	import_fields :mutation_satisfaction
 	#import_fields :mutation_claim
 	#import_fields :mutation_settlement
 	import_fields :mutation_proposal

@@ -171,4 +171,14 @@ defp all_validate(params) do
 		:or_primary_intents_resource_inventoried_as_id])
 	|> Changeset.apply_action(nil)
 end
+
+@spec state(Schema.id()) :: Queryable.t()
+def state(id) do
+	from p in Proposal,
+		where: p.id == ^id,
+		join: pi in assoc(p, :publishes),
+		join: i in assoc(pi, :publishes),
+		left_join: s in assoc(i, :satisfied_by),
+		select: {fragment("every(?)", i.finished), count(i.id), count(s.id)}
+end
 end

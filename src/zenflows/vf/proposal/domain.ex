@@ -52,6 +52,23 @@ def all!(page \\ Page.new()) do
 	value
 end
 
+@spec state(Proposal.t() | Schema.id())
+	:: {:ok, :pending | :accepted | :refused} | {:error, String.t()}
+def state(%Proposal{id: id}), do: state(id)
+def state(id) do
+	Query.state(id)
+	|> Repo.one()
+	|> case do
+		nil -> {:error, "not found"}
+		{true, _, 0} ->
+			{:ok, :refused}
+		{_, intents, satisfactions} when intents != satisfactions ->
+			{:ok, :pending}
+		{_, intents, satisfactions} when intents == satisfactions ->
+			{:ok, :accepted}
+	end
+end
+
 @spec create(Schema.params()) :: {:ok, Proposal.t()} | {:error, Changeset.t()}
 def create(params) do
 	key = multi_key()

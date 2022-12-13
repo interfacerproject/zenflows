@@ -172,8 +172,8 @@ defp all_validate(params) do
 	|> Changeset.apply_action(nil)
 end
 
-@spec state(Schema.id()) :: Queryable.t()
-def state(id) do
+@spec status(Schema.id()) :: Queryable.t()
+def status(id) do
 	from p in Proposal,
 		where: p.id == ^id,
 		join: pi in assoc(p, :publishes),

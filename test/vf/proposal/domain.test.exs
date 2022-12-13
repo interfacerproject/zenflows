@@ -48,24 +48,24 @@ describe "one/1" do
 	end
 end
 
-describe "state/1" do
+describe "status/1" do
 	test "pending", %{inserted: proposal} do
 		int = Factory.insert!(:intent, finished: false)
 		Factory.insert!(:proposed_intent, published_in: proposal, publishes: int)
-		assert {:ok, :pending} = Domain.state(proposal.id)
+		assert {:ok, :pending} = Domain.status(proposal.id)
 	end
 
 	test "accepted", %{inserted: proposal} do
 		int = Factory.insert!(:intent, finished: false)
 		Factory.insert!(:proposed_intent, published_in: proposal, publishes: int)
 		Factory.insert!(:satisfaction, satisfies: int)
-		assert {:ok, :accepted} = Domain.state(proposal.id)
+		assert {:ok, :accepted} = Domain.status(proposal.id)
 	end
 
 	test "refused", %{inserted: proposal} do
 		int = Factory.insert!(:intent, finished: true)
 		Factory.insert!(:proposed_intent, published_in: proposal, publishes: int)
-		assert {:ok, :refused} = Domain.state(proposal.id)
+		assert {:ok, :refused} = Domain.status(proposal.id)
 	end
 end
 

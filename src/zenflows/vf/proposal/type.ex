@@ -37,8 +37,8 @@ create commitments; commonly seen in a price list or e-commerce.
 @eligible_location "The location at which this proposal is eligible."
 @eligible_location_id "(`SpatialThing`) #{@eligible_location}"
 
-@desc "The state of the proposal: pending, accepted, or refused."
-enum :proposed_state do
+@desc "The status of the proposal: pending, accepted, or refused."
+enum :proposed_status do
 	value :pending
 	value :accepted
 	value :refused
@@ -80,8 +80,8 @@ object :proposal do
 	field :reciprocal_intents, list_of(non_null(:intent)),
 		resolve: &Resolv.reciprocal_intents/3
 
-	field :state, non_null(:proposed_state),
-		resolve: &Resolv.state/3
+	field :status, non_null(:proposed_status),
+		resolve: &Resolv.status/3
 end
 
 input_object :proposal_create_params do

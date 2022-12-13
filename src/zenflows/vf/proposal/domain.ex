@@ -52,11 +52,11 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec state(Proposal.t() | Schema.id())
+@spec status(Proposal.t() | Schema.id())
 	:: {:ok, :pending | :accepted | :refused} | {:error, String.t()}
-def state(%Proposal{id: id}), do: state(id)
-def state(id) do
-	Query.state(id)
+def status(%Proposal{id: id}), do: status(id)
+def status(id) do
+	Query.status(id)
 	|> Repo.one()
 	|> case do
 		nil -> {:error, "not found"}

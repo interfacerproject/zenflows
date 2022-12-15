@@ -34,9 +34,9 @@ end
 
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
 defp all_f(q, {:id, v}),
-	do: where(q, [x], x.id_id in ^v)
+	do: where(q, [x], x.id in ^v)
 defp all_f(q, {:or_id, v}),
-	do: or_where(q, [x], x.id_id in ^v)
+	do: or_where(q, [x], x.id in ^v)
 defp all_f(q, {:classified_as, v}),
 	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
 defp all_f(q, {:or_classified_as, v}),

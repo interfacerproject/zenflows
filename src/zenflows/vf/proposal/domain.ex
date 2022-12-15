@@ -62,10 +62,10 @@ def status(id) do
 		nil -> {:error, "not found"}
 		{true, _, 0} ->
 			{:ok, :refused}
-		{_, intents, satisfactions} when intents != satisfactions ->
-			{:ok, :pending}
 		{_, intents, satisfactions} when intents == satisfactions ->
 			{:ok, :accepted}
+		_ ->
+			{:ok, :pending}
 	end
 end
 

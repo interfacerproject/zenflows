@@ -153,6 +153,9 @@ input_object :proposal_filter_params do
 	field :or_primary_intents_resource_inventoried_as_note, :string
 	field :primary_intents_resource_inventoried_as_id, list_of(non_null(:id))
 	field :or_primary_intents_resource_inventoried_as_id, list_of(non_null(:id))
+	field :status, :proposed_status
+	field :or_status, :proposed_status
+	field :not_status, :proposed_status
 end
 
 object :query_proposal do

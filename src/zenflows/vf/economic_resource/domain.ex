@@ -280,7 +280,7 @@ def trace_dpp_er_before(_item, visited, depth) when depth >= @max_depth do
 	{visited, %{}}
 end
 def trace_dpp_er_before(%EconomicResource{} = item, visited, depth) do
-	a_dpp_item = %{node: item}
+	a_dpp_item = %{type: "EconomicResource", node: item}
 	{visited2, children} = EconomicResource.Domain.previous(item) |> Enum.reduce({visited, []},
 		fn ee, {visited, children} ->
 			if MapSet.member?(visited, {ee.__struct__, ee.id}) do
@@ -312,7 +312,7 @@ def trace_dpp_ee_before(_item, visited, depth) when depth >= @max_depth do
 	{visited, %{}}
 end
 def trace_dpp_ee_before(%EconomicEvent{} = item, visited, depth) do
-	a_dpp_item = %{node: item}
+	a_dpp_item = %{type: "EconomicEvent", node: item}
 	pr_item = EconomicEvent.Domain.previous(item)
 	if pr_item == nil do
 		{visited, Map.put(a_dpp_item, :children, [])}
@@ -336,7 +336,7 @@ def trace_dpp_pr_before(_item, visited, depth) when depth >= @max_depth do
 	{visited, %{}}
 end
 def trace_dpp_pr_before(item, visited, depth) do
-	a_dpp_item = %{node: item}
+	a_dpp_item = %{type: "Process", node: item}
 	{visited2, children} = Process.Domain.previous(item) |> Enum.reduce({visited, []},
 		fn ee, {visited, children} ->
 			if MapSet.member?(visited, {ee.__struct__, ee.id}) do

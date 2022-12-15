@@ -93,6 +93,45 @@ defp all_f(q, {:or_primary_intents_resource_inventoried_as_id, v}) do
 	|> join(:primary_intents_resource_inventoried_as)
 	|> or_where([primary_intents_resource_inventoried_as: r], r.id in ^v)
 end
+defp all_f(q, {:status, v}) do
+	cond = case v do
+		:refused -> dynamic([intents: i, satisfactions: s], fragment("every(?)", i.finished) and count(s.id) == 0)
+		:accepted -> dynamic([intents: i, satisfactions: s], count(i.id) == count(s.id))
+		:pending -> dynamic([intents: i, satisfactions: s], not fragment("every(?)", i.finished) and count(i.id) != count(s.id))
+	end
+	q
+	|> join(:inner, [x], pi in assoc(x, :publishes), as: :proposed_intents)
+	|> join(:inner, [proposed_intents: pi], i in assoc(pi, :publishes), as: :intents)
+	|> join(:left, [intents: i], s in assoc(i, :satisfied_by), as: :satisfactions)
+	|> group_by([x], x.id)
+	|> having(^cond)
+end
+defp all_f(q, {:or_status, v}) do
+	cond = case v do
+		:refused -> dynamic([intents: i, satisfactions: s], fragment("every(?)", i.finished) and count(s.id) == 0)
+		:accepted -> dynamic([intents: i, satisfactions: s], count(i.id) == count(s.id))
+		:pending -> dynamic([intents: i, satisfactions: s], not fragment("every(?)", i.finished) and count(i.id) != count(s.id))
+	end
+	q
+	|> join(:inner, [x], pi in assoc(x, :publishes), as: :proposed_intents)
+	|> join(:inner, [proposed_intents: pi], i in assoc(pi, :publishes), as: :intents)
+	|> join(:left, [intents: i], s in assoc(i, :satisfied_by), as: :satisfactions)
+	|> group_by([x], x.id)
+	|> or_having(^cond)
+end
+defp all_f(q, {:not_status, v}) do
+	cond = case v do
+		:refused -> dynamic([intents: i, satisfactions: s], not (fragment("every(?)", i.finished) and count(s.id) == 0))
+		:accepted -> dynamic([intents: i, satisfactions: s], not (count(i.id) == count(s.id)))
+		:pending -> dynamic([intents: i, satisfactions: s], not (not fragment("every(?)", i.finished) and count(i.id) != count(s.id)))
+	end
+	q
+	|> join(:inner, [x], pi in assoc(x, :publishes), as: :proposed_intents)
+	|> join(:inner, [proposed_intents: pi], i in assoc(pi, :publishes), as: :intents)
+	|> join(:left, [intents: i], s in assoc(i, :satisfied_by), as: :satisfactions)
+	|> group_by([x], x.id)
+	|> having(^cond)
+end
 
 # join primary_intents
 @spec join(Queryable.t(), atom()) :: Queryable.t()
@@ -126,6 +165,9 @@ defp all_validate(params) do
 		or_primary_intents_resource_inventoried_as_note: :string,
 		primary_intents_resource_inventoried_as_id: {:array, ID},
 		or_primary_intents_resource_inventoried_as_id: {:array, ID},
+		status: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w[pending accepted refused]a)},
+		or_status: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w[pending accepted refused]a)},
+		not_status: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w[pending accepted refused]a)},
 	}}
 	|> Changeset.cast(params, ~w[
 		primary_intents_resource_inventoried_as_conforms_to
@@ -140,6 +182,7 @@ defp all_validate(params) do
 		or_primary_intents_resource_inventoried_as_note
 		primary_intents_resource_inventoried_as_id
 		or_primary_intents_resource_inventoried_as_id
+		status or_status not_status
 	]a)
 	|> Validate.class(:primary_intents_resource_inventoried_as_conforms_to)
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_conforms_to)
@@ -169,6 +212,7 @@ defp all_validate(params) do
 	|> Validate.class(:or_primary_intents_resource_inventoried_as_id)
 	|> Validate.exist_nand([:primary_intents_resource_inventoried_as_id,
 		:or_primary_intents_resource_inventoried_as_id])
+	|> Validate.exist_nand([:status, :or_status, :not_status])
 	|> Changeset.apply_action(nil)
 end
 

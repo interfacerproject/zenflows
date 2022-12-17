@@ -269,11 +269,13 @@ end
 
 object :query_economic_resource do
 	field :economic_resource, :economic_resource do
+		meta only_guest?: true
 		arg :id, non_null(:id)
 		resolve &Resolv.economic_resource/2
 	end
 
 	field :economic_resources, :economic_resource_connection do
+		meta only_guest?: true
 		arg :first, :integer
 		arg :after, :id
 		arg :last, :integer

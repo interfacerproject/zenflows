@@ -129,7 +129,7 @@ If you want to edit the generated docker-copmose file:
 
 [![software by Dyne.org](https://files.dyne.org/software_by_dyne.png)](http://www.dyne.org)
 
-Copyleft (ɔ) 2021-2022 by [Dyne.org](https://www.dyne.org) foundation, Amsterdam
+Copyleft (ɔ) 2021-2023 by [Dyne.org](https://www.dyne.org) foundation, Amsterdam
 
 Designed, written and maintained by [srfsh](https://github.com/srfsh) with the help of [jaromil](https://github.com/jaromil), [puria](https://github.com/puria).
 
@@ -174,7 +174,7 @@ Please first take a look at the
 ***
 ## 💼 License
     Zenflows - Valueflows vocabulary
-    Copyright (c) 2021-2022 Dyne.org foundation, Amsterdam
+    Copyright (c) 2021-2023 Dyne.org foundation, Amsterdam
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as

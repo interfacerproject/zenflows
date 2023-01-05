@@ -30,7 +30,7 @@ setup do
 			"eddsaPublicKey" => Base.encode64("eddsa_public_key"),
 			"ethereumAddress" => Base.encode64("ethereum_address"),
 			"reflowPublicKey" => Base.encode64("reflow_public_key"),
-			"schnorrPublicKey" => Base.encode64("schnorr_public_key"),
+			"bitcoinPublicKey" => Base.encode64("bitcoin_public_key"),
 		},
 		inserted: Factory.insert!(:person),
 	}
@@ -48,7 +48,7 @@ fragment person on Person {
 	eddsaPublicKey
 	ethereumAddress
 	reflowPublicKey
-	schnorrPublicKey
+	bitcoinPublicKey
 }
 """
 
@@ -73,7 +73,7 @@ describe "Query" do
 		assert data["eddsaPublicKey"] == new.eddsa_public_key
 		assert data["ethereumAddress"] == new.ethereum_address
 		assert data["reflowPublicKey"] == new.reflow_public_key
-		assert data["schnorrPublicKey"] == new.schnorr_public_key
+		assert data["bitcoinPublicKey"] == new.bitcoin_public_key
 	end
 end
 
@@ -139,7 +139,7 @@ describe "Mutation" do
 		assert data["eddsaPublicKey"] == old.eddsa_public_key
 		assert data["ethereumAddress"] == old.ethereum_address
 		assert data["reflowPublicKey"] == old.reflow_public_key
-		assert data["schnorrPublicKey"] == old.schnorr_public_key
+		assert data["bitcoinPublicKey"] == old.bitcoin_public_key
 	end
 
 	test "deletePerson: doesn't delete the person without the admin key", %{inserted: new} do

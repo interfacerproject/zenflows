@@ -33,7 +33,7 @@ setup do
 			eddsa_public_key: Base.encode64("eddsa_public_key"),
 			ethereum_address: Base.encode64("ethereum_address"),
 			reflow_public_key: Base.encode64("reflow_public_key"),
-			schnorr_public_key: Base.encode64("schnorr_public_key"),
+			bitcoin_public_key: Base.encode64("bitcoin_public_key"),
 		},
 		inserted: Factory.insert!(:person),
 	}
@@ -67,7 +67,7 @@ describe "create/1" do
 		assert new.eddsa_public_key == params.eddsa_public_key
 		assert new.ethereum_address == params.ethereum_address
 		assert new.reflow_public_key == params.reflow_public_key
-		assert new.schnorr_public_key == params.schnorr_public_key
+		assert new.bitcoin_public_key == params.bitcoin_public_key
 	end
 
 	test "with bad params: doesn't create a Person" do
@@ -87,7 +87,7 @@ describe "update/2" do
 		assert new.eddsa_public_key == old.eddsa_public_key
 		assert new.ethereum_address == old.ethereum_address
 		assert new.reflow_public_key == old.reflow_public_key
-		assert new.schnorr_public_key == old.schnorr_public_key
+		assert new.bitcoin_public_key == old.bitcoin_public_key
 	end
 
 	test "with bad params: doesn't update the Person", %{inserted: old} do
@@ -101,7 +101,7 @@ describe "update/2" do
 		assert new.eddsa_public_key == old.eddsa_public_key
 		assert new.ethereum_address == old.ethereum_address
 		assert new.reflow_public_key == old.reflow_public_key
-		assert new.schnorr_public_key == old.schnorr_public_key
+		assert new.bitcoin_public_key == old.bitcoin_public_key
 	end
 end
 

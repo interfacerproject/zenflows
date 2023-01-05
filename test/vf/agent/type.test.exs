@@ -98,7 +98,7 @@ describe "Query agent()" do
 							eddsaPublicKey
 							ethereumAddress
 							reflowPublicKey
-							schnorrPublicKey
+							bitcoinPublicKey
 						}
 					}
 				}
@@ -115,7 +115,7 @@ describe "Query agent()" do
 		assert data["eddsaPublicKey"] == per.eddsa_public_key
 		assert data["ethereumAddress"] == per.ethereum_address
 		assert data["reflowPublicKey"] == per.reflow_public_key
-		assert data["schnorrPublicKey"] == per.schnorr_public_key
+		assert data["bitcoinPublicKey"] == per.bitcoin_public_key
 	end
 
 	test "as Organization", %{org: org} do

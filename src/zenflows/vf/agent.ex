@@ -40,7 +40,7 @@ alias Zenflows.VF.SpatialThing
 	eddsa_public_key: String.t() | nil,
 	ethereum_address: String.t() | nil,
 	reflow_public_key: String.t() | nil,
-	schnorr_public_key: String.t() | nil,
+	bitcoin_public_key: String.t() | nil,
 
 	# organization
 	classified_as: [String.t()] | nil,
@@ -62,7 +62,7 @@ schema "vf_agent" do
 	field :eddsa_public_key, :string
 	field :ethereum_address, :string
 	field :reflow_public_key, :string
-	field :schnorr_public_key, :string
+	field :bitcoin_public_key, :string
 
 	# organization
 	field :classified_as, {:array, :string}

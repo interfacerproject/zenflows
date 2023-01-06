@@ -20,6 +20,8 @@ defmodule Zenflows.DID do
 A module to interact with the did controller instances over HTTPS.
 """
 
+alias Zenflows.VF.Person
+
 @did_header %{
 	"proof" => %{
 		"type" => "EcdsaSecp256k1Signature2019",
@@ -37,6 +39,7 @@ A module to interact with the did controller instances over HTTPS.
         }
     ]
 }
+@did_prefix "did:dyne:ifacer:"
 
 def child_spec(_) do
 		Supervisor.child_spec(
@@ -56,36 +59,62 @@ defp exec(name, post_data) do
 		"/v1/sandbox/#{name}", post_data)
 end
 
+@spec get_did(Person.t()) :: {:ok, map()} | {:error, term()}
+def get_did(person) do
+	with {:ok, %{status: stat, data: body}} when stat == 200 <-
+			Zenflows.HTTPC.request(__MODULE__, "GET",
+				"/dids/#{@did_prefix}#{person.eddsa_public_key}"),
+		{:ok, data} <- Jason.decode(body) do
+		{:ok, %{"created" => false, "did" => data}}
+	else
+		err ->
+			case err do
+				{:ok, _} -> {:error, "DID not found"}
+				{:error, err} -> {:error, err}
+			end
+	end
+end
+
+@spec request_new_did(Person.t()) :: {:ok, map()} | {:error, term()}
+def request_new_did(person) do
+	did_request = %{
+		"did_spec" => "ifacer",
+		"signer_did_spec" => "ifacer.A",
+		"identity" => "Ifacer user test",
+		"ifacer_id" => %{"identifier" => person.id},
+		"bitcoin_public_key" => person.bitcoin_public_key,
+		"ecdh_public_key" => person.ecdh_public_key,
+		"eddsa_public_key" => person.eddsa_public_key,
+		"ethereum_address" => person.ethereum_address,
+		"reflow_public_key" => person.reflow_public_key,
+		"timestamp" =>
+			DateTime.utc_now() |> DateTime.to_unix(:millisecond) |> to_string
+	}
+
+	with {:ok, did} <-
+		Zenflows.Restroom.exec("pubkeys-request-signed",
+			Map.merge(@did_header,
+				Map.merge(did_request, keyring()))),
+		{:ok, did_signed} <- exec("pubkeys-accept.chain", did)
+	do
+		{:ok, %{"created" => true, "did" => did_signed}}
+	else
+		err -> err
+	end
+end
+
+@spec claim(Ecto.Repo.t(), %{person: Person.t()}) :: {:ok, map()} | {:error, term()}
 def claim(_repo, %{person: person}) do
 	if keyring() == nil do
 		{:error, "DID Controller not configured"}
 	else
-		did_request = %{
-			"did_spec" => "ifacer",
-			"signer_did_spec" => "ifacer.A",
-			"identity" => "Ifacer user test",
-			"ifacer_id" => %{"identifier" => person.id},
-			"bitcoin_public_key" => person.bitcoin_public_key,
-			"ecdh_public_key" => person.ecdh_public_key,
-			"eddsa_public_key" => person.eddsa_public_key,
-			"ethereum_address" => person.ethereum_address,
-			"reflow_public_key" => person.reflow_public_key,
-			"timestamp" =>
-				DateTime.utc_now() |> DateTime.to_unix(:millisecond) |> to_string
-		}
-
-		with {:ok, did} <-
-			Zenflows.Restroom.exec("pubkeys-request-signed",
-				Map.merge(@did_header,
-					Map.merge(did_request, keyring()))),
-			 {:ok, did_signed} <- exec("pubkeys-accept.chain", did)
-		do
-			{:ok, did_signed}
-		else
-			err -> err
+		case get_did(person) do
+			{:ok, did} -> {:ok, did}
+			_ -> request_new_did(person)
 		end
 	end
 end
+
 # Return the hostname of restroom from the configs.
 @spec host() :: String.t()
 defp host() do
@@ -105,7 +134,7 @@ defp scheme() do
 end
 
 # Keyring (private keys) for the server
-@spec keyring() :: :http | :https
+@spec keyring() :: nil | map()
 defp keyring() do
 	Keyword.fetch!(conf(), :did_keyring)
 end
@@ -116,4 +145,3 @@ defp conf() do
 	Application.fetch_env!(:zenflows, __MODULE__)
 end
 end
-

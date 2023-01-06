@@ -77,28 +77,34 @@ end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
-defp exec(name, post_data) do
-	hdrs = [{"content-type", "application/json"}]
-
-	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
-			{:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
-				request("POST", "/api/#{name}", hdrs, post_body),
-			{:ok, data} <- Jason.decode(body) do
-		if stat == 200 do
-			{:ok, data}
-		else
-			{:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
-		end
-	else
-		{:ok, %{status: stat, data: body}} ->
-			{:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
-
-		other -> other
-	end
+def exec(name, post_data) do
+	request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
+		name, post_data)
 end
 
-defp request(method, path, headers, body) do
-	Zenflows.HTTPC.request(__MODULE__, method, path, headers, body)
+@doc """
+Given the request function (wrapper of Zenflows.HTTPC.request), the path
+and the data to post, it makes the request and parse the result.
+"""
+@spec request(fun(), String.t(), map()) :: {:ok, map()} | {:error, term()}
+def request(request_fn, path, post_data) do
+  hdrs = [{"content-type", "application/json"}]
+
+  with {:ok, post_body} <- Jason.encode(%{data: post_data}),
+      {:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
+        request_fn.("POST", "/api/#{path}", hdrs, post_body),
+      {:ok, data} <- Jason.decode(body) do
+    if stat == 200 do
+      {:ok, data}
+    else
+      {:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
+    end
+  else
+    {:ok, %{status: stat, data: body}} ->
+      {:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
+
+    other -> other
+  end
 end
 
 # Return the salt from the configs.

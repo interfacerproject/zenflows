@@ -227,5 +227,10 @@ object :mutation_person do
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_person/2
 	end
+
+	field :claim_person, non_null(:boolean) do
+		arg :id, non_null(:id)
+		resolve &Resolv.claim_person/2
+	end
 end
 end

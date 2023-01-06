@@ -29,6 +29,7 @@ def start(_type, _args) do
 		Zenflows.DB.Repo,
 		Zenflows.InstVars.Domain,
 		Zenflows.Restroom,
+		Zenflows.DID,
 		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web.Router, options: [port: 8000]},
 	]
 

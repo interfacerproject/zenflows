@@ -72,6 +72,15 @@ config :zenflows, Zenflows.Restroom,
 	room_host: get_env("ROOM_HOST", "localhost"),
 	room_port: get_env_int.("ROOM_PORT", 3000),
 	room_salt: fetch_env!("ROOM_SALT")
+#
+# did
+#
+did_keyring = Base.decode64!(get_env("DID_KEYRING", ""))
+config :zenflows, Zenflows.DID,
+	did_scheme: if(get_env("DID_SCHEME", "http") == "http", do: :http, else: :https),
+	did_host: get_env("DID_HOST", "did.dyne.org"),
+	did_port: get_env_int.("DID_PORT", 80),
+	did_keyring: if(did_keyring == "", do: nil, else: Jason.decode!(did_keyring))
 
 #
 # admin

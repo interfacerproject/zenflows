@@ -42,6 +42,14 @@ also see the [Required Options](#required-options).
 * `ROOM_SALT`: The base64-encoded salt to be used with Restroom's
   keypairoomServer call.
 
+* `DID_HOST`: The hostname or IP address of the DID controller instance.
+  Defaults to `did.dyne.org`.
+* `DID_PORT`: The port number of the Restroom instance. It must be an integer
+  between `0` and `65535`, inclusive.  Defaults to `80`.
+* `DID_SCHEME`: Protocol to be used, either `http` or `https`.
+* `DID_KEYRING`: Keyring (identity) of the server, it is not defined
+  communication with DID controller is disabled.
+
 * `ADMIN_KEY`: A 64-octect long, lowercase-base16-encoded string used for the
   authenticating calls from the administrators.  Can be generated with
   `openssl rand -hex 64`.  It is automatically generated when you run

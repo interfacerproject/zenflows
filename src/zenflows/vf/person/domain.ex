@@ -122,13 +122,12 @@ end
 @spec claim(Schema.id()) ::
 	{:ok, Person.t()} | {:error, String.t() | Changeset.t()}
 def claim(id) do
-	key = multi_key()
 	Multi.new()
 	|> multi_one(id)
-	|> Multi.run(:claim_did, &Zenflows.DID.claim/2)
+	|> Multi.run(:claim_id, &Zenflows.DID.claim/2)
 	|> Repo.transaction()
 	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
+		{:ok, %{claim_id: value}} -> {:ok, value}
 		{:error, _, reason, _} -> {:error, reason}
 	end
 end

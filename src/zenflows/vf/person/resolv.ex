@@ -67,8 +67,8 @@ def delete_person(%{id: id}, _) do
 end
 
 def claim_person(%{id: id}, _) do
-	with {:ok, _} <- Domain.claim(id) do
-		{:ok, true}
+	with {:ok, did} <- Domain.claim(id) do
+		{:ok, did}
 	end
 end
 

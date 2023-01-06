@@ -228,7 +228,7 @@ object :mutation_person do
 		resolve &Resolv.delete_person/2
 	end
 
-	field :claim_person, non_null(:boolean) do
+	field :claim_person, non_null(:json) do
 		arg :id, non_null(:id)
 		resolve &Resolv.claim_person/2
 	end

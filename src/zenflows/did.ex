@@ -71,18 +71,16 @@ def claim(_repo, %{person: person}) do
 			"ethereum_address" => person.ethereum_address,
 			"reflow_public_key" => person.reflow_public_key,
 			"timestamp" =>
-				DateTime.utc_now() |> DateTime.to_unix(:millisecond) |> to_string,
-			"specific_id" => "ifacer.A",
-			"signer_specific_id" => "ifacer.A"
+				DateTime.utc_now() |> DateTime.to_unix(:millisecond) |> to_string
 		}
 
 		with {:ok, did} <-
 			Zenflows.Restroom.exec("pubkeys-request-signed",
 				Map.merge(@did_header,
-					Map.merge(did_request, keyring()))) |> IO.inspect()
-			 # {:ok, did_signed} <- exec("pubkeys-accept.chain", did)
+					Map.merge(did_request, keyring()))),
+			 {:ok, did_signed} <- exec("pubkeys-accept.chain", did)
 		do
-			{:ok, did}
+			{:ok, did_signed}
 		else
 			err -> err
 		end

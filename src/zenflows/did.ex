@@ -22,25 +22,6 @@ A module to interact with the did controller instances over HTTPS.
 
 alias Zenflows.VF.Person
 
-@did_header %{
-	"proof" => %{
-		"type" => "EcdsaSecp256k1Signature2019",
-		"proofPurpose" => "assertionMethod"
-    },
-	"@context" => [
-        "https://www.w3.org/ns/did/v1",
-        "https://w3id.org/security/suites/ed25519-2018/v1",
-        "https://w3id.org/security/suites/secp256k1-2019/v1",
-        "https://w3id.org/security/suites/secp256k1-2020/v1",
-        "https://dyne.github.io/W3C-DID/specs/ReflowBLS12381.json",
-        %{
-			"description" => "https://schema.org/description",
-			"identifier" => "https://schema.org/identifier"
-        }
-    ]
-}
-@did_prefix "did:dyne:ifacer:"
-
 def child_spec(_) do
 		Supervisor.child_spec(
 			{Zenflows.HTTPC,
@@ -59,11 +40,16 @@ defp exec(name, post_data) do
 		"/v1/sandbox/#{name}", post_data)
 end
 
+@spec get_did(Person.t()) :: String.t()
+defp did_id(person) do
+	"did:dyne:ifacer:#{person.eddsa_public_key}"
+end
+
 @spec get_did(Person.t()) :: {:ok, map()} | {:error, term()}
 def get_did(person) do
 	with {:ok, %{status: stat, data: body}} when stat == 200 <-
 			Zenflows.HTTPC.request(__MODULE__, "GET",
-				"/dids/#{@did_prefix}#{person.eddsa_public_key}"),
+				"/dids/#{did_id(person)}"),
 		{:ok, data} <- Jason.decode(body) do
 		{:ok, %{"created" => false, "did" => data}}
 	else
@@ -77,6 +63,23 @@ end
 
 @spec request_new_did(Person.t()) :: {:ok, map()} | {:error, term()}
 def request_new_did(person) do
+	did_header = %{
+		"proof" => %{
+			"type" => "EcdsaSecp256k1Signature2019",
+			"proofPurpose" => "assertionMethod"
+		},
+		"@context" => [
+			"https://www.w3.org/ns/did/v1",
+			"https://w3id.org/security/suites/ed25519-2018/v1",
+			"https://w3id.org/security/suites/secp256k1-2019/v1",
+			"https://w3id.org/security/suites/secp256k1-2020/v1",
+			"https://dyne.github.io/W3C-DID/specs/ReflowBLS12381.json",
+			%{
+				"description" => "https://schema.org/description",
+				"identifier" => "https://schema.org/identifier"
+			}
+		]
+	}
 	did_request = %{
 		"did_spec" => "ifacer",
 		"signer_did_spec" => "ifacer.A",
@@ -93,7 +96,7 @@ def request_new_did(person) do
 
 	with {:ok, did} <-
 		Zenflows.Restroom.exec("pubkeys-request-signed",
-			Map.merge(@did_header,
+			Map.merge(did_header,
 				Map.merge(did_request, keyring()))),
 		{:ok, did_signed} <- exec("pubkeys-accept.chain", did)
 	do

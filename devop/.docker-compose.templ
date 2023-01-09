@@ -36,8 +36,7 @@ services:
       DB_PASS: &db_pass @DB_PASS
       # DB_PORT: 5432
 
-      ROOM_HOST: zvmlet
-      ROOM_PORT: &room_port 3000
+      ROOM_URI: http://zvmlet:3000
       ROOM_SALT: @ROOM_SALT
 
       GQL_AUTH_CALLS: "true"
@@ -64,6 +63,6 @@ services:
       context: ../
       dockerfile: zencode/Dockerfile
     environment:
-      HTTP_PORT: *room_port
+      HTTP_PORT: 3000
     volumes:
       - ../zencode/src:/app/contracts:ro

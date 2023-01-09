@@ -115,25 +115,25 @@ def claim(_repo, %{person: person}) do
 	end
 end
 
-# Return the hostname of restroom from the configs.
-@spec host() :: String.t()
-defp host() do
-	Keyword.fetch!(conf(), :did_host)
-end
-
-# Return the port of restroom from the configs.
-@spec port() :: non_neg_integer()
-defp port() do
-	Keyword.fetch!(conf(), :did_port)
-end
-
-# http/https.
+# Return the scheme of did from the configs.
 @spec scheme() :: :http | :https
 defp scheme() do
-	Keyword.fetch!(conf(), :did_scheme)
+	Keyword.fetch!(conf(), :did_uri).scheme
 end
 
-# Keyring (private keys) for the server
+# Return the hostname of did from the configs.
+@spec host() :: String.t()
+defp host() do
+	Keyword.fetch!(conf(), :did_uri).host
+end
+
+# Return the port of did from the configs.
+@spec port() :: non_neg_integer()
+defp port() do
+	Keyword.fetch!(conf(), :did_uri).port
+end
+
+# Return the private keyring of the server from the configs.
 @spec keyring() :: nil | map()
 defp keyring() do
 	Keyword.fetch!(conf(), :did_keyring)

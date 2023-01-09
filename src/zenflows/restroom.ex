@@ -24,7 +24,7 @@ def child_spec(_) do
 		Supervisor.child_spec(
 			{Zenflows.HTTPC,
 				name: __MODULE__,
-				scheme: :http,
+				scheme: scheme(),
 				host: host(),
 				port: port(),
 			},
@@ -113,16 +113,22 @@ defp salt() do
 	Keyword.fetch!(conf(), :room_salt)
 end
 
+# Return the scheme of restroom from the configs.
+@spec scheme() :: :http | :https
+defp scheme() do
+	Keyword.fetch!(conf(), :room_uri).scheme
+end
+
 # Return the hostname of restroom from the configs.
 @spec host() :: String.t()
 defp host() do
-	Keyword.fetch!(conf(), :room_host)
+	Keyword.fetch!(conf(), :room_uri).host
 end
 
 # Return the port of restroom from the configs.
 @spec port() :: non_neg_integer()
 defp port() do
-	Keyword.fetch!(conf(), :room_port)
+	Keyword.fetch!(conf(), :room_uri).port
 end
 
 # Return the application configurations of this module.

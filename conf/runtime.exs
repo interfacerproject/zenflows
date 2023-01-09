@@ -27,6 +27,15 @@ get_env_int = fn varname, int ->
 	end
 end
 
+get_env_url = fn varname, default ->
+	with {:ok, %{scheme: scheme, host: host, port: port}} when not is_nil(host) and scheme in ["http", "https"]
+				  <- URI.new(get_env(varname, default)) do
+		%{scheme: :"#{scheme}", host: host, port: port}
+	else
+		err -> raise err
+	end
+end
+
 #
 # database
 #
@@ -68,18 +77,18 @@ config :zenflows, Zenflows.DB.Repo, db_conf
 #
 # restroom
 #
+room_uri = get_env_url.("ROOM_URI", "http://localhost")
 config :zenflows, Zenflows.Restroom,
-	room_host: get_env("ROOM_HOST", "localhost"),
-	room_port: get_env_int.("ROOM_PORT", 3000),
+	room_uri: room_uri,
 	room_salt: fetch_env!("ROOM_SALT")
+
 #
 # did
 #
 did_keyring = Base.decode64!(get_env("DID_KEYRING", ""))
+did_uri = get_env_url.("DID_URI", "http://did.dyne.org")
 config :zenflows, Zenflows.DID,
-	did_scheme: if(get_env("DID_SCHEME", "http") == "http", do: :http, else: :https),
-	did_host: get_env("DID_HOST", "did.dyne.org"),
-	did_port: get_env_int.("DID_PORT", 80),
+	did_uri: did_uri,
 	did_keyring: if(did_keyring == "", do: nil, else: Jason.decode!(did_keyring))
 
 #

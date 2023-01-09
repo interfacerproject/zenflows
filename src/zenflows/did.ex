@@ -63,7 +63,7 @@ end
 
 @spec request_new_did(Person.t()) :: {:ok, map()} | {:error, term()}
 def request_new_did(person) do
-	did_header = %{
+	did_request = %{
 		"proof" => %{
 			"type" => "EcdsaSecp256k1Signature2019",
 			"proofPurpose" => "assertionMethod"
@@ -78,9 +78,7 @@ def request_new_did(person) do
 				"description" => "https://schema.org/description",
 				"identifier" => "https://schema.org/identifier"
 			}
-		]
-	}
-	did_request = %{
+		],
 		"did_spec" => "ifacer",
 		"signer_did_spec" => "ifacer.A",
 		"identity" => "Ifacer user test",
@@ -96,13 +94,10 @@ def request_new_did(person) do
 
 	with {:ok, did} <-
 		Zenflows.Restroom.exec("pubkeys-request-signed",
-			Map.merge(did_header,
-				Map.merge(did_request, keyring()))),
+			Map.merge(did_request, keyring())),
 		{:ok, did_signed} <- exec("pubkeys-accept.chain", did)
 	do
 		{:ok, %{"created" => true, "did" => did_signed}}
-	else
-		err -> err
 	end
 end
 

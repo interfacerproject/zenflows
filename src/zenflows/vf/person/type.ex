@@ -40,7 +40,7 @@ who have no physical location.
 @eddsa_public_key "eddsa public key, encoded by zenroom"
 @ethereum_address "ethereum address, encoded by zenroom"
 @reflow_public_key "reflow public key, encoded by zenroom"
-@schnorr_public_key "schnorr public key, encoded by zenroom"
+@bitcoin_public_key "bitcoin public key, encoded by zenroom"
 
 @desc "A natural person."
 object :person do
@@ -79,8 +79,8 @@ object :person do
 	@desc @reflow_public_key
 	field :reflow_public_key, :string
 
-	@desc @schnorr_public_key
-	field :schnorr_public_key, :string
+	@desc @bitcoin_public_key
+	field :bitcoin_public_key, :string
 end
 
 @desc "Person eddsa public key"
@@ -120,8 +120,8 @@ input_object :person_create_params do
 	@desc @reflow_public_key
 	field :reflow_public_key, :string
 
-	@desc @schnorr_public_key
-	field :schnorr_public_key, :string
+	@desc @bitcoin_public_key
+	field :bitcoin_public_key, :string
 end
 
 input_object :person_update_params do
@@ -226,6 +226,11 @@ object :mutation_person do
 		meta only_admin?: true
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_person/2
+	end
+
+	field :claim_person, non_null(:json) do
+		arg :id, non_null(:id)
+		resolve &Resolv.claim_person/2
 	end
 end
 end

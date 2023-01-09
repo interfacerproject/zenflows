@@ -66,6 +66,10 @@ def delete_person(%{id: id}, _) do
 	end
 end
 
+def claim_person(%{id: id}, _) do
+	Domain.claim(id)
+end
+
 def images(per, _, _) do
 	per = Domain.preload(per, :images)
 	{:ok, per.images}

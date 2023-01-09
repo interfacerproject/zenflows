@@ -36,11 +36,13 @@ also see the [Required Options](#required-options).
      This option should be used if extended configuration is desired (using the
      options mention in the link above).
 
-* `ROOM_HOST`: The hostname or IP address of the Restroom instance.  Defaults to `localhost`.
-* `ROOM_PORT`: The port number of the Restroom instance. It must be an integer
-  between `0` and `65535`, inclusive.  Defaults to `3000`.
+* `ROOM_URI`: The URI of the Restroom instance.  Defaults to `http://localhost`.
 * `ROOM_SALT`: The base64-encoded salt to be used with Restroom's
   keypairoomServer call.
+
+* `DID_URI`: The URI of the DID controller instance. Defaults to `https://did.dyne.org`.
+* `DID_KEYRING`: Keyring (identity) of the server, it is not defined
+  communication with DID controller is disabled.
 
 * `ADMIN_KEY`: A 64-octect long, lowercase-base16-encoded string used for the
   authenticating calls from the administrators.  Can be generated with

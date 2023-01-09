@@ -37,7 +37,7 @@ alias Zenflows.VF.SpatialThing
 	eddsa_public_key: String.t() | nil,
 	ethereum_address: String.t() | nil,
 	reflow_public_key: String.t() | nil,
-	schnorr_public_key: String.t() | nil,
+	bitcoin_public_key: String.t() | nil,
 }
 
 schema "vf_agent" do
@@ -52,7 +52,7 @@ schema "vf_agent" do
 	field :eddsa_public_key, :string
 	field :ethereum_address, :string
 	field :reflow_public_key, :string
-	field :schnorr_public_key, :string
+	field :bitcoin_public_key, :string
 	timestamps()
 end
 
@@ -63,7 +63,7 @@ end
 	eddsa_public_key
 	ethereum_address
 	reflow_public_key
-	schnorr_public_key
+	bitcoin_public_key
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
@@ -85,7 +85,7 @@ def changeset(params) do
 	|> Validate.key(:eddsa_public_key)
 	|> Validate.key(:ethereum_address)
 	|> Validate.key(:reflow_public_key)
-	|> Validate.key(:schnorr_public_key)
+	|> Validate.key(:bitcoin_public_key)
 	|> Validate.email(:email)
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)

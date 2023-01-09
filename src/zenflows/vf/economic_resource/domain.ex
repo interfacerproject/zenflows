@@ -301,7 +301,7 @@ def trace_dpp_ee_before_recurse(%EconomicResource{} = item, visited, depth) do
 	trace_dpp_er_before(item, visited, depth)
 end
 def trace_dpp_ee_before_recurse(%EconomicEvent{} = item, visited, depth) do
-	trace_dpp_pr_before(item, MapSet.put(visited, {item.__struct__, item.id}), depth)
+	trace_dpp_ee_before(item, MapSet.put(visited, {item.__struct__, item.id}), depth)
 end
 def trace_dpp_ee_before_recurse(%Process{} = item, visited, depth) do
 	trace_dpp_pr_before(item, MapSet.put(visited, {item.__struct__, item.id}), depth)

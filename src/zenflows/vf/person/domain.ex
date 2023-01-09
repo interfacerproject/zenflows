@@ -119,6 +119,19 @@ def delete(id) do
 	end
 end
 
+@spec claim(Schema.id()) ::
+	{:ok, Person.t()} | {:error, String.t() | Changeset.t()}
+def claim(id) do
+	Multi.new()
+	|> multi_one(id)
+	|> Multi.run(:claim_id, &Zenflows.DID.claim/2)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{claim_id: value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
 @spec delete!(Schema.id()) :: Person.t()
 def delete!(id) do
 	{:ok, value} = delete(id)

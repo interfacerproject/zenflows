@@ -34,7 +34,7 @@ OR
 	AND eddsa_public_key IS NULL
 	AND ethereum_address IS NULL
 	AND reflow_public_key IS NULL
-	AND schnorr_public_key IS NULL
+	AND bitcoin_public_key IS NULL
 )
 """
 
@@ -55,7 +55,7 @@ def change() do
 		add :eddsa_public_key, :text
 		add :ethereum_address, :text
 		add :reflow_public_key, :text
-		add :schnorr_public_key, :text
+		add :bitcoin_public_key, :text
 
 		# organization
 		add :classified_as, {:array, :text}

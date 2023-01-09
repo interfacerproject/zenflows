@@ -24,7 +24,7 @@ def child_spec(_) do
 		Supervisor.child_spec(
 			{Zenflows.HTTPC,
 				name: __MODULE__,
-				scheme: :http,
+				scheme: scheme(),
 				host: host(),
 				port: port(),
 			},
@@ -77,13 +77,23 @@ end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
-defp exec(name, post_data) do
+def exec(name, post_data) do
+	request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
+		name, post_data)
+end
+
+@doc """
+Given the request function (wrapper of Zenflows.HTTPC.request), the path
+and the data to post, it makes the request and parse the result.
+"""
+@spec request(fun(), String.t(), map()) :: {:ok, map()} | {:error, term()}
+def request(request_fn, path, post_data) do
 	hdrs = [{"content-type", "application/json"}]
 
 	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
-			{:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
-				request("POST", "/api/#{name}", hdrs, post_body),
-			{:ok, data} <- Jason.decode(body) do
+	   {:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
+			request_fn.("POST", "/api/#{path}", hdrs, post_body),
+		{:ok, data} <- Jason.decode(body) do
 		if stat == 200 do
 			{:ok, data}
 		else
@@ -91,14 +101,10 @@ defp exec(name, post_data) do
 		end
 	else
 		{:ok, %{status: stat, data: body}} ->
-			{:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
+		  {:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
 
 		other -> other
 	end
-end
-
-defp request(method, path, headers, body) do
-	Zenflows.HTTPC.request(__MODULE__, method, path, headers, body)
 end
 
 # Return the salt from the configs.
@@ -107,16 +113,22 @@ defp salt() do
 	Keyword.fetch!(conf(), :room_salt)
 end
 
+# Return the scheme of restroom from the configs.
+@spec scheme() :: :http | :https
+defp scheme() do
+	Keyword.fetch!(conf(), :room_uri).scheme
+end
+
 # Return the hostname of restroom from the configs.
 @spec host() :: String.t()
 defp host() do
-	Keyword.fetch!(conf(), :room_host)
+	Keyword.fetch!(conf(), :room_uri).host
 end
 
 # Return the port of restroom from the configs.
 @spec port() :: non_neg_integer()
 defp port() do
-	Keyword.fetch!(conf(), :room_port)
+	Keyword.fetch!(conf(), :room_uri).port
 end
 
 # Return the application configurations of this module.

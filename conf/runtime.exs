@@ -86,7 +86,7 @@ config :zenflows, Zenflows.Restroom,
 # did
 #
 did_keyring = Base.decode64!(get_env("DID_KEYRING", ""))
-did_uri = get_env_url.("DID_URI", "http://did.dyne.org")
+did_uri = get_env_url.("DID_URI", "https://did.dyne.org")
 config :zenflows, Zenflows.DID,
 	did_uri: did_uri,
 	did_keyring: if(did_keyring == "", do: nil, else: Jason.decode!(did_keyring))

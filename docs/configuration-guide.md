@@ -40,7 +40,7 @@ also see the [Required Options](#required-options).
 * `ROOM_SALT`: The base64-encoded salt to be used with Restroom's
   keypairoomServer call.
 
-* `DID_URI`: The URI of the DID controller instance. Defaults to `http://did.dyne.org`.
+* `DID_URI`: The URI of the DID controller instance. Defaults to `https://did.dyne.org`.
 * `DID_KEYRING`: Keyring (identity) of the server, it is not defined
   communication with DID controller is disabled.
 

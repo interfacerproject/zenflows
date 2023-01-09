@@ -40,7 +40,7 @@ defp exec(name, post_data) do
 		"/v1/sandbox/#{name}", post_data)
 end
 
-@spec get_did(Person.t()) :: String.t()
+@spec did_id(Person.t()) :: String.t()
 defp did_id(person) do
 	"did:dyne:ifacer:#{person.eddsa_public_key}"
 end
@@ -49,15 +49,13 @@ end
 def get_did(person) do
 	with {:ok, %{status: stat, data: body}} when stat == 200 <-
 			Zenflows.HTTPC.request(__MODULE__, "GET",
-				"/dids/#{did_id(person)}"),
-		{:ok, data} <- Jason.decode(body) do
-		{:ok, %{"created" => false, "did" => data}}
+				"/dids/#{did_id(person)}") do
+		case Jason.decode(body) do
+			{:ok, data} -> {:ok, %{"created" => false, "did" => data}}
+			{:error, err} -> {:error, err}
+		end
 	else
-		err ->
-			case err do
-				{:ok, _} -> {:error, "DID not found"}
-				{:error, err} -> {:error, err}
-			end
+		_err -> {:error, "DID not found"}
 	end
 end
 

@@ -88,23 +88,23 @@ and the data to post, it makes the request and parse the result.
 """
 @spec request(fun(), String.t(), map()) :: {:ok, map()} | {:error, term()}
 def request(request_fn, path, post_data) do
-  hdrs = [{"content-type", "application/json"}]
+	hdrs = [{"content-type", "application/json"}]
 
-  with {:ok, post_body} <- Jason.encode(%{data: post_data}),
-      {:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
-        request_fn.("POST", "/api/#{path}", hdrs, post_body),
-      {:ok, data} <- Jason.decode(body) do
-    if stat == 200 do
-      {:ok, data}
-    else
-      {:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
-    end
-  else
-    {:ok, %{status: stat, data: body}} ->
-      {:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
+	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
+	   {:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
+			request_fn.("POST", "/api/#{path}", hdrs, post_body),
+		{:ok, data} <- Jason.decode(body) do
+		if stat == 200 do
+			{:ok, data}
+		else
+			{:error, data |> Map.fetch!("zenroom_errors") |> Map.fetch!("logs")}
+		end
+	else
+		{:ok, %{status: stat, data: body}} ->
+		  {:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
 
-    other -> other
-  end
+		other -> other
+	end
 end
 
 # Return the salt from the configs.

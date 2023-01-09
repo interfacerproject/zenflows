@@ -36,7 +36,7 @@ also see the [Required Options](#required-options).
      This option should be used if extended configuration is desired (using the
      options mention in the link above).
 
-* `ROOM_URI`: The URI of the Restroom instance.  Defaults to `http://localhost`.
+* `ROOM_URI`: The URI of the Restroom instance.  Defaults to `http://localhost:3000`.
 * `ROOM_SALT`: The base64-encoded salt to be used with Restroom's
   keypairoomServer call.
 

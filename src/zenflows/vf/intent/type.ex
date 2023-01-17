@@ -120,7 +120,7 @@ object :intent do
 		resolve: &Resolv.resource_inventoried_as/3
 
 	@desc @resource_conforms_to
-	field :resource_conforms_to, :economic_resource,
+	field :resource_conforms_to, :resource_specification,
 		resolve: &Resolv.resource_conforms_to/3
 
 	@desc @resource_classified_as

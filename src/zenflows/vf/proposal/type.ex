@@ -30,7 +30,7 @@ imply uniqueness.
 @has_beginning "The beginning time of proposal publication."
 @has_end "The end time of proposal publication."
 @unit_based """
-This proposal contains unit based quantities, which can be multipied to
+This proposal contains unit based quantities, which can be multiplied to
 create commitments; commonly seen in a price list or e-commerce.
 """
 @created "The date and time the proposal was created."

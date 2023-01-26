@@ -19,12 +19,7 @@ version: "3.8"
 services:
   srv:
     container_name: srv
-    image: zenflows:latest
-    build:
-      context: ../
-      dockerfile: Dockerfile
-      args:
-        MIX_ENV: prod
+    image: ghcr.io/interfacerproject/zenflows:master
     ports:
       - 8000:8000
     environment:
@@ -58,10 +53,7 @@ services:
       - /var/lib/postgresql/data
   zvmlet:
     container_name: zvmlet
-    image: zvmlet:latest
-    build:
-      context: ../
-      dockerfile: zencode/Dockerfile
+    image: ghcr.io/interfacerproject/zenflows-crypto:master
     environment:
       HTTP_PORT: 3000
     volumes:

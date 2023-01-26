@@ -22,7 +22,7 @@ services:
     image: zenflows:latest
     build:
       context: ../
-      dockerfile: devop/Dockerfile
+      dockerfile: Dockerfile
       args:
         MIX_ENV: prod
     ports:
@@ -58,10 +58,7 @@ services:
       - /var/lib/postgresql/data
   zvmlet:
     container_name: zvmlet
-    image: zvmlet:latest
-    build:
-      context: ../
-      dockerfile: zencode/Dockerfile
+    image: ghcr.io/interfacerproject/zenflows-crypto:master
     environment:
       HTTP_PORT: 3000
     volumes:

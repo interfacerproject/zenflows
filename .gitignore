@@ -95,10 +95,10 @@
 !/docs/*.jpg
 
 # devops stuff
+!/Dockerfile
 !/.dockerignore
 !/devop/
 /devop/*
-!/devop/Dockerfile
 !/devop/.docker-compose.templ
 
 # github stuff

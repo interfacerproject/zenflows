@@ -95,12 +95,11 @@
 !/docs/*.jpg
 
 # devops stuff
-!Dockerfile
+!/Dockerfile
 !/.dockerignore
 !/devop/
 /devop/*
 !/devop/.docker-compose.templ
-!/devop/.docker-compose-ghcr.templ
 
 # github stuff
 !/.github/

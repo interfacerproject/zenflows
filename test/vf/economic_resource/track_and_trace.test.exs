@@ -256,28 +256,28 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt14.id
 	assert evt14.previous_event_id == evt13.id
 
-	evts = Domain.previous(res)
-	left = Enum.map(evts, & &1.id)
-	right = Enum.map([evt0, evt1, evt2, evt3, evt8, evt10], & &1.id)
+	#evts = Domain.previous(res)
+	#left = Enum.map(evts, & &1.id)
+	#right = Enum.map([evt0, evt1, evt2, evt3, evt8, evt10], & &1.id)
 	#assert left == right
 end
 
-defp assert_trace(left, right) do
-	if length(left) != length(right), do: throw "lengths must be the same"
-	Enum.zip(left, right)
-	|> Enum.with_index(fn {l, r}, ind ->
-		if l.__struct__ != r.__struct__ and l.id != r.id,
-			do: flunk("""
-			At index #{ind}:
-
-			#{inspect(l, pretty: true)}
-
-			DOES NOT MATCH
-
-			#{inspect(r, pretty: true)}
-			""")
-	end)
-end
+#defp assert_trace(left, right) do
+#	if length(left) != length(right), do: throw "lengths must be the same"
+#	Enum.zip(left, right)
+#	|> Enum.with_index(fn {l, r}, ind ->
+#		if l.__struct__ != r.__struct__ and l.id != r.id,
+#			do: flunk("""
+#			At index #{ind}:
+#
+#			#{inspect(l, pretty: true)}
+#
+#			DOES NOT MATCH
+#
+#			#{inspect(r, pretty: true)}
+#			""")
+#	end)
+#end
 
 test "trace/2" do
 	spec_cotton = ResourceSpecification.Domain.create!(%{name: "cotton"})
@@ -329,7 +329,7 @@ test "trace/2" do
 	res_cotton = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create gowns"})
-	evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(%{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -359,7 +359,7 @@ test "trace/2" do
 		name: "cleaning the gowns",
 		based_on_id: proc_spec_clean.id,
 	})
-	evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(%{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -371,7 +371,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(%{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -383,7 +383,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(%{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -396,7 +396,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	evt_transfer = EconomicEvent.Domain.create!(%{
+	_evt_transfer = EconomicEvent.Domain.create!(%{
 		action_id: "transferCustody",
 		provider_id: agent_alice.id,
 		receiver_id: agent_bob.id,
@@ -413,7 +413,7 @@ test "trace/2" do
 		name: "doing the surgery",
 		based_on_id: proc_spec_surgery.id,
 	})
-	evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(%{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -425,7 +425,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(%{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -437,7 +437,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_work = EconomicEvent.Domain.create!(%{
+	_evt_work = EconomicEvent.Domain.create!(%{
 		action_id: "work",
 		input_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -450,7 +450,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	evt_transfer = EconomicEvent.Domain.create!(%{
+	_evt_transfer = EconomicEvent.Domain.create!(%{
 		action_id: "transferCustody",
 		provider_id: agent_bob.id,
 		receiver_id: agent_alice.id,
@@ -467,7 +467,7 @@ test "trace/2" do
 		name: "cleaning the gowns again",
 		based_on_id: proc_spec_clean.id,
 	})
-	evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(%{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -479,7 +479,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(%{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -491,7 +491,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(%{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -531,7 +531,7 @@ test "trace/2" do
 	res_transferred_cotton = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create shirt design"})
-	evt_work = EconomicEvent.Domain.create!(%{
+	_evt_work = EconomicEvent.Domain.create!(%{
 		action_id: "work",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -558,7 +558,7 @@ test "trace/2" do
 	res_shirt_design = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create shirt"})
-	evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(%{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -570,7 +570,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_cite = EconomicEvent.Domain.create!(%{
+	_evt_cite = EconomicEvent.Domain.create!(%{
 		action_id: "cite",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -582,7 +582,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_use = EconomicEvent.Domain.create!(%{
+	_evt_use = EconomicEvent.Domain.create!(%{
 		action_id: "use",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -612,7 +612,7 @@ test "trace/2" do
 	}, %{name: "shirt"})
 	res_shirt = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
-	evt_lower = EconomicEvent.Domain.create!(%{
+	_evt_lower = EconomicEvent.Domain.create!(%{
 		action_id: "lower",
 		provider_id: agent_carol.id,
 		receiver_id: agent_carol.id,
@@ -638,7 +638,7 @@ test "trace/2" do
 	res_moved_shirt = EconomicResource.Domain.one!(evt_move.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "transport shirt"})
-	evt_pickup = EconomicEvent.Domain.create!(%{
+	_evt_pickup = EconomicEvent.Domain.create!(%{
 		action_id: "pickup",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -662,7 +662,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_deliver_service = EconomicEvent.Domain.create!(%{
+	_evt_deliver_service = EconomicEvent.Domain.create!(%{
 		action_id: "deliverService",
 		output_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -689,7 +689,7 @@ test "trace/2" do
 	res_transferred_shirt = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "clean gown and shirt", based_on_id: proc_spec_clean.id})
-	evt_accept_gown = EconomicEvent.Domain.create!(%{
+	_evt_accept_gown = EconomicEvent.Domain.create!(%{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -701,7 +701,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_accept_shirt = EconomicEvent.Domain.create!(%{
+	_evt_accept_shirt = EconomicEvent.Domain.create!(%{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -713,7 +713,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_modify_gown = EconomicEvent.Domain.create!(%{
+	_evt_modify_gown = EconomicEvent.Domain.create!(%{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -725,7 +725,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_modify_shirt = EconomicEvent.Domain.create!(%{
+	_evt_modify_shirt = EconomicEvent.Domain.create!(%{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,

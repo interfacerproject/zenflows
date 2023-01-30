@@ -28,21 +28,23 @@ alias Zenflows.DB.{Schema, Validate}
 alias Zenflows.VF.{
 	EconomicEvent,
 	Plan,
+	ProcessGroup,
 	ProcessSpecification,
 	Scenario,
 }
 
 @type t() :: %__MODULE__{
 	name: String.t(),
-	note: String.t() | nil,
-	has_beginning: DateTime.t() | nil,
-	has_end: DateTime.t() | nil,
+	note: nil | String.t(),
+	has_beginning: nil | DateTime.t(),
+	has_end: nil | DateTime.t(),
 	finished: boolean(),
 	deletable: boolean(),
 	classified_as: [String.t()],
-	based_on: ProcessSpecification.t() | nil,
-	planned_within: Plan.t() | nil,
-	nested_in: Scenario.t() | nil,
+	based_on: nil | ProcessSpecification.t(),
+	planned_within: nil | Plan.t(),
+	nested_in: nil | Scenario.t(),
+	grouped_in: nil | ProcessGroup.t(),
 }
 
 @derive {Jason.Encoder, only: ~w[
@@ -51,7 +53,7 @@ alias Zenflows.VF.{
 	has_beginning has_end
 	finished deletable
 	classified_as
-	based_on_id planned_within_id
+	based_on_id planned_within_id grouped_in_id
 ]a}
 schema "vf_process" do
 	field :name, :string
@@ -65,6 +67,7 @@ schema "vf_process" do
 	# belongs_to :in_scope_of
 	belongs_to :planned_within, Plan
 	belongs_to :nested_in, Scenario
+	belongs_to :grouped_in, ProcessGroup
 	timestamps()
 
 	has_many :inputs, EconomicEvent, foreign_key: :input_of_id
@@ -75,7 +78,7 @@ end
 @cast @reqr ++ ~w[
 	has_beginning has_end
 	finished note classified_as
-	based_on_id planned_within_id nested_in_id
+	based_on_id planned_within_id nested_in_id grouped_in_id
 ]a # in_scope_of_id
 
 @doc false
@@ -91,5 +94,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	#|> Changeset.assoc_constraint(:in_scope_of)
 	|> Changeset.assoc_constraint(:planned_within)
 	|> Changeset.assoc_constraint(:nested_in)
+	|> Changeset.assoc_constraint(:grouped_in)
 end
 end

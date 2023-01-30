@@ -18,12 +18,15 @@
 defmodule Zenflows.VF.Process.Domain do
 @moduledoc "Domain logic of Processes."
 
-alias Ecto.{Changeset, Multi}
+import Ecto.Query
+
+alias Ecto.Changeset
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	EconomicEvent,
 	Process,
 	Process.Query,
+	ProcessGroup,
 }
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -69,14 +72,20 @@ end
 
 @spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}
 def create(params) do
-	key = multi_key()
-	Multi.new()
-	|> multi_insert(params)
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
-		{:error, _, reason, _} -> {:error, reason}
-	end
+	Repo.multi(fn ->
+		case Process.changeset(params) do
+			%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
+				if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
+					Changeset.add_error(cset, :grouped_in_id,
+						"this ProcessGroup must not group other ProcessGroups")
+				else
+					cset
+				end
+			cset ->
+				cset
+		end
+		|> Repo.insert()
+	end)
 end
 
 @spec create!(Schema.params()) :: Process.t()
@@ -88,32 +97,37 @@ end
 @spec update(Schema.id(), Schema.params())
 	:: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
-	key = multi_key()
-	Multi.new()
-	|> multi_update(id, params)
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
-		{:error, _, reason, _} -> {:error, reason}
-	end
+	Repo.multi(fn ->
+		with {:ok, proc} <- one(id) do
+			case Process.changeset(proc, params) do
+				%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
+					if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
+						Changeset.add_error(cset, :grouped_in_id,
+							"this ProcessGroup must not group other ProcessGroups")
+					else
+						cset
+					end
+				cset ->
+					cset
+			end
+			|> Repo.update()
+		end
+	end)
 end
 
 @spec update!(Schema.id(), Schema.params()) :: Process.t()
 def update!(id, params) do
-	{:ok, value} = update(id, params)
+	{:ok, value} = __MODULE__.update(id, params)
 	value
 end
 
 @spec delete(Schema.id()) :: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
-	key = multi_key()
-	Multi.new()
-	|> multi_delete(id)
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
-		{:error, _, reason, _} -> {:error, reason}
-	end
+	Repo.multi(fn ->
+		with {:ok, proc} <- one(id) do
+			Repo.delete(proc)
+		end
+	end)
 end
 
 @spec delete!(Schema.id()) :: Process.t()
@@ -122,37 +136,9 @@ def delete!(id) do
 	value
 end
 
-@spec preload(Process.t(), :based_on | :planned_within | :nested_in)
+@spec preload(Process.t(), :based_on | :planned_within | :nested_in | :grouped_in)
 	:: Process.t()
-def preload(proc, x) when x in ~w[based_on planned_within nested_in]a do
+def preload(proc, x) when x in ~w[based_on planned_within nested_in grouped_in]a do
 	Repo.preload(proc, x)
-end
-
-@spec multi_key() :: atom()
-def multi_key(), do: :process
-
-@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_one(m, key \\ multi_key(), id) do
-	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
-end
-
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, Process.changeset(params))
-end
-
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.update(key,
-		&Process.changeset(Map.fetch!(&1, "#{key}.one"), params))
-end
-
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

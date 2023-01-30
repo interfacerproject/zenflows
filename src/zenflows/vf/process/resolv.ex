@@ -70,4 +70,9 @@ end
 def previous(proc, _, _) do
 	{:ok, Domain.previous(proc)}
 end
+
+def grouped_in(proc, _, _) do
+	proc = Domain.preload(proc, :grouped_in)
+	{:ok, proc.grouped_in}
+end
 end

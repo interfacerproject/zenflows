@@ -21,4 +21,24 @@ defmodule Zenflows.DB.Repo do
 use Ecto.Repo,
 	otp_app: :zenflows,
 	adapter: Ecto.Adapters.Postgres
+
+@spec multi((-> {:ok | :error, term()})
+		| (Ecto.Repo.t() -> {:ok | :error, term()}))
+	:: {:ok | :error, term()}
+def multi(fun) when is_function(fun, 0) do
+	transaction(fn ->
+		case fun.() do
+			{:ok, v} -> v
+			{:error, v} -> rollback(v)
+		end
+	end)
+end
+def multi(fun) when is_function(fun, 1) do
+	transaction(fn repo ->
+		case fun.(repo) do
+			{:ok, v} -> v
+			{:error, v} -> rollback(v)
+		end
+	end)
+end
 end

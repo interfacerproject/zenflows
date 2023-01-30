@@ -20,11 +20,12 @@ defmodule Zenflows.DID do
 A module to interact with the did controller instances over HTTPS.
 """
 
+alias Zenflows.HTTPC
 alias Zenflows.VF.Person
 
 def child_spec(_) do
 		Supervisor.child_spec(
-			{Zenflows.HTTPC,
+			{HTTPC,
 				name: __MODULE__,
 				scheme: scheme(),
 				host: host(),
@@ -36,7 +37,7 @@ end
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
 defp exec(name, post_data) do
-	Zenflows.Restroom.request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
+	Zenflows.Restroom.request(&HTTPC.request(__MODULE__, &1, &2, &3, &4),
 		"/v1/sandbox/#{name}", post_data)
 end
 
@@ -47,15 +48,14 @@ end
 
 @spec get_did(Person.t()) :: {:ok, map()} | {:error, term()}
 def get_did(person) do
-	with {:ok, %{status: stat, data: body}} when stat == 200 <-
-			Zenflows.HTTPC.request(__MODULE__, "GET",
-				"/dids/#{did_id(person)}") do
-		case Jason.decode(body) do
-			{:ok, data} -> {:ok, %{"created" => false, "did" => data}}
-			{:error, err} -> {:error, err}
-		end
-	else
-		_err -> {:error, "DID not found"}
+	case HTTPC.request(__MODULE__, "GET", "/dids/#{did_id(person)}") do
+		{:ok, %{status: 200, data: body}} ->
+			case Jason.decode(body) do
+				{:ok, data} -> {:ok, %{"created" => false, "did" => data}}
+				{:error, err} -> {:error, err}
+			end
+		_ ->
+			{:error, "DID not found"}
 	end
 end
 

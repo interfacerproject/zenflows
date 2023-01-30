@@ -195,9 +195,14 @@ object :economic_event do
 	field :triggered_by, :economic_event,
 		resolve: &Resolv.triggered_by/3
 
+	@desc """
+	Used to implement the trace algorithm.  It is described in
+	the algorithms section of Valueflow's website.
+	"""
 	field :previous_event, :economic_event,
 		resolve: &Resolv.previous_event/3
 
+	@desc "Used to implement the trace algorithm."
 	field :previous, :production_flow_item,
 		resolve: &Resolv.previous/3
 end

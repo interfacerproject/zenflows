@@ -413,7 +413,7 @@ defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 					provider_id
 					resource_quantity_has_numerical_value resource_quantity_has_unit_id
 				]a))
-			|> repo.one!()
+			|> repo.one()
 
 		not_single_ref? = fn ->
 			where(EconomicEvent, [e],
@@ -430,6 +430,8 @@ defp handle_insert(key, %{action_id: "dropoff"} = evt, _) do
 		end
 
 		cond do
+			pair_evt == nil ->
+				{:error, "there must be a paired pickup event"}
 			evt.provider_id != pair_evt.provider_id ->
 				{:error, "you don't have custody over this resource"}
 			evt.resource_quantity_has_unit_id != pair_evt.resource_quantity_has_unit_id ->

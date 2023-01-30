@@ -352,12 +352,14 @@ end
 @spec field_fetch(fetch_method(), Changeset.t(), atom()) :: {:ok, term()} | :error
 defp field_fetch(:change, cset, field) do
 	case  Changeset.fetch_field(cset, field) do
+		{_, nil} -> :error
 		{:changes, v} -> {:ok, v}
 		_ -> :error
 	end
 end
 defp field_fetch(:data, cset, field) do
 	case  Changeset.fetch_field(cset, field) do
+		{_, nil} -> :error
 		{:data, v} -> {:ok, v}
 		_ -> :error
 	end
@@ -365,6 +367,7 @@ end
 defp field_fetch(:both, cset, field) do
 	case Changeset.fetch_field(cset, field) do
 		:error -> :error
+		{_, nil} -> :error
 		{_, v} -> {:ok, v}
 	end
 end

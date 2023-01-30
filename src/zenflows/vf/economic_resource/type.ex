@@ -178,6 +178,7 @@ object :economic_resource do
 	@desc @metadata
 	field :metadata, :json
 
+	@desc "Used to implement the trace algorithm."
 	field :previous, list_of(non_null(:economic_event)),
 		resolve: &Resolv.previous/3
 

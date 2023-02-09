@@ -5,6 +5,8 @@
 !/.gitignore
 !/.gitmodules
 
+!/.reuse
+
 # license and readme
 !/LICENSE
 !/README.md

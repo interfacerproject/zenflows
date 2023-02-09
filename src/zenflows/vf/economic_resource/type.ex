@@ -266,6 +266,8 @@ input_object :economic_resource_filter_params do
 	field :or_name, :string
 	field :note, :string
 	field :or_note, :string
+	field :repo, :string
+	field :or_repo, :string
 end
 
 object :query_economic_resource do

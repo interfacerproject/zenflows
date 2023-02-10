@@ -16,69 +16,61 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.VF.Process.Domain do
-@moduledoc "Domain logic of Processes."
+defmodule Zenflows.VF.ProcessGroup.Domain do
+@moduledoc "Domain logic of ProcessGroups."
 
 import Ecto.Query
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Page, Repo, Schema}
-alias Zenflows.VF.{
-	EconomicEvent,
-	Process,
-	Process.Query,
-	ProcessGroup,
-}
+alias Zenflows.VF.{Process, ProcessGroup}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
-	:: {:ok, Process.t()} | {:error, String.t()}
+	:: {:ok, ProcessGroup.t()} | {:error, String.t()}
 def one(repo \\ Repo, _)
 def one(repo, id) when is_binary(id), do: one(repo, id: id)
 def one(repo, clauses) do
-	case repo.get_by(Process, clauses) do
+	case repo.get_by(ProcessGroup, clauses) do
 		nil -> {:error, "not found"}
 		found -> {:ok, found}
 	end
 end
 
-@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: Process.t()
+@spec one!(Ecto.Repo.t(), Schema.id() | map() | Keyword.t()) :: ProcessGroup.t()
 def one!(repo \\ Repo, id_or_clauses) do
 	{:ok, value} = one(repo, id_or_clauses)
 	value
 end
 
-@spec all(Page.t()) :: {:ok, [Process.t()]} | {:error, Changeset.t()}
+@spec all(Page.t()) :: {:ok, [ProcessGroup.t()]} | {:error, Changeset.t()}
 def all(page \\ Page.new()) do
-	{:ok, Page.all(Process, page)}
+	{:ok, Page.all(ProcessGroup, page)}
 end
 
-@spec all!(Page.t()) :: [Process.t()]
+@spec all!(Page.t()) :: [ProcessGroup.t()]
 def all!(page \\ Page.new()) do
 	{:ok, value} = all(page)
 	value
 end
 
-@spec previous(Process.t() | Schema.id()) :: [EconomicEvent.t()]
-def previous(_, _ \\ Page.new())
-def previous(%Process{id: id}, page), do: previous(id, page)
-def previous(id, page) do
-	Query.previous(id)
-	|> Page.all(page)
-	|> Enum.sort(&(
-		&1.previous_event_id == nil
-		or &1.id == &2.previous_event_id
-		or &1.id <= &2.id))
-	|> Enum.reverse()
+@spec groups(Schema.id(), Page.t()) ::
+	{:ok, [Process.t()] | [ProcessGroup.t()]} | {:error, Changeset.t()}
+def groups(id, page \\ Page.new()) do
+	Repo.multi(fn ->
+		{:ok, with [] <- where(Process, grouped_in_id: ^id) |> Page.all(page) do
+			where(ProcessGroup, grouped_in_id: ^id) |> Page.all(page)
+		end}
+	end)
 end
 
-@spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}
+@spec create(Schema.params()) :: {:ok, ProcessGroup.t()} | {:error, Changeset.t()}
 def create(params) do
 	Repo.multi(fn ->
-		case Process.changeset(params) do
+		case ProcessGroup.changeset(params) do
 			%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
-				if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
+				if where(Process, grouped_in_id: ^gid) |> Repo.exists?() do
 					Changeset.add_error(cset, :grouped_in_id,
-						"this ProcessGroup must not group other ProcessGroups")
+						"this ProcessGroup must not group Processes")
 				else
 					cset
 				end
@@ -89,22 +81,22 @@ def create(params) do
 	end)
 end
 
-@spec create!(Schema.params()) :: Process.t()
+@spec create!(Schema.params()) :: ProcessGroup.t()
 def create!(params) do
 	{:ok, value} = create(params)
 	value
 end
 
 @spec update(Schema.id(), Schema.params())
-	:: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
+	:: {:ok, ProcessGroup.t()} | {:error, String.t() | Changeset.t()}
 def update(id, params) do
 	Repo.multi(fn ->
-		with {:ok, proc} <- one(id) do
-			case Process.changeset(proc, params) do
+		with {:ok, procgrp} <- one(id) do
+			case ProcessGroup.changeset(procgrp, params) do
 				%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
-					if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
+					if where(Process, grouped_in_id: ^gid) |> Repo.exists?() do
 						Changeset.add_error(cset, :grouped_in_id,
-							"this ProcessGroup must not group other ProcessGroups")
+							"this ProcessGroup must not group Processes")
 					else
 						cset
 					end
@@ -116,30 +108,29 @@ def update(id, params) do
 	end)
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Process.t()
+@spec update!(Schema.id(), Schema.params()) :: ProcessGroup.t()
 def update!(id, params) do
 	{:ok, value} = __MODULE__.update(id, params)
 	value
 end
 
-@spec delete(Schema.id()) :: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
+@spec delete(Schema.id()) :: {:ok, ProcessGroup.t()} | {:error, String.t() | Changeset.t()}
 def delete(id) do
 	Repo.multi(fn ->
-		with {:ok, proc} <- one(id) do
-			Repo.delete(proc)
+		with {:ok, procgrp} <- one(id) do
+			Repo.delete(procgrp)
 		end
 	end)
 end
 
-@spec delete!(Schema.id()) :: Process.t()
+@spec delete!(Schema.id()) :: ProcessGroup.t()
 def delete!(id) do
 	{:ok, value} = delete(id)
 	value
 end
 
-@spec preload(Process.t(), :based_on | :planned_within | :nested_in | :grouped_in)
-	:: Process.t()
-def preload(proc, x) when x in ~w[based_on planned_within nested_in grouped_in]a do
-	Repo.preload(proc, x)
+@spec preload(ProcessGroup.t(), :grouped_in) :: ProcessGroup.t()
+def preload(proc, :grouped_in) do
+	Repo.preload(proc, :grouped_in)
 end
 end

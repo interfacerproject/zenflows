@@ -16,64 +16,52 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Zenflows.VF.Process.Resolv do
+defmodule Zenflows.VF.ProcessGroup.Resolv do
 @moduledoc false
 
 use Absinthe.Schema.Notation
 
 alias Zenflows.GQL.Connection
-alias Zenflows.VF.Process.Domain
+alias Zenflows.VF.ProcessGroup.Domain
 
-def process(params, _) do
+def process_group(params, _) do
 	Domain.one(params)
 end
 
-def processes(params, _) do
+def process_groups(params, _) do
 	with {:ok, page} <- Connection.parse(params),
 			{:ok, schemas} <- Domain.all(page) do
 		{:ok, Connection.from_list(schemas, page)}
 	end
 end
 
-def create_process(%{process: params}, _) do
-	with {:ok, process} <- Domain.create(params) do
-		{:ok, %{process: process}}
+def create_process_group(%{process_group: params}, _) do
+	with {:ok, procgrp} <- Domain.create(params) do
+		{:ok, %{process_group: procgrp}}
 	end
 end
 
-def update_process(%{process: %{id: id} = params}, _) do
-	with {:ok, proc} <- Domain.update(id, params) do
-		{:ok, %{process: proc}}
+def update_process_group(%{process_group: %{id: id} = params}, _) do
+	with {:ok, procgrp} <- Domain.update(id, params) do
+		{:ok, %{process_group: procgrp}}
 	end
 end
 
-def delete_process(%{id: id}, _) do
+def delete_process_group(%{id: id}, _) do
 	with {:ok, _} <- Domain.delete(id) do
 		{:ok, true}
 	end
 end
 
-def based_on(proc, _, _) do
-	proc = Domain.preload(proc, :based_on)
-	{:ok, proc.based_on}
+def groups(procgrp, params, _) do
+	with {:ok, page} <- Connection.parse(params),
+			{:ok, schemas} <- Domain.groups(procgrp.id, page) do
+		{:ok, Connection.from_list(schemas, page)}
+	end
 end
 
-def planned_within(proc, _, _) do
-	proc = Domain.preload(proc, :planned_within)
-	{:ok, proc.planned_within}
-end
-
-def nested_in(proc, _, _) do
-	proc = Domain.preload(proc, :nested_in)
-	{:ok, proc.nested_in}
-end
-
-def previous(proc, _, _) do
-	{:ok, Domain.previous(proc)}
-end
-
-def grouped_in(proc, _, _) do
-	proc = Domain.preload(proc, :grouped_in)
-	{:ok, proc.grouped_in}
+def grouped_in(procgrp, _, _) do
+	procgrp = Domain.preload(procgrp, :grouped_in)
+	{:ok, procgrp.grouped_in}
 end
 end

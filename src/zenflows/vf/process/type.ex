@@ -51,6 +51,13 @@ The process with its inputs and outputs is part of the plan.
 The process with its inputs and outputs is part of the scenario.
 """
 @nested_in_id "(`Scenario`) #{@nested_in}"
+@grouped_in """
+A ProcessGroup, to which this Process belongs.
+
+It also implies that the ProcessGroup to which this Process belongs
+holds nothing but only Processes.
+"""
+@grouped_in_id "(`ProcessGroup`) #{@grouped_in}"
 
 @desc """
 A logical collection of processes that constitute a body of processned work
@@ -93,6 +100,9 @@ object :process do
 
 	field :previous, list_of(non_null(:economic_event)),
 		resolve: &Resolv.previous/3
+
+	@desc @grouped_in
+	field :grouped_in, :process_group, resolve: &Resolv.grouped_in/3
 end
 
 input_object :process_create_params do
@@ -122,6 +132,9 @@ input_object :process_create_params do
 
 	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
+
+	@desc @grouped_in_id
+	field :grouped_in_id, :id, name: "grouped_in"
 end
 
 input_object :process_update_params do
@@ -153,6 +166,9 @@ input_object :process_update_params do
 
 	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
+
+	@desc @grouped_in_id
+	field :grouped_in_id, :id, name: "grouped_in"
 end
 
 object :process_response do

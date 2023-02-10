@@ -54,6 +54,7 @@ import_types VF.Agreement.Type
 import_types VF.ScenarioDefinition.Type
 import_types VF.Scenario.Type
 import_types VF.Plan.Type
+import_types VF.ProcessGroup.Type
 import_types VF.Process.Type
 import_types VF.ProductBatch.Type
 import_types VF.EconomicResource.Type
@@ -101,6 +102,7 @@ query do
 	import_fields :query_scenario_definition
 	import_fields :query_scenario
 	import_fields :query_plan
+	import_fields :query_process_group
 	import_fields :query_process
 	import_fields :query_product_batch
 	import_fields :query_economic_resource
@@ -148,6 +150,7 @@ mutation do
 	import_fields :mutation_scenario
 	import_fields :mutation_plan
 	import_fields :mutation_process
+	import_fields :mutation_process_group
 	import_fields :mutation_product_batch
 	import_fields :mutation_economic_resource
 	import_fields :mutation_economic_event

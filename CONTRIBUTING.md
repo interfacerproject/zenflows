@@ -1,3 +1,23 @@
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+Zenflows is software that implements the Valueflows vocabulary.
+Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
+Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
 # Dyne.org - Contributor License Agreement
 
 This Contributor Agreement (“CA”) applies to the contribution specified in section "Terms" below that you make to any product or project managed by us (the “project”), and sets out the intellectual property rights you grant to us in the contributed materials. The term “us” shall mean Dyne.org Foundation. The term “you” shall mean the person or entity identified below. If you agree to be bound by these terms, fill in the information requested and [sign the Dyne.org CA](https://dyne.org/cla). Read this agreement carefully before signing. These terms and conditions constitute a binding legal agreement.

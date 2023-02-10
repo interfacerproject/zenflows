@@ -1,11 +1,12 @@
-# Zenflows is designed to implement the Valueflows vocabulary,
-# written and maintained by srfsh <info@dyne.org>.
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
 # Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -50,6 +51,13 @@ The process with its inputs and outputs is part of the plan.
 The process with its inputs and outputs is part of the scenario.
 """
 @nested_in_id "(`Scenario`) #{@nested_in}"
+@grouped_in """
+A ProcessGroup, to which this Process belongs.
+
+It also implies that the ProcessGroup to which this Process belongs
+holds nothing but only Processes.
+"""
+@grouped_in_id "(`ProcessGroup`) #{@grouped_in}"
 
 @desc """
 A logical collection of processes that constitute a body of processned work
@@ -92,6 +100,9 @@ object :process do
 
 	field :previous, list_of(non_null(:economic_event)),
 		resolve: &Resolv.previous/3
+
+	@desc @grouped_in
+	field :grouped_in, :process_group, resolve: &Resolv.grouped_in/3
 end
 
 input_object :process_create_params do
@@ -121,6 +132,9 @@ input_object :process_create_params do
 
 	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
+
+	@desc @grouped_in_id
+	field :grouped_in_id, :id, name: "grouped_in"
 end
 
 input_object :process_update_params do
@@ -152,6 +166,9 @@ input_object :process_update_params do
 
 	@desc @nested_in_id
 	field :nested_in_id, :id, name: "nested_in"
+
+	@desc @grouped_in_id
+	field :grouped_in_id, :id, name: "grouped_in"
 end
 
 object :process_response do

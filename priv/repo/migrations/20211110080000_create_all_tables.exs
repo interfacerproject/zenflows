@@ -1,11 +1,12 @@
-# Zenflows is designed to implement the Valueflows vocabulary,
-# written and maintained by srfsh <info@dyne.org>.
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
 # Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -24,6 +25,7 @@ def change() do
 	execute "CREATE EXTENSION citext", "DROP EXTENSION citext"
 
 	create table("zf_file")
+	create table("zf_process_group")
 
 	create table("vf_unit")
 	create table("vf_spatial_thing")

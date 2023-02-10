@@ -1,11 +1,12 @@
-# Zenflows is designed to implement the Valueflows vocabulary,
-# written and maintained by srfsh <info@dyne.org>.
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
 # Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -53,6 +54,7 @@ import_types VF.Agreement.Type
 import_types VF.ScenarioDefinition.Type
 import_types VF.Scenario.Type
 import_types VF.Plan.Type
+import_types VF.ProcessGroup.Type
 import_types VF.Process.Type
 import_types VF.ProductBatch.Type
 import_types VF.EconomicResource.Type
@@ -100,6 +102,7 @@ query do
 	import_fields :query_scenario_definition
 	import_fields :query_scenario
 	import_fields :query_plan
+	import_fields :query_process_group
 	import_fields :query_process
 	import_fields :query_product_batch
 	import_fields :query_economic_resource
@@ -147,6 +150,7 @@ mutation do
 	import_fields :mutation_scenario
 	import_fields :mutation_plan
 	import_fields :mutation_process
+	import_fields :mutation_process_group
 	import_fields :mutation_product_batch
 	import_fields :mutation_economic_resource
 	import_fields :mutation_economic_event

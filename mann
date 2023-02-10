@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Zenflows is designed to implement the Valueflows vocabulary,
 # written and maintained by srfsh <info@dyne.org>.
 # Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.

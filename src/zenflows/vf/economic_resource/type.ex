@@ -227,6 +227,9 @@ end
 input_object :economic_resource_update_params do
 	field :id, non_null(:id)
 
+	@desc @name
+	field :name, :string
+
 	@desc @note
 	field :note, :string
 

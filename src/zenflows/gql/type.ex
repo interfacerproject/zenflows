@@ -42,11 +42,24 @@ scalar :url64, name: "Url64" do
 	serialize & &1
 end
 
-@desc "A JSON document encoded as string."
+@desc "A JSON array xor object document encoded as string."
 scalar :json, name: "JSON" do
 	parse &json_parse/1
 	serialize & &1
 end
+
+@desc "A JSON object document encoded as string."
+scalar :json_object, name: "JSONObject" do
+	parse &json_obj_parse/1
+	serialize & &1
+end
+
+@desc "A JSON array document encoded as string."
+scalar :json_array, name: "JSONArray" do
+	parse &json_arr_parse/1
+	serialize & &1
+end
+
 
 @desc "Cursors for pagination"
 object :page_info do
@@ -118,15 +131,34 @@ end
 defp url64_parse(%Input.Null{}), do: {:ok, nil}
 defp url64_parse(_), do: :error
 
-@spec json_parse(Input.t()) :: {:ok, String.t() | nil} | :error
+@spec json_parse(Input.t()) :: {:ok, nil | map() | list()} | :error
 defp json_parse(%Input.String{value: v}) do
 	case Jason.decode(v) do
-		{:ok, map} -> {:ok, map}
-		{:error, _} -> :error
+		{:ok, map_or_list} when is_map(map_or_list) or is_list(map_or_list) ->
+			{:ok, map_or_list}
+		{:error, _} ->
+			:error
 	end
 end
 defp json_parse(%Input.Null{}), do: {:ok, nil}
 defp json_parse(_), do: :error
+
+@spec json_obj_parse(Input.t()) :: {:ok, nil | map()} | :error
+defp json_obj_parse(v) do
+	case json_parse(v) do
+		{:ok, map} when is_map(map) -> {:ok, map}
+		_ -> :error
+	end
+end
+
+@spec json_arr_parse(Input.t()) :: {:ok, nil | list()} | :error
+defp json_arr_parse(v) do
+	case json_parse(v) do
+		{:ok, list} when is_list(list) -> {:ok, list}
+		_ -> :error
+	end
+end
+
 
 @spec id_parse(Input.t()) :: {:ok, ID.t() | nil} | :error
 def id_parse(%Input.String{value: v}), do: ID.cast(v)

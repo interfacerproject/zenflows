@@ -39,7 +39,7 @@ end
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
 defp exec(name, post_data) do
 	Zenflows.Restroom.request(&HTTPC.request(__MODULE__, &1, &2, &3, &4),
-		"/v1/sandbox/#{name}", post_data)
+		"/v1/ifacer/#{name}", post_data)
 end
 
 @spec did_id(Person.t()) :: String.t()
@@ -78,8 +78,8 @@ def request_new_did(person) do
 				"identifier" => "https://schema.org/identifier"
 			}
 		],
-		"did_spec" => "ifacer",
-		"signer_did_spec" => "ifacer.A",
+		"did_spec" => "ifacer.test",
+		"signer_did_spec" => "ifacer.test_A",
 		"identity" => "Ifacer user test",
 		"ifacer_id" => %{"identifier" => person.id},
 		"bitcoin_public_key" => person.bitcoin_public_key,

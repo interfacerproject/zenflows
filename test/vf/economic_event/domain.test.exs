@@ -102,6 +102,7 @@ describe "`create/2` with raise:" do
 					has_numerical_value: Factory.decimal(),
 				},
 				has_point_in_time: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -120,6 +121,7 @@ describe "`create/2` with raise:" do
 			},
 			has_end: Factory.now(),
 			to_location_id: Factory.insert!(:spatial_thing).id,
+			resource_metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		res_params = %{
 			name: Factory.str("name"),
@@ -132,7 +134,6 @@ describe "`create/2` with raise:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
 			Domain.create(evt_params, res_params)
@@ -149,8 +150,8 @@ describe "`create/2` with raise:" do
 		assert res.version == res_params.version
 		assert res.licensor == res_params.licensor
 		assert res.license == res_params.license
-		assert res.metadata == res_params.metadata
 
+		assert res.metadata == evt_params.resource_metadata
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
 		assert Decimal.eq?(res.accounting_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
@@ -215,6 +216,7 @@ describe "`create/2` with produce:" do
 					has_numerical_value: Factory.decimal(),
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -234,6 +236,7 @@ describe "`create/2` with produce:" do
 			},
 			has_end: Factory.now(),
 			to_location_id: Factory.insert!(:spatial_thing).id,
+			resource_metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		res_params = %{
 			name: Factory.str("name"),
@@ -246,7 +249,6 @@ describe "`create/2` with produce:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
 			Domain.create(evt_params, res_params)
@@ -263,8 +265,8 @@ describe "`create/2` with produce:" do
 		assert res.version == res_params.version
 		assert res.licensor == res_params.licensor
 		assert res.license == res_params.license
-		assert res.metadata == res_params.metadata
 
+		assert res.metadata == evt_params.resource_metadata
 		assert res.primary_accountable_id == evt_params.receiver_id
 		assert res.custodian_id == evt_params.receiver_id
 		assert Decimal.eq?(res.accounting_quantity_has_numerical_value, evt_params.resource_quantity.has_numerical_value)
@@ -773,6 +775,7 @@ describe "`create/2` with transferCustody:" do
 					has_numerical_value: res.onhand_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		else
 			%{params: %{
@@ -786,6 +789,7 @@ describe "`create/2` with transferCustody:" do
 				},
 				to_location_id: Factory.insert!(:spatial_thing).id,
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -828,7 +832,6 @@ describe "`create/2` with transferCustody:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt} = Domain.create(params, res_params)
 		evt = Domain.preload(evt, :to_resource_inventoried_as)
@@ -850,8 +853,8 @@ describe "`create/2` with transferCustody:" do
 		assert to_res.version == res_params.version
 		assert to_res.licensor == res_params.licensor
 		assert to_res.license == res_params.license
-		assert to_res.metadata == res_params.metadata
 
+		assert to_res.metadata == params.resource_metadata
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
 		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, 0)
@@ -1040,6 +1043,7 @@ describe "`create/2` with transferAllRights:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		else
 			%{params: %{
@@ -1052,6 +1056,7 @@ describe "`create/2` with transferAllRights:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -1073,8 +1078,8 @@ describe "`create/2` with transferAllRights:" do
 				has_end: Factory.now(),
 			}
 			assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
-		evt = Domain.preload(evt, :resource_inventoried_as)
+				Domain.create(raise_params, %{name: Factory.str("name")})
+			evt = Domain.preload(evt, :resource_inventoried_as)
 			tmp_res = evt.resource_inventoried_as
 			Changeset.change(tmp_res, contained_in_id: params.resource_inventoried_as_id)
 			|> Repo.update!()
@@ -1093,7 +1098,6 @@ describe "`create/2` with transferAllRights:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
 			Domain.create(params, res_params)
@@ -1116,8 +1120,8 @@ describe "`create/2` with transferAllRights:" do
 		assert to_res.version == res_params.version
 		assert to_res.licensor == res_params.licensor
 		assert to_res.license == res_params.license
-		assert to_res.metadata == res_params.metadata
 
+		assert to_res.metadata == params.resource_metadata
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
 		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
@@ -1305,6 +1309,7 @@ describe "`create/2` with transfer:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		else
 			%{params: %{
@@ -1317,6 +1322,7 @@ describe "`create/2` with transfer:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -1358,7 +1364,6 @@ describe "`create/2` with transfer:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt}
 			= Domain.create(
@@ -1383,8 +1388,8 @@ describe "`create/2` with transfer:" do
 		assert to_res.version == res_params.version
 		assert to_res.licensor == res_params.licensor
 		assert to_res.license == res_params.license
-		assert to_res.metadata == res_params.metadata
 
+		assert to_res.metadata == params.resource_metadata
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
 		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)
@@ -1607,6 +1612,7 @@ describe "`create/2` with move:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		else
 			%{params: %{
@@ -1619,6 +1625,7 @@ describe "`create/2` with move:" do
 					has_numerical_value: res.accounting_quantity_has_numerical_value,
 				},
 				has_beginning: Factory.now(),
+				resource_metadata: %{Factory.str("key") => Factory.str("val")},
 			}}
 		end
 	end
@@ -1660,7 +1667,6 @@ describe "`create/2` with move:" do
 			version: Factory.str("version"),
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
-			metadata: %{Factory.str("key") => Factory.str("val")},
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
 			Domain.create(params, res_params)
@@ -1683,8 +1689,8 @@ describe "`create/2` with move:" do
 		assert to_res.version == res_params.version
 		assert to_res.licensor == res_params.licensor
 		assert to_res.license == res_params.license
-		assert to_res.metadata == res_params.metadata
 
+		assert to_res.metadata == params.resource_metadata
 		assert to_res.primary_accountable_id == params.receiver_id
 		assert to_res.custodian_id == params.receiver_id
 		assert Decimal.eq?(to_res.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value)

@@ -168,6 +168,7 @@ defp handle_insert(key, %{action_id: action_id} = evt, res_params)
 				|> Map.put(:onhand_quantity_has_numerical_value, evt.resource_quantity_has_numerical_value)
 				|> Map.put(:current_location_id, evt.to_location_id)
 				|> Map.put(:classified_as, evt.resource_classified_as)
+				|> Map.put(:metadata, evt.resource_metadata)
 
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.eco_res", res_params)
@@ -600,6 +601,15 @@ defp handle_insert(key, %{action_id: "modify"} = evt, _) do
 			where: r.id == e.resource_inventoried_as_id,
 			update: [set: [stage_id: p.based_on_id]])
 	end, [])
+	|> Multi.merge(fn _ ->
+		if evt.resource_metadata != nil do
+			Multi.update_all(Multi.new(), "#{key}.metadata",
+				where(EconomicResource, id: ^evt.resource_inventoried_as_id),
+				set: [metadata: evt.resource_metadata])
+		else
+			Multi.new()
+		end
+	end)
 end
 defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 	Multi.new()
@@ -699,7 +709,7 @@ defp handle_insert(key, %{action_id: "transferCustody"} = evt, res_params) do
 				|> Map.put_new(:version, res.version)
 				|> Map.put_new(:licensor, res.licensor)
 				|> Map.put_new(:license, res.license)
-				|> Map.put_new(:metadata, res.metadata)
+				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
@@ -823,7 +833,7 @@ defp handle_insert(key, %{action_id: "transferAllRights"} = evt, res_params) do
 				|> Map.put_new(:version, res.version)
 				|> Map.put_new(:licensor, res.licensor)
 				|> Map.put_new(:license, res.license)
-				|> Map.put_new(:metadata, res.metadata)
+				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
@@ -960,7 +970,7 @@ defp handle_insert(key, %{action_id: "transfer"} = evt, res_params) do
 				|> Map.put_new(:version, res.version)
 				|> Map.put_new(:licensor, res.licensor)
 				|> Map.put_new(:license, res.license)
-				|> Map.put_new(:metadata, res.metadata)
+				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)
@@ -1099,7 +1109,7 @@ defp handle_insert(key, %{action_id: "move"} = evt, res_params) do
 				|> Map.put_new(:version, res.version)
 				|> Map.put_new(:licensor, res.licensor)
 				|> Map.put_new(:license, res.license)
-				|> Map.put_new(:metadata, res.metadata)
+				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
 			|> EconomicResource.Domain.multi_insert("#{key}.to_eco_res", res_params)

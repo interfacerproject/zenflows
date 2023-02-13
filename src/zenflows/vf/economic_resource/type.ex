@@ -219,9 +219,6 @@ input_object :economic_resource_create_params do
 
 	@desc @license
 	field :license, :string
-
-	@desc @metadata
-	field :metadata, :json
 end
 
 input_object :economic_resource_update_params do
@@ -235,9 +232,6 @@ input_object :economic_resource_update_params do
 
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
-
-	@desc @metadata
-	field :metadata, :json
 end
 
 object :economic_resource_response do

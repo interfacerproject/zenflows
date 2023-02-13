@@ -282,6 +282,7 @@ defp do_changeset(%{changes: %{action_id: "transferAllRights"}} = cset) do
 	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id
 		resource_quantity resource_classified_as
+		resource_metadata
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
@@ -292,6 +293,7 @@ defp do_changeset(%{changes: %{action_id: id}} = cset)
 	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
 		to_location_id resource_classified_as
+		resource_metadata
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
@@ -301,6 +303,7 @@ defp do_changeset(%{changes: %{action_id: "move"}} = cset) do
 	|> Changeset.cast(cset.params, ~w[
 		resource_inventoried_as_id to_resource_inventoried_as_id resource_quantity
 		to_location_id resource_classified_as
+		resource_metadata
 	]a)
 	|> Changeset.validate_required(~w[resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)

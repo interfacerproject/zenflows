@@ -181,8 +181,10 @@ defp do_changeset(%{changes: %{action_id: "lower"}} = cset) do
 end
 defp do_changeset(%{changes: %{action_id: "consume"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id resource_inventoried_as_id resource_quantity]a)
-	|> Changeset.validate_required(~w[input_of_id resource_inventoried_as_id resource_quantity]a)
+	|> Changeset.cast(cset.params,
+		~w[input_of_id resource_inventoried_as_id resource_quantity]a)
+	|> Changeset.validate_required(
+		~w[input_of_id resource_inventoried_as_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_eq([:provider_id, :receiver_id])
 end
@@ -200,8 +202,10 @@ defp do_changeset(%{changes: %{action_id: "use"}} = cset) do
 end
 defp do_changeset(%{changes: %{action_id: "work"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id effort_quantity resource_conforms_to_id]a)
-	|> Changeset.validate_required(~w[input_of_id effort_quantity resource_conforms_to_id]a)
+	|> Changeset.cast(cset.params,
+		~w[input_of_id effort_quantity resource_conforms_to_id]a)
+	|> Changeset.validate_required(
+		~w[input_of_id effort_quantity resource_conforms_to_id]a)
 	|> Measure.cast(:effort_quantity)
 end
 defp do_changeset(%{changes: %{action_id: "cite"}} = cset) do
@@ -216,36 +220,45 @@ defp do_changeset(%{changes: %{action_id: "cite"}} = cset) do
 end
 defp do_changeset(%{changes: %{action_id: "deliverService"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id output_of_id resource_conforms_to_id resource_quantity]a)
+	|> Changeset.cast(cset.params,
+		~w[input_of_id output_of_id resource_conforms_to_id resource_quantity]a)
 	|> Changeset.validate_required(~w[resource_conforms_to_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_ne([:input_of_id, :output_of_id])
 end
 defp do_changeset(%{changes: %{action_id: "pickup"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
-	|> Changeset.validate_required(~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.cast(cset.params,
+		~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.validate_required(
+		~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_eq([:provider_id, :receiver_id])
 end
 defp do_changeset(%{changes: %{action_id: "dropoff"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[output_of_id resource_quantity resource_inventoried_as_id to_location_id]a)
-	|> Changeset.validate_required(~w[output_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.cast(cset.params,
+		~w[output_of_id resource_quantity resource_inventoried_as_id to_location_id]a)
+	|> Changeset.validate_required(
+		~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_eq([:provider_id, :receiver_id])
 end
 defp do_changeset(%{changes: %{action_id: "accept"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[input_of_id resource_quantity resource_inventoried_as_id]a)
-	|> Changeset.validate_required(~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.cast(cset.params,
+		~w[input_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.validate_required(
+		~w[input_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_eq([:provider_id, :receiver_id])
 end
 defp do_changeset(%{changes: %{action_id: "modify"}} = cset) do
 	cset
-	|> Changeset.cast(cset.params, ~w[output_of_id resource_quantity resource_inventoried_as_id]a)
-	|> Changeset.validate_required(~w[output_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.cast(cset.params,
+		~w[output_of_id resource_quantity resource_inventoried_as_id]a)
+	|> Changeset.validate_required(
+		~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)
 	|> Validate.value_eq([:provider_id, :receiver_id])
 end

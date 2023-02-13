@@ -60,7 +60,6 @@ scalar :json_array, name: "JSONArray" do
 	serialize & &1
 end
 
-
 @desc "Cursors for pagination"
 object :page_info do
 	@desc """
@@ -158,7 +157,6 @@ defp json_arr_parse(v) do
 		_ -> :error
 	end
 end
-
 
 @spec id_parse(Input.t()) :: {:ok, ID.t() | nil} | :error
 def id_parse(%Input.String{value: v}), do: ID.cast(v)

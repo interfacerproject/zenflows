@@ -101,6 +101,7 @@ policies or calculations which govern this economic event.
 """
 @triggered_by "References another economic event that implied this economic event, often based on a prior agreement."
 @triggered_by_id "(`EconomicEvent`) #{@triggered_by}"
+@resource_metadata "Metadata of the project."
 
 union :production_flow_item do
 	types [:process, :economic_event, :economic_resource]
@@ -206,6 +207,9 @@ object :economic_event do
 	@desc "Used to implement the trace algorithm."
 	field :previous, :production_flow_item,
 		resolve: &Resolv.previous/3
+
+	@desc @resource_metadata
+	field :resource_metadata, :json_object
 end
 
 input_object :economic_event_create_params do
@@ -268,6 +272,9 @@ input_object :economic_event_create_params do
 
 	@desc @triggered_by_id
 	field :triggered_by_id, :id, name: "triggered_by"
+
+	@desc @resource_metadata
+	field :resource_metadata, :json_object
 end
 
 input_object :economic_event_update_params do

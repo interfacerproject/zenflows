@@ -63,6 +63,7 @@ alias Zenflows.VF.{
 	agreed_in: String.t() | nil,
 	triggered_by: EconomicEvent.t() | nil,
 	previous_event: nil | EconomicEvent.t(),
+	resource_metadata: nil | map(),
 }
 
 @derive {Jason.Encoder, only: ~w[
@@ -82,6 +83,7 @@ alias Zenflows.VF.{
 	realization_of_id
 	triggered_by_id
 	previous_event_id
+	resource_metadata
 ]a}
 schema "vf_economic_event" do
 	field :action_id, Action.ID
@@ -111,6 +113,7 @@ schema "vf_economic_event" do
 	field :agreed_in, :string
 	belongs_to :triggered_by, EconomicEvent
 	belongs_to :previous_event, EconomicEvent
+	field :resource_metadata, :map
 	timestamps()
 end
 
@@ -155,6 +158,7 @@ defp do_changeset(%{changes: %{action_id: "raise"}} = cset) do
 	|> Changeset.cast(cset.params, ~w[
 		resource_conforms_to_id resource_inventoried_as_id
 		resource_classified_as resource_quantity to_location_id
+		resource_metadata
 	]a)
 	|> Changeset.validate_required([:resource_quantity])
 	|> Measure.cast(:resource_quantity)
@@ -166,6 +170,7 @@ defp do_changeset(%{changes: %{action_id: "produce"}} = cset) do
 	|> Changeset.cast(cset.params, ~w[
 		output_of_id resource_conforms_to_id resource_inventoried_as_id
 		resource_classified_as resource_quantity to_location_id
+		resource_metadata
 	]a)
 	|> Changeset.validate_required(~w[output_of_id resource_quantity]a)
 	|> Measure.cast(:resource_quantity)
@@ -256,7 +261,7 @@ end
 defp do_changeset(%{changes: %{action_id: "modify"}} = cset) do
 	cset
 	|> Changeset.cast(cset.params,
-		~w[output_of_id resource_quantity resource_inventoried_as_id]a)
+		~w[output_of_id resource_quantity resource_inventoried_as_id resource_metadata]a)
 	|> Changeset.validate_required(
 		~w[output_of_id resource_quantity resource_inventoried_as_id]a)
 	|> Measure.cast(:resource_quantity)

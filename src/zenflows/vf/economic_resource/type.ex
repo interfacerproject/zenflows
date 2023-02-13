@@ -233,6 +233,9 @@ input_object :economic_resource_update_params do
 	@desc @note
 	field :note, :string
 
+	@desc @classified_as
+	field :classified_as, list_of(non_null(:uri))
+
 	@desc @metadata
 	field :metadata, :json
 end

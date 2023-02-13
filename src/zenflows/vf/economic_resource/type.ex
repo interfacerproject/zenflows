@@ -177,7 +177,7 @@ object :economic_resource do
 	field :license, :string
 
 	@desc @metadata
-	field :metadata, :json
+	field :metadata, :json_object
 
 	@desc "Used to implement the trace algorithm."
 	field :previous, list_of(non_null(:economic_event)),

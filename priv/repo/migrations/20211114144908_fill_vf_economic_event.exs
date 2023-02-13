@@ -45,6 +45,7 @@ def change() do
 		add :previous_event_id, references("vf_economic_event")
 		# add :in_scope_of
 		add :agreed_in, :text
+		add :resource_metadata, :jsonb
 		timestamps()
 	end
 end

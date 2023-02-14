@@ -31,7 +31,27 @@ plug Plug.Parsers,
 	pass: ["*/*"],
 	body_reader: {__MODULE__, :read_body, []}
 plug MW.GQLContext
+plug :cors
 plug :dispatch
+
+def cors(conn, _) do
+	conn = conn
+		|> put_resp_header("access-control-allow-origin", "*")
+		|> put_resp_header("access-control-allow-credentials", "false")
+		|> put_resp_header("access-control-allow-methods",
+			"POST, GET, DELETE, PUT, OPTIONS, PATCH")
+		|> put_resp_header("access-control-allow-headers", "*")
+
+	if conn.method == "OPTIONS" do
+		conn
+		|> send_resp(:no_content, "")
+		|> halt()
+	else
+		conn
+	end
+
+
+end
 
 @init_opts [schema: Zenflows.GQL.Schema]
 

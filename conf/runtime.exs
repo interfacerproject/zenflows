@@ -90,7 +90,10 @@ did_keyring = Base.decode64!(get_env("DID_KEYRING", ""))
 did_uri = get_env_url.("DID_URI", "https://did.dyne.org")
 config :zenflows, Zenflows.DID,
 	did_uri: did_uri,
-	did_keyring: if(did_keyring == "", do: nil, else: Jason.decode!(did_keyring))
+	did_keyring: if(did_keyring == "", do: nil, else: Jason.decode!(did_keyring)),
+	did_spec: get_env("DID_SPEC", "ifacer.test"),
+	did_signer_spec: get_env("DID_SIGNER_SPEC", "ifacer.test_A"),
+	did_identity: get_env("DID_IDENTITY", "Ifacer user test")
 
 #
 # admin

@@ -63,6 +63,9 @@ also see the [Required Options](#required-options).
 * `DID_URI`: The URI of the DID controller instance. Defaults to `https://did.dyne.org`.
 * `DID_KEYRING`: Keyring (identity) of the server, it is not defined
   communication with DID controller is disabled.
+* `DID_SPEC`: Spec of the newly created dids.
+* `DID_SIGNER_SPEC`: Spec of the signer did.
+* `DID_IDENTITY`: Message inside the identity field in the did.
 
 * `ADMIN_KEY`: A 64-octect long, lowercase-base16-encoded string used for the
   authenticating calls from the administrators.  Can be generated with

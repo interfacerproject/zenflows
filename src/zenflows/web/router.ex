@@ -49,8 +49,6 @@ def cors(conn, _) do
 	else
 		conn
 	end
-
-
 end
 
 @init_opts [schema: Zenflows.GQL.Schema]

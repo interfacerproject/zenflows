@@ -183,13 +183,11 @@ end
 defp handle_set(_, _, flows, visited, contained, modified, delivered, saved_event),
 	do: {flows, visited, contained, modified, delivered, saved_event}
 
-@spec classifications() :: [String.t()]
-def classifications() do
-	import Ecto.Query
-
-	from(r in EconomicResource,
-		select: fragment("distinct unnest(?)", r.classified_as))
-	|> Repo.all()
+@spec classifications(Page.t()) :: {:ok, [String.t()]} | {:error, Changeset.t()}
+def classifications(page \\ Page.new()) do
+	with {:ok, q} <- Query.classifications(page) do
+		{:ok, Repo.all(q)}
+	end
 end
 
 @spec update(Schema.id(), Schema.params())

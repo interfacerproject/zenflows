@@ -35,8 +35,10 @@ def economic_resources(params, _) do
 	end
 end
 
-def economic_resource_classifications(_, _) do
-	{:ok, Domain.classifications()}
+def economic_resource_classifications(params, _) do
+	with {:ok, page} <- Connection.parse(params) do
+		Domain.classifications(page)
+	end
 end
 
 def update_economic_resource(%{resource: %{id: id} = params}, _) do

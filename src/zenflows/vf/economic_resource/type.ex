@@ -271,6 +271,12 @@ input_object :economic_resource_filter_params do
 	field :or_repo, :string
 end
 
+input_object :economic_resource_classifications_filter_params do
+	field :uri, :uri
+	field :or_uri, :uri
+	field :not_uri, :uri
+end
+
 object :query_economic_resource do
 	field :economic_resource, :economic_resource do
 		meta only_guest?: true
@@ -289,6 +295,7 @@ object :query_economic_resource do
 	end
 
 	field :economic_resource_classifications, list_of(non_null(:uri)) do
+		arg :filter, :economic_resource_classifications_filter_params
 		resolve &Resolv.economic_resource_classifications/2
 	end
 end

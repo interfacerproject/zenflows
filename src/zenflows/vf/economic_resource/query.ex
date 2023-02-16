@@ -75,8 +75,8 @@ defp all_f(q, {:repo, v}),
 defp all_f(q, {:or_repo, v}),
 	do: or_where(q, [x], x.repo == ^v)
 
-@spec all_validate(Schema.params()) ::
-	{:ok, Changeset.data()} | {:error, Changeset.t()}
+@spec all_validate(Schema.params())
+	:: {:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
 	{%{}, %{
 		id: {:array, ID},
@@ -156,4 +156,38 @@ def previous(id) do
 		or_where: e.to_resource_inventoried_as_id == ^id,
 		or_where: e.action_id in ["raise", "lower"] and e.resource_inventoried_as_id == ^id
 end
+
+@spec classifications(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def classifications(%{filter: nil}) do
+	{:ok, from(r in EconomicResource,
+		select: fragment("distinct unnest(?)", r.classified_as))}
+end
+def classifications(%{filter: params}) do
+	with {:ok, filters} <- classifications_validate(params) do
+		{:ok, Enum.reduce(filters,
+			subquery(from(r in EconomicResource,
+				select: %{classified_as: fragment("distinct unnest(?)", r.classified_as)})),
+			&classifications_f(&2, &1))
+			|> select([x], x.classified_as)}
+	end
+end
+
+@spec classifications_validate(Schema.params())
+	:: {:ok, Changeset.data()} | {:error, Changeset.t()}
+defp classifications_validate(params) do
+	{%{}, %{uri: :string, or_uri: :string, not_urls: :string}}
+	|> Changeset.cast(params, [:uri])
+	|> Validate.exist_nand([:uri, :or_uri])
+	|> Validate.escape_like(:uri)
+	|> Validate.escape_like(:or_uri)
+	|> Validate.escape_like(:not_uri)
+	|> Changeset.apply_action(nil)
+end
+
+defp classifications_f(q, {:uri, v}),
+	do: where(q, [x], ilike(x.classified_as, ^"%#{v}%"))
+defp classifications_f(q, {:or_uri, v}),
+	do: or_where(q, [x], ilike(x.classified_as, ^"%#{v}%"))
+defp classifications_f(q, {:not_uri, v}),
+	do: where(q, [x], not ilike(x.classified_as, ^"%#{v}%"))
 end

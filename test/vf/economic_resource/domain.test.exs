@@ -77,11 +77,38 @@ test "by_id/1 returns a EconomicResource", %{inserted: eco_res} do
 	assert {:ok, %EconomicResource{}} = Domain.one(eco_res.id)
 end
 
-test "classifications/0 returns list of unique `classified_as` values" do
-	Enum.each(1..10, fn _ -> Factory.insert!(:economic_resource) end)
-	left = Enum.flat_map(Domain.all!(), & &1.classified_as)
-	right = Domain.classifications()
-	assert [] = left -- right
+describe "classifications/1" do
+	test "returns list of unique `classified_as` values" do
+		Enum.each(1..10, fn _ -> Factory.insert!(:economic_resource) end)
+		left = Enum.flat_map(Domain.all!(), & &1.classified_as)
+		{:ok, right} = Domain.classifications()
+		assert [] = left -- right
+	end
+
+	test "returns the filters results correctly" do
+		alias Ecto.Changeset
+		alias Zenflows.DB.{Page, Repo}
+
+		Factory.insert!(:economic_resource)
+		|> Changeset.change(classified_as: ["foobar"])
+		|> Repo.update!()
+
+		Factory.insert!(:economic_resource)
+		|> Changeset.change(classified_as: ["barfoo"])
+		|> Repo.update!()
+
+		Factory.insert!(:economic_resource)
+		|> Changeset.change(classified_as: ["baz"])
+		|> Repo.update!()
+
+		left = ["foobar", "barfoo"]
+		assert {:ok, right} = Domain.classifications(Page.new(%{filter: %{uri: "foo"}}))
+		assert [] == left -- right
+		assert {:ok, right} = Domain.classifications(Page.new(%{filter: %{uri: "bar"}}))
+		assert [] == left -- right
+
+		assert {:ok, ["baz"]} = Domain.classifications(Page.new(%{filter: %{uri: "baz"}}))
+	end
 end
 
 describe "update/2" do

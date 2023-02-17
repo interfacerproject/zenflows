@@ -44,7 +44,7 @@ end
 
 @spec did_id(Person.t()) :: String.t()
 defp did_id(person) do
-	"did:dyne:ifacer:#{person.eddsa_public_key}"
+	"did:dyne:#{did_spec()}:#{person.eddsa_public_key}"
 end
 
 @spec get_did(Person.t()) :: {:ok, map()} | {:error, term()}
@@ -78,9 +78,9 @@ def request_new_did(person) do
 				"identifier" => "https://schema.org/identifier"
 			}
 		],
-		"did_spec" => "ifacer.test",
-		"signer_did_spec" => "ifacer.test_A",
-		"identity" => "Ifacer user test",
+		"did_spec" => did_spec(),
+		"signer_did_spec" => did_signer_spec(),
+		"identity" => did_identity(),
 		"ifacer_id" => %{"identifier" => person.id},
 		"bitcoin_public_key" => person.bitcoin_public_key,
 		"ecdh_public_key" => person.ecdh_public_key,
@@ -110,6 +110,24 @@ def claim(_repo, %{person: person}) do
 			_ -> request_new_did(person)
 		end
 	end
+end
+
+# Return the spec of the newly created dids
+@spec did_spec() :: String.t()
+defp did_spec() do
+	Keyword.fetch!(conf(), :did_spec)
+end
+
+# Return the spec of the signer
+@spec did_signer_spec() :: String.t()
+defp did_signer_spec() do
+	Keyword.fetch!(conf(), :did_signer_spec)
+end
+
+# Return the identity inside the newly created dids
+@spec did_identity() :: String.t()
+defp did_identity() do
+	Keyword.fetch!(conf(), :did_identity)
 end
 
 # Return the scheme of did from the configs.

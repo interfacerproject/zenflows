@@ -158,7 +158,8 @@ end
 input_object :person_filter_params do
 	field :name, :string
 	field :user, :string
-	field :user_or_name, :string
+	field :or_user, :string
+	field :or_name, :string
 end
 
 object :query_person do

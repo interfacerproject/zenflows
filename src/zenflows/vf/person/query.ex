@@ -36,28 +36,24 @@ end
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
 defp all_f(q, {:name, v}),
 	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
-defp all_f(q, {:or_name, v}),
-	do: or_where(q, [x], ilike(x.name, ^"%#{v}%"))
 defp all_f(q, {:user, v}),
 	do: where(q, [x], ilike(x.user, ^"%#{v}%"))
-defp all_f(q, {:or_user, v}),
-	do: or_where(q, [x], ilike(x.user, ^"%#{v}"))
+defp all_f(q, {:user_or_name, v}),
+	do: where(q, [x], ilike(x.user, ^"%#{v}") or ilike(x.name, ^"%#{v}"))
 
 @spec all_validate(Schema.params()) ::
 	{:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
-	{%{}, %{name: :string, or_name: :string, user: :string, or_user: :string}}
-	|> Changeset.cast(params, ~w[name or_name user or_user]a)
+	{%{}, %{name: :string, user: :string, user_or_name: :string}}
+	|> Changeset.cast(params, ~w[name user user_or_name]a)
 	|> Validate.name(:name)
-	|> Validate.name(:or_name)
 	|> Validate.name(:user)
-	|> Validate.name(:or_user)
-	|> Validate.exist_xor([:name, :or_name])
-	|> Validate.exist_xor([:user, :or_user])
+	|> Validate.name(:user_or_name)
+	|> Validate.exist_xor([:name, :user_or_name])
+	|> Validate.exist_xor([:user, :user_or_name])
 	|> Validate.escape_like(:name)
-	|> Validate.escape_like(:or_name)
 	|> Validate.escape_like(:user)
-	|> Validate.escape_like(:or_user)
+	|> Validate.escape_like(:user_or_name)
 	|> Changeset.apply_action(nil)
 end
 end

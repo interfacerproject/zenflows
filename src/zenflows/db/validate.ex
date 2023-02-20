@@ -224,7 +224,7 @@ The name "note" is a reference to long texts, as in email bodies,
 descriptions, notes, and so on.
 """
 @spec note(Changeset.t(), atom()) :: Changeset.t()
-def note(cset, field), do: byte_range(cset, field, 1, 2048)
+def note(cset, field), do: byte_range(cset, field, 1, 16384)
 
 @doc """
 Validate that given `field` is [16, 2048] bytes long.

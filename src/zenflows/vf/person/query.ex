@@ -39,7 +39,7 @@ defp all_f(q, {:name, v}),
 defp all_f(q, {:user, v}),
 	do: where(q, [x], ilike(x.user, ^"%#{v}%"))
 defp all_f(q, {:user_or_name, v}),
-	do: where(q, [x], ilike(x.user, ^"%#{v}") or ilike(x.name, ^"%#{v}"))
+	do: where(q, [x], ilike(x.user, ^"%#{v}%") or ilike(x.name, ^"%#{v}%"))
 
 @spec all_validate(Schema.params()) ::
 	{:ok, Changeset.data()} | {:error, Changeset.t()}

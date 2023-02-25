@@ -30,7 +30,7 @@ end
 
 get_env_url = fn varname, default ->
 	with {:ok, %{scheme: scheme, host: host, port: port}} when not is_nil(host) and scheme in ["http", "https"]
-				  <- URI.new(get_env(varname, default)) do
+				<- URI.new(get_env(varname, default)) do
 		%{scheme: :"#{scheme}", host: host, port: port}
 	else
 		err -> raise err

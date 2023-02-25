@@ -92,9 +92,9 @@ def request(request_fn, path, post_data) do
 	hdrs = [{"content-type", "application/json"}]
 
 	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
-	   {:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
-			request_fn.("POST", "/api/#{path}", hdrs, post_body),
-		{:ok, data} <- Jason.decode(body) do
+			{:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
+				request_fn.("POST", "/api/#{path}", hdrs, post_body),
+			{:ok, data} <- Jason.decode(body) do
 		if stat == 200 do
 			{:ok, data}
 		else
@@ -102,7 +102,7 @@ def request(request_fn, path, post_data) do
 		end
 	else
 		{:ok, %{status: stat, data: body}} ->
-		  {:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
+			{:error, "the http call result in non-200 status code #{stat}: #{inspect(body)}"}
 
 		other -> other
 	end

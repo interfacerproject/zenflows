@@ -21,11 +21,28 @@ use ExUnit.Case, async: true
 
 import Zenflows.Restroom
 
-test "`byte_equal?/2` returns `true` when the two matches" do
-	assert byte_equal?("42", "42")
+describe "`byte_equal?/2" do
+	test "returns `true` when the two matches" do
+		assert byte_equal?("42", "42")
+	end
+
+	test "returns `false` when the two doesn't match" do
+		refute byte_equal?("42", "41")
+	end
 end
 
-test "`byte_equal?/2` returns `false` when the two doesn't match" do
-	refute byte_equal?("42", "41")
+describe "`hmac_new/2`, `hmac_verify/2`" do
+	test "the hash is authentic" do
+		data = Base.encode64("domates biber patlıcan")
+		assert {:ok, hash} = hmac_new(data)
+		assert :ok == hmac_verify(data, hash)
+	end
+
+	test "the hash is not authentic" do
+		data_authentic = Base.encode64("domates biber patlıcan")
+		data_forged = Base.encode64("domates biber patates")
+		assert {:ok, hash} = hmac_new(data_authentic)
+		assert {:error, _} = hmac_verify(data_forged, hash)
+	end
 end
 end

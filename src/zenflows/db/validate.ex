@@ -226,6 +226,7 @@ descriptions, notes, and so on.
 """
 @spec note(Changeset.t(), atom()) :: Changeset.t()
 def note(cset, field), do: byte_range(cset, field, 1, 16384)
+# credo:disable-for-previous-line Credo.Check.Readability.LargeNumbers
 
 @doc """
 Validate that given `field` is [16, 2048] bytes long.

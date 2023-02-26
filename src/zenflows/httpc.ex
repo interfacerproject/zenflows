@@ -36,8 +36,9 @@ def start_link(opts) do
 	GenServer.start_link(__MODULE__, {scheme, host, port}, name: name)
 end
 
-@spec request(term(), term(), term(), term())
-	:: {:ok, term()} | {:error, term()}
+@spec request(atom(), String.t(), String.t(), Mint.Types.headers())
+	:: {:ok, %{status: non_neg_integer(), data: binary(), headers: Mint.Types.headers()}}
+		| {:error, term()}
 def request(name, method, path, headers \\ [], body \\ nil, max \\ 5) do
 	headers =
 		case :lists.keyfind("user-agent", 1, headers) do

@@ -41,8 +41,8 @@ end
 def request(name, method, path, headers \\ [], body \\ nil, max \\ 5) do
 	headers =
 		case :lists.keyfind("user-agent", 1, headers) do
-		  {"user-agent", _} -> headers
-		  false -> [{"user-agent", "zenflows/#{Application.spec(:zenflows, :vsn)}"} | headers]
+			{"user-agent", _} -> headers
+			false -> [{"user-agent", "zenflows/#{Application.spec(:zenflows, :vsn)}"} | headers]
 		end
 	Enum.reduce_while(1..max, nil, fn x, _ ->
 		case GenServer.call(name, {:request, method, path, headers, body}) do
@@ -70,7 +70,7 @@ def handle_call({:request, method, path, headers, body}, from, state) do
 		{scheme, host, port} = state.conn_info
 		case HTTP.connect(scheme, host, port) do
 			{:ok, conn} ->
-		 		state = put_in(state.conn, conn)
+				state = put_in(state.conn, conn)
 				{:ok, state}
 			{:error, reason} ->
 				{:error, reason}

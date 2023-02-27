@@ -29,10 +29,10 @@ use Ecto.Repo,
 def multi(fun) when is_function(fun, 0) do
 	transaction(fn ->
 		case fun.() do
-			:ok -> :atom
-			:error -> rollback(:atom)
-			{:ok, v} -> {:tuple, v}
-			{:error, v} -> rollback({:tuple, v})
+			:ok -> :atom                         # {:ok, :atom}
+			:error -> rollback(:atom)            # {:error, :atom}
+			{:ok, v} -> {:tuple, v}              # {:ok, {:tuple, v}}
+			{:error, v} -> rollback({:tuple, v}) # {:error, {:tuple, v}}
 		end
 	end)
 	|> case do

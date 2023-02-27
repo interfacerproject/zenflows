@@ -80,11 +80,21 @@ also see the [Required Options](#required-options).
   maximum GraphQL page size if client provides a too-large value.
   It must be greater than `GQL_DEF_PAGE_SIZE`.
 
+* `EMAIL_ADDR`: The email address used for sending emails to users.
+  It will appear in the From: field of a message.
+* `EMAIL_KEY`: The Sendgrid API key used for authentication.
+* `EMAIL_EXPIRY`: The expiry time of a token that is used for
+  recovery/validation links in emails.  It is in seconds, and the
+  default is 4 days worth of seconds.  It can't be less than a second.
+
 
 ## Required Options
 
 Some of the options on how to connect to the database and the Restroom intance
 are required, along with `ADMIN_KEY` that is used authenticating admin calls.
+
+For the emails, you'll need to provide both `EMAIL_ADDR` and `EMAIL_KEY` as
+well.
 
 For the Restroom instance, you only need the `ROOM_SALT` option.
 

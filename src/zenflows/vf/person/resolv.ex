@@ -82,7 +82,7 @@ def primary_location(per, _, _) do
 end
 
 @spec parse_person_exists(map()) :: {:ok, map()} | {:error, Changeset.t()}
-def parse_person_exists(params) do
+defp parse_person_exists(params) do
 	{%{}, %{email: :string, user: :string}}
 	|> Changeset.cast(params, [:email, :user])
 	|> Validate.exist_xor([:email, :user])

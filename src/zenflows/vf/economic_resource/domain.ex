@@ -19,6 +19,8 @@
 defmodule Zenflows.VF.EconomicResource.Domain do
 @moduledoc "Domain logic of EconomicResources."
 
+require Logger
+
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
@@ -183,6 +185,44 @@ end
 defp handle_set(_, _, flows, visited, contained, modified, delivered, saved_event),
 	do: {flows, visited, contained, modified, delivered, saved_event}
 
+@spec trace_dpp(EconomicResource.t()) :: [EconomicResource.t() | EconomicEvent.t() | Process.t()]
+def trace_dpp(res) do
+	{:ok, result} = Repo.multi(fn ->
+		# the initial value for `_depth_countdown` was taken from:
+		# https://github.com/interfacerproject/Interfacer-notebook/blob/326750b1cae445ce5faa0fafb057e50538077910/if_consts.py#L25
+		{_visited, children} =
+			trace_dpp_before(res, _depth_countdown = 100_000_000, _visited = MapSet.new(), _children = [])
+		{:ok, Enum.reverse(children)}
+	end)
+	result
+end
+
+@spec trace_dpp_before(EconomicResource.t(), non_neg_integer(),
+		MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()])
+	:: {MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()]}
+def trace_dpp_before(%{id: id}, 0, visited, children) do
+	Logger.info(%{type: "EconomicResource", id: id, visited: visited, children: children})
+	{visited, children}
+end
+def trace_dpp_before(res, depth, visited, children) do
+	{:ok, result} = Repo.multi(fn ->
+		{visited, res_children} =
+			previous(res)
+			|> Enum.reduce({visited, []}, fn evt, {visited, res_children}  ->
+				if MapSet.member?(visited, "evt#{evt.id}") do
+					{visited, res_children}
+				else
+					visited = MapSet.put(visited, "evt#{evt.id}")
+					EconomicEvent.Domain.trace_dpp_before(evt, depth - 1, visited, res_children)
+				end
+			end)
+		child = %{type: "EconomicResource", node: res, children: Enum.reverse(res_children)}
+		children = [child | children]
+		{:ok, {visited, children}}
+	end)
+	result
+end
+
 @spec classifications(Page.t()) :: {:ok, [String.t()]} | {:error, Changeset.t()}
 def classifications(page \\ Page.new()) do
 	with {:ok, q} <- Query.classifications(page) do
@@ -270,88 +310,5 @@ def multi_delete(m, key \\ multi_key(), id) do
 	m
 	|> multi_one("#{key}.one", id)
 	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
-end
-
-@max_depth 100_000_000
-
-@spec trace_dpp_er_before(EconomicResource.t(), MapSet.t(), integer()) :: {MapSet.t(), map()}
-def trace_dpp_er_before(_item, visited, depth) when depth >= @max_depth do
-	{visited, %{}}
-end
-def trace_dpp_er_before(%EconomicResource{} = item, visited, depth) do
-	a_dpp_item = %{type: "EconomicResource", node: item}
-	{visited2, children} = EconomicResource.Domain.previous(item) |> Enum.reduce({visited, []},
-		fn ee, {visited, children} ->
-			if MapSet.member?(visited, {ee.__struct__, ee.id}) do
-				{visited, children}
-			else
-				{visited2, child} = trace_dpp_ee_before(ee, MapSet.put(visited, {ee.__struct__, ee.id}), depth + 1)
-				{visited2, [child | children]}
-			end
-		end
-	)
-	{visited2, Map.put(a_dpp_item, :children, children)}
-end
-
-@spec trace_dpp_ee_before_recurse(
-	EconomicEvent.t() | EconomicResource.t() | Process.t(),
-	MapSet.t(), pos_integer() ) :: {MapSet.t(), map()}
-def trace_dpp_ee_before_recurse(%EconomicResource{} = item, visited, depth) do
-	trace_dpp_er_before(item, visited, depth)
-end
-def trace_dpp_ee_before_recurse(%EconomicEvent{} = item, visited, depth) do
-	trace_dpp_ee_before(item, MapSet.put(visited, {item.__struct__, item.id}), depth)
-end
-def trace_dpp_ee_before_recurse(%Process{} = item, visited, depth) do
-	trace_dpp_pr_before(item, MapSet.put(visited, {item.__struct__, item.id}), depth)
-end
-
-@spec trace_dpp_ee_before(EconomicEvent.t(), MapSet.t(), pos_integer()) :: {MapSet.t(), map()}
-def trace_dpp_ee_before(_item, visited, depth) when depth >= @max_depth do
-	{visited, %{}}
-end
-def trace_dpp_ee_before(%EconomicEvent{} = item, visited, depth) do
-	a_dpp_item = %{type: "EconomicEvent", node: item}
-	pr_item = EconomicEvent.Domain.previous(item)
-	if pr_item == nil do
-		{visited, Map.put(a_dpp_item, :children, [])}
-	else
-		{visited2, children} = [pr_item] |> Enum.reduce({visited, []},
-			fn pf, {visited, children} ->
-				if MapSet.member?(visited, {pf.__struct__, pf.id}) do
-					{visited, children}
-				else
-					{visited2, child} = trace_dpp_ee_before_recurse(pf, visited, depth + 1)
-					{visited2, [child | children]}
-				end
-			end
-		)
-		{visited2, Map.put(a_dpp_item, :children, children)}
-	end
-end
-
-@spec trace_dpp_pr_before(Process.t(), MapSet.t(), integer()) :: {MapSet.t(), map()}
-def trace_dpp_pr_before(_item, visited, depth) when depth >= @max_depth do
-	{visited, %{}}
-end
-def trace_dpp_pr_before(item, visited, depth) do
-	a_dpp_item = %{type: "Process", node: item}
-	{visited2, children} = Process.Domain.previous(item) |> Enum.reduce({visited, []},
-		fn ee, {visited, children} ->
-			if MapSet.member?(visited, {ee.__struct__, ee.id}) do
-				{visited, children}
-			else
-				{visited2, child} = trace_dpp_ee_before(ee, MapSet.put(visited, {ee.__struct__, ee.id}), depth + 1)
-				{visited2, [child | children]}
-			end
-		end
-	)
-	{visited2, Map.put(a_dpp_item, :children, children)}
-end
-
-@spec trace_dpp(EconomicResource.t(), Page.t()) :: map()
-def trace_dpp(item, _page \\ Page.new()) do
-	{_, dpp} = trace_dpp_er_before(item, MapSet.new(), 0)
-	dpp
 end
 end

@@ -21,10 +21,13 @@ defmodule Zenflows.VF.Process.Domain do
 
 import Ecto.Query
 
+require Logger
+
 alias Ecto.Changeset
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	EconomicEvent,
+	EconomicResource,
 	Process,
 	Process.Query,
 	ProcessGroup,
@@ -69,6 +72,32 @@ def previous(id, page) do
 		or &1.id == &2.previous_event_id
 		or &1.id <= &2.id))
 	|> Enum.reverse()
+end
+
+@spec trace_dpp_before(Process.t(), non_neg_integer(),
+		MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()])
+	:: {MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()]}
+def trace_dpp_before(%{id: id}, 0, visited, children) do
+	Logger.info(%{type: "Process", id: id, visited: visited, children: children})
+	{visited, children}
+end
+def trace_dpp_before(proc, depth, visited, children) do
+	{:ok, result} = Repo.multi(fn ->
+		{visited, proc_children} =
+			previous(proc)
+			|> Enum.reduce({visited, []}, fn evt, {visited, proc_children} ->
+				if MapSet.member?(visited, "evt#{evt.id}") do
+					{visited, proc_children}
+				else
+					visited = MapSet.put(visited, "evt#{evt.id}")
+					EconomicEvent.Domain.trace_dpp_before(evt, depth - 1, visited, proc_children)
+				end
+			end)
+		child = %{type: "Process", node: proc, children: Enum.reverse(proc_children)}
+		children = [child | children]
+		{:ok, {visited, children}}
+	end)
+	result
 end
 
 @spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}

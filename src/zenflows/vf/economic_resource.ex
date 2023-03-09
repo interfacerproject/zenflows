@@ -80,6 +80,7 @@ alias Zenflows.VF.{
 	stage_id current_location_id lot_id contained_in_id
 	unit_of_effort_id previous_event_id
 ]a}
+
 schema "vf_economic_resource" do
 	field :name, :string
 	field :note, :string
@@ -155,5 +156,42 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:contained_in)
 	|> Changeset.assoc_constraint(:unit_of_effort)
 	|> Changeset.assoc_constraint(:previous_event)
+end
+
+# This is only used for `Zenflows.VF.EconomicResource.Domain.trace_dpp/1`.
+defimpl Jason.Encoder, for: __MODULE__ do
+	def encode(res, opts) do
+		Jason.Encode.map(%{
+			"id" => res.id,
+			"name" => res.name,
+			"note" => res.note,
+			"trackingIdentifier" => res.tracking_identifier,
+			"classifiedAs" => res.classified_as,
+			"state" => %{"id" => res.state_id},
+			"okhv" => res.okhv,
+			"repo" => res.repo,
+			"version" => res.version,
+			"licensor" => res.licensor,
+			"license" => res.license,
+			"metadata" => res.metadata,
+			"accountingQuantity" => %{
+				"hasNumericalValue" => res.accounting_quantity_has_numerical_value,
+				"hasUnit" => %{"id" => res.accounting_quantity_has_unit_id},
+			},
+			"onhandQuantityHas" => %{
+				"numericalValue" => res.onhand_quantity_has_numerical_value,
+				"hasUnit" => %{"id" => res.onhand_quantity_has_unit_id},
+			},
+			"conformsTo" => %{"id" => res.conforms_to_id},
+			"primaryAccountable" => %{"id" => res.primary_accountable_id},
+			"custodian" => %{"id" => res.custodian_id},
+			"stage" => %{"id" => res.stage_id},
+			"currentLocation" => %{"id" => res.current_location_id},
+			"lot" => %{"id" => res.lot_id},
+			"containedIn" => %{"id" => res.contained_in_id},
+			"unitOfEffort" => %{"id" => res.unit_of_effort_id},
+			"previousEvent" => %{"id" => res.previous_event_id},
+		}, opts)
+	end
 end
 end

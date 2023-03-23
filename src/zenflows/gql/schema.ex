@@ -70,6 +70,7 @@ import_types VF.Satisfaction.Type
 import_types VF.Proposal.Type
 import_types VF.ProposedIntent.Type
 #import_types VF.ProposedTo.Type
+import_types Zenflows.Project.Type
 
 query do
 	@desc "For testing.  Temporary"
@@ -164,6 +165,7 @@ mutation do
 	import_fields :mutation_proposal
 	import_fields :mutation_proposed_intent
 	#import_fields :mutation_proposed_to
+	import_fields :mutation_project
 end
 
 @impl true

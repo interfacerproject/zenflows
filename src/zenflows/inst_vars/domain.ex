@@ -21,8 +21,8 @@ defmodule Zenflows.InstVars.Domain do
 
 use Agent
 
-alias Zenflows.{DB.Repo, InstVars}
-alias Zenflows.VF.{ResourceSpecification, Unit}
+alias Zenflows.DB.{ID, Repo}
+alias Zenflows.InstVars
 
 @doc false
 def start_link(_) do
@@ -40,7 +40,10 @@ def start_link(_) do
 	} end, name: __MODULE__)
 end
 
-@spec get() :: %{units: [Unit.t()], specs: [ResourceSpecification.t()]}
+@spec get() :: %{
+	units: %{required(atom()) => %{id: ID.t()}},
+	specs: %{required(atom()) => %{id: ID.t()}},
+}
 def get() do
 	Agent.get(__MODULE__, & &1)
 end

@@ -36,19 +36,19 @@ input_object :project_location_params do
 end
 
 input_object :project_license_params do
-	field :scope, :string
-	field :licenseId, :string
+	field :scope, non_null(:string)
+	field :license_id, non_null(:string)
 end
 
 input_object :project_create_params do
 	# Main steps
 	field :title, non_null(:string)
 	field :description, non_null(:string)
-	field :link, non_null(:string)
-	field :tags, list_of(:string)
+	field :link, non_null(:uri)
+	field :tags, list_of(non_null(:uri))
 
 	# Linked design steps
-	field :linked_design, non_null(:string)
+	field :linked_design_id, :id
 
 	# Location steps
 	field :location_name, :string
@@ -57,15 +57,9 @@ input_object :project_create_params do
 
 	field :images, non_null(list_of(:ifile))
 
-	# Declarations step
-	field :repairable, :string
-	field :recyclable, :string
-
-	field :certifications, list_of(:string)
-
-	field :relations, non_null(list_of(:string))
-	field :licenses, non_null(list_of(:project_license_params))
-	field :contributors, non_null(list_of(:string))
+	field :relations, non_null(list_of(non_null(:string)))
+	field :licenses, non_null(list_of(non_null(:project_license_params)))
+	field :contributors, non_null(list_of(non_null(:id)))
 
 	field :project_type, non_null(:project_type)
 end

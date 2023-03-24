@@ -23,6 +23,12 @@ alias Zenflows.Project.Resolv
 
 use Absinthe.Schema.Notation
 
+enum :project_type do
+	value :design
+	value :service
+	value :product
+end
+
 input_object :project_location_params do
 	field :address, non_null(:string)
 	field :lat, non_null(:decimal)
@@ -61,7 +67,7 @@ input_object :project_create_params do
 	field :licenses, non_null(list_of(:project_license_params))
 	field :contributors, non_null(list_of(:string))
 
-	field :project_type, non_null(:string)
+	field :project_type, non_null(:project_type)
 end
 
 input_object :project_add_contributor_params do

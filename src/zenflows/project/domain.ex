@@ -45,9 +45,9 @@ end
 def create(params) do
 	inst_vars = Zenflows.InstVars.Domain.get()
 	project_types = %{
-		design: inst_vars.specs.spec_project_design_id,
-		service: inst_vars.specs.spec_project_service_id,
-		product: inst_vars.specs.spec_project_product_id
+		design: inst_vars.specs.spec_project_design.id,
+		service: inst_vars.specs.spec_project_service.id,
+		product: inst_vars.specs.spec_project_product.id
 	}
 	project_type = String.to_existing_atom(params.project_type)
 	process_name = "creation of #{params.title} by #{params.user.name}"
@@ -94,6 +94,33 @@ def create(params) do
 						images: [],
 						repo: params.link,
 						license: if(length(params.licenses)>0, do: params.licenses[0].license_id, else: "")
+					}
+				) do
+			# economic system: points assignments
+			# addIdeaPoints(user!.ulid, IdeaPoints.OnCreate)
+			# addStrengthsPoints(user!.ulid, StrengthsPoints.OnCreate)
+			{:ok, evt}
+		else
+			{:error, message} -> {:error, message}
+			_ -> {:error, "Project creation failed"}
+		end
+	end)
+end
+
+@spec add_contributor(Schema.params()) :: {:ok, map()} | {:error, Changeset.t()}
+def add_contributor(params) do
+	inst_vars = Zenflows.InstVars.Domain.get()
+
+	Repo.multi(fn ->
+		with {:ok, evt } <- EconomicEvent.Domain.create(
+					%{
+						action_id: "work",
+						provider_id: params.contributor,
+						receiver_id: params.contributor,
+						input_of_id: params.process,
+						has_point_in_time: DateTime.utc_now(),
+						resource_conforms_to_id: inst_vars.specs.spec_project_design.id,
+						effort_quantity: %{ has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id },
 					}
 				) do
 			# economic system: points assignments

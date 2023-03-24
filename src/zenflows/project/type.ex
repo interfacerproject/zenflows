@@ -64,11 +64,20 @@ input_object :project_create_params do
  	field :project_type, non_null(:string)
 end
 
+input_object :project_add_contributor_params do
+	field :contributor, :id
+	field :process, :id
+end
+
 object :mutation_project do
 	@desc "Flow to create a new project (economic resource with PRODUCE action)"
 	field :project_create, :economic_event do
 		arg :project, non_null(:project_create_params)
 		resolve &Resolv.project_create/2
+	end
+	field :project_add_contributor, :economic_event do
+		arg :contributor, non_null(:project_add_contributor_params)
+		resolve &Resolv.project_add_contributor/2
 	end
 end
 end

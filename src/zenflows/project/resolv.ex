@@ -22,8 +22,9 @@ defmodule Zenflows.Project.Resolv do
 alias Zenflows.Project.Domain
 
 def project_create(%{project: params}, %{context: %{req_user: user}}) do
-	params = Map.put(params, user, user)
-	Domain.create(params)
+	params
+	|> Map.put(:owner_id, user.id)
+	|> Domain.create()
 end
 
 def project_add_contributor(%{contributor: params}, %{context: %{req_user: user}}) do

@@ -19,119 +19,124 @@
 defmodule Zenflows.Project.Domain do
 @moduledoc "Domain logic of Project flows"
 
-alias Zenflows.DB.{Repo, Schema}
-alias Zenflows.VF.{Process, SpatialThing, EconomicEvent}
+alias Ecto.Changeset
+alias Zenflows.InstVars
+alias Zenflows.DB.{ID, Repo, Schema}
+alias Zenflows.VF.{
+	EconomicEvent,
+	EconomicResource,
+	Person,
+	Process,
+	SpatialThing,
+}
 
-
-@spec create_project_location(String.t(), map(), boolean(), boolean())
-		:: {SpatialThing.t(), boolean()}
-defp create_project_location(location_name,
-		location_data, location_remote, design) do
-	remote = location_remote || design
-	if location_data != nil do
-		{:ok, st} = SpatialThing.Domain.create(%{
-			name: location_name || location_data.address,
-			addr: location_data.address,
-			lat: location_data.lat || 0,
-			lng: location_data.lng || 0,
-		});
-		{st, remote};
+# `maybe_create_location` creates a SpatialThing if `params.location` is
+# supplied and valid; else, it returns `nil` for the SpatialThing.
+@spec maybe_create_location(Schema.params())
+	:: {:ok, {nil | SpatialThing.t(), boolean()}} | {:error, Changeset.t()}
+defp maybe_create_location(params) do
+	remote? = params.location_remote || params.project_type == :design
+	if params.location != nil do
+		%{
+			name: params.location_name || params.location.address,
+			mappable_address: params.location.address,
+			lat: params.location.lat,
+			lng: params.location.lng,
+		}
+		|> SpatialThing.Domain.create()
+		|> case do
+			{:ok, st} -> {:ok, {st, remote?}}
+			{:error, reason} -> {:error, reason}
+		end
 	else
-		{nil, remote};
+		{:ok, {nil, remote?}}
 	end
 end
 
-@spec create(Schema.params()) :: {:ok, map()} | {:error, Changeset.t()}
+# `is_resource_design?` receives an id parameter, and whenever it
+# is not nil, it checks if the resource referenced by that id exists
+# or not; in the case that it exists, it returns true.
+@spec is_resource_design?(nil | ID.t()) :: {:ok, boolean()} | {:error, String.t()}
+defp is_resource_design?(nil), do: {:ok, false}
+defp is_resource_design?(id) do
+	case EconomicResource.Domain.one(id) do
+		{:ok, _} -> {:ok, true}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@spec create(Schema.params()) :: {:ok, EconomicEvent.t()} | {:error, Changeset.t()}
 def create(params) do
-	inst_vars = Zenflows.InstVars.Domain.get()
+	inst_vars = InstVars.Domain.get()
 	project_types = %{
 		design: inst_vars.specs.spec_project_design.id,
 		service: inst_vars.specs.spec_project_service.id,
 		product: inst_vars.specs.spec_project_product.id
 	}
-	project_type = String.to_existing_atom(params.project_type)
-	process_name = "creation of #{params.title} by #{params.user.name}"
-
-	design = Map.has_key?(params, :linked_design) && String.length(params.linked_design) > 0
-
-	tags = params.tags
-	tags = if(tags != nil && length(tags)>0, do: tags, else: nil)
-
-	{location, remote} = if Map.has_key?(params, :location)
-			|| params.location_remote do
-		create_project_location(params.location_name,
-					params.location, params.location_remote,
-					project_type == :design)
-	else
-		{nil, nil}
-	end
 
 	Repo.multi(fn ->
-		with {:ok, process } <- Process.Domain.create(%{name: process_name}),
-				{:ok, evt } <- EconomicEvent.Domain.create(
-					%{
-						action_id: "produce",
-						provider_id: params.user.id,
-						receiver_id: params.user.id,
-						output_of_id: process.id,
-						has_point_in_time: DateTime.utc_now(),
-						resource_classified_as: tags,
-						resource_conforms_to_id: project_types[project_type],
-						resource_quantity: %{ has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id },
-						to_location_id: if(location != nil, do: location.id, else: nil),
-						resource_metadata: %{
-							contributors: params.contributors,
-							licenses: params.licenses,
-							relations: params.relations,
-							declarations: params.declarations,
-							remote: remote,
-							design: design,
-						}
+		with {:ok, owner} <- Person.Domain.one(params.owner_id),
+				{:ok, process} <-
+					%{name: "creation of #{params.title} by #{owner.name}"}
+					|> Process.Domain.create(),
+				{:ok, {location, remote?}} <- maybe_create_location(params),
+				# TODO: `resource_metadata` should check that the `linked_design_id` exists somehow.
+				{:ok, design?} <- is_resource_design?(params.linked_design_id) do
+			EconomicEvent.Domain.create(
+				%{
+					action_id: "produce",
+					provider_id: owner.id,
+					receiver_id: owner.id,
+					output_of_id: process.id,
+					has_point_in_time: DateTime.utc_now(),
+					resource_classified_as: params.tags,
+					resource_conforms_to_id: project_types[params.project_type],
+					resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+					to_location_id: location[:id],
+					resource_metadata: %{
+						contributors: params.contributors,
+						licenses: params.licenses,
+						relations: params.relations,
+						declarations: params.declarations,
+						remote: remote?,
+						design: design?,
 					},
-					%{
-						name: params.title,
-						note: params.description,
-						images: [],
-						repo: params.link,
-						license: if(length(params.licenses)>0, do: params.licenses[0].license_id, else: "")
-					}
-				) do
+				},
+				%{
+					name: params.title,
+					note: params.description,
+					images: params.images,
+					repo: params.link,
+					license: get_in(params.licenses, [Access.at(0), :license_id]),
+				}
+			)
 			# economic system: points assignments
 			# addIdeaPoints(user!.ulid, IdeaPoints.OnCreate)
 			# addStrengthsPoints(user!.ulid, StrengthsPoints.OnCreate)
-			{:ok, evt}
-		else
-			{:error, message} -> {:error, message}
-			_ -> {:error, "Project creation failed"}
 		end
 	end)
 end
 
-@spec add_contributor(Schema.params()) :: {:ok, map()} | {:error, Changeset.t()}
+@spec add_contributor(Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, Changeset.t()}
 def add_contributor(params) do
-	inst_vars = Zenflows.InstVars.Domain.get()
+	inst_vars = InstVars.Domain.get()
 
 	Repo.multi(fn ->
-		with {:ok, evt } <- EconomicEvent.Domain.create(
-					%{
-						action_id: "work",
-						provider_id: params.contributor,
-						receiver_id: params.contributor,
-						input_of_id: params.process,
-						has_point_in_time: DateTime.utc_now(),
-						resource_conforms_to_id: inst_vars.specs.spec_project_design.id,
-						effort_quantity: %{ has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id },
-					}
-				) do
-			# economic system: points assignments
-			# addIdeaPoints(user!.ulid, IdeaPoints.OnCreate)
-			# addStrengthsPoints(user!.ulid, StrengthsPoints.OnCreate)
-			{:ok, evt}
-		else
-			{:error, message} -> {:error, message}
-			_ -> {:error, "Project creation failed"}
+		%{
+			action_id: "work",
+			provider_id: params.contributor_id,
+			receiver_id: params.contributor_id,
+			input_of_id: params.process_id,
+			has_point_in_time: DateTime.utc_now(),
+			resource_conforms_to_id: inst_vars.specs.spec_project_design.id,
+			effort_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+		}
+		|> EconomicEvent.Domain.create()
+		|> case do
+			{:ok, evt} -> {:ok, evt}
+			{:error, reason} -> {:error, reason}
 		end
 	end)
 end
-
 end

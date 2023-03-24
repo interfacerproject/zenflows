@@ -42,14 +42,14 @@ input_object :project_create_params do
 	field :tags, list_of(:string)
 
 	# Linked design steps
- 	field :linked_design, non_null(:string)
+	field :linked_design, non_null(:string)
 
 	# Location steps
 	field :location_name, :string
 	field :location, :project_location_params
 	field :location_remote, :boolean
 
- 	field :images, non_null(list_of(:ifile))
+	field :images, non_null(list_of(:ifile))
 
 	# Declarations step
 	field :repairable, :string
@@ -57,11 +57,11 @@ input_object :project_create_params do
 
 	field :certifications, list_of(:string)
 
- 	field :relations, non_null(list_of(:string))
- 	field :licenses, non_null(list_of(:project_license_params))
- 	field :contributors, non_null(list_of(:string))
+	field :relations, non_null(list_of(:string))
+	field :licenses, non_null(list_of(:project_license_params))
+	field :contributors, non_null(list_of(:string))
 
- 	field :project_type, non_null(:string)
+	field :project_type, non_null(:string)
 end
 
 input_object :project_add_contributor_params do
@@ -75,6 +75,7 @@ object :mutation_project do
 		arg :project, non_null(:project_create_params)
 		resolve &Resolv.project_create/2
 	end
+
 	field :project_add_contributor, :economic_event do
 		arg :contributor, non_null(:project_add_contributor_params)
 		resolve &Resolv.project_add_contributor/2

@@ -27,7 +27,7 @@ alias Zenflows.VF.{Process, SpatialThing, EconomicEvent}
 		:: {SpatialThing.t(), boolean()}
 defp create_project_location(location_name,
 		location_data, location_remote, design) do
- 	remote = location_remote || design
+	remote = location_remote || design
 	if location_data != nil do
 		{:ok, st} = SpatialThing.Domain.create(%{
 			name: location_name || location_data.address,
@@ -58,13 +58,13 @@ def create(params) do
 	tags = if(tags != nil && length(tags)>0, do: tags, else: nil)
 
 	{location, remote} = if Map.has_key?(params, :location)
- 			|| params.location_remote do
- 		create_project_location(params.location_name,
- 					params.location, params.location_remote,
- 					project_type == :design)
- 	else
+			|| params.location_remote do
+		create_project_location(params.location_name,
+					params.location, params.location_remote,
+					project_type == :design)
+	else
 		{nil, nil}
- 	end
+	end
 
 	Repo.multi(fn ->
 		with {:ok, process } <- Process.Domain.create(%{name: process_name}),

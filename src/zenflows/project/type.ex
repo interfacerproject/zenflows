@@ -24,9 +24,9 @@ alias Zenflows.Project.Resolv
 use Absinthe.Schema.Notation
 
 input_object :project_location_params do
-	field :address, :string
-	field :lat, :decimal
-	field :lng, :decimal
+	field :address, non_null(:string)
+	field :lat, non_null(:decimal)
+	field :lng, non_null(:decimal)
 end
 
 input_object :project_license_params do

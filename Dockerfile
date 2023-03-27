@@ -38,7 +38,7 @@ COPY src src
 RUN mix do compile, release
 
 
-FROM alpine:3.16 AS app
+FROM alpine:3.17 AS app
 ARG MIX_ENV
 ENV MIX_ENV=$MIX_ENV
 

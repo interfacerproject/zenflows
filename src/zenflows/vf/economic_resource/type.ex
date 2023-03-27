@@ -232,6 +232,9 @@ input_object :economic_resource_update_params do
 
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
+
+	@desc @repo
+	field :repo, :string
 end
 
 object :economic_resource_response do

@@ -84,6 +84,15 @@ config :zenflows, Zenflows.Restroom,
 	room_salt: fetch_env!("ROOM_SALT")
 
 #
+# wallet
+#
+keyring = Base.decode64!(fetch_env!("KEYRING"))
+wallet_uri = get_env_url.("WALLET_URI", "")
+config :zenflows, Zenflows.Wallet,
+	keyring: Jason.decode!(keyring),
+	wallet_uri: wallet_uri
+
+#
 # did
 #
 did_keyring = Base.decode64!(get_env("DID_KEYRING", ""))

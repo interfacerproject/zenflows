@@ -20,6 +20,7 @@ defmodule ZenflowsTest.VF.EconomicEvent do
 use ZenflowsTest.Help.EctoCase, async: true
 
 alias Zenflows.Project.Domain
+alias Zenflows.Wallet
 
 setup_all do
 	[errmsg_exist_xnor: "exactly one of them must be provided"]
@@ -38,12 +39,13 @@ describe "`onCreate` flow" do
 	end
 
 	test "create a project and add a contributor", %{params: params} do
+		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
+
 		create_params = %{
 			title: params.title,
 			description: "ciccio",
 			link: "example.com",
 			tags: ["aa", "bbb"],
-			linked_design: "ciao",
 			location_name: "ciccio",
 			location: %{
 				lat: 13,
@@ -57,7 +59,7 @@ describe "`onCreate` flow" do
 			project_type: "design",
 			contributors: [],
 			declarations: [],
-			user: params.agent,
+			owner_id: params.agent.id,
 		}
 		{:ok, evt} = Domain.create(create_params)
 		evt = evt
@@ -68,10 +70,12 @@ describe "`onCreate` flow" do
 		assert evt.resource_inventoried_as.name == params.title
 
 		contribute_params = %{
-			contributor: params.contributor.id,
-			process: evt.output_of.id,
+			contributor_id: params.contributor.id,
+			process_id: evt.output_of.id,
 			user: params.agent,
 		}
+		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
+		assert coins_after - coins_before == 100
 		{:ok, _} = Domain.add_contributor(contribute_params)
 	end
 

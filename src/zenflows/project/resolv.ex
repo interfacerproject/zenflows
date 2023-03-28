@@ -28,7 +28,8 @@ def project_create(%{project: params}, %{context: %{req_user: user}}) do
 end
 
 def project_add_contributor(%{contributor: params}, %{context: %{req_user: user}}) do
-	params = Map.put(params, user, user)
-	Domain.add_contributor(params)
+	params
+	|> Map.put(:user, user.id)
+	|> Domain.add_contributor()
 end
 end

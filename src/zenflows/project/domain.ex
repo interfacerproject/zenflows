@@ -29,6 +29,26 @@ alias Zenflows.VF.{
 	Process,
 	SpatialThing,
 }
+alias Zenflows.Wallet
+
+def idea_points(), do: %{
+	on_fork: 100,
+	on_create: 100,
+	on_contributions: 100,
+	on_star: 10,
+	on_watch: 10,
+	on_accept: 100,
+	on_cite: 100,
+}
+def strengths_points(), do: %{
+	on_fork: 100,
+	on_create: 100,
+	on_contributions: 100,
+	on_star: 10,
+	on_watch: 10,
+	on_accept: 100,
+	on_cite: 100,
+}
 
 # `maybe_create_location` creates a SpatialThing if `params.location` is
 # supplied and valid; else, it returns `nil` for the SpatialThing.
@@ -81,38 +101,39 @@ def create(params) do
 					|> Process.Domain.create(),
 				{:ok, {location, remote?}} <- maybe_create_location(params),
 				# TODO: `resource_metadata` should check that the `linked_design_id` exists somehow.
-				{:ok, design?} <- is_resource_design?(params.linked_design_id) do
-			EconomicEvent.Domain.create(
-				%{
-					action_id: "produce",
-					provider_id: owner.id,
-					receiver_id: owner.id,
-					output_of_id: process.id,
-					has_point_in_time: DateTime.utc_now(),
-					resource_classified_as: params.tags,
-					resource_conforms_to_id: project_types[params.project_type],
-					resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
-					to_location_id: location[:id],
-					resource_metadata: %{
-						contributors: params.contributors,
-						licenses: params.licenses,
-						relations: params.relations,
-						declarations: params.declarations,
-						remote: remote?,
-						design: design?,
+				{:ok, design?} <- is_resource_design?(params[:linked_design_id]),
+				{:ok, evt} <- EconomicEvent.Domain.create(
+					%{
+						action_id: "produce",
+						provider_id: owner.id,
+						receiver_id: owner.id,
+						output_of_id: process.id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_classified_as: params.tags,
+						resource_conforms_to_id: project_types[String.to_existing_atom(params.project_type)],
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+						to_location_id: if(location != nil, do: location.id, else: nil),
+						resource_metadata: %{
+							contributors: params.contributors,
+							licenses: params.licenses,
+							relations: params.relations,
+							declarations: params.declarations,
+							remote: remote?,
+							design: design?,
+						},
 					},
-				},
-				%{
-					name: params.title,
-					note: params.description,
-					images: params.images,
-					repo: params.link,
-					license: get_in(params.licenses, [Access.at(0), :license_id]),
-				}
-			)
-			# economic system: points assignments
-			# addIdeaPoints(user!.ulid, IdeaPoints.OnCreate)
-			# addStrengthsPoints(user!.ulid, StrengthsPoints.OnCreate)
+					%{
+						name: params.title,
+						note: params.description,
+						images: params.images,
+						repo: params.link,
+						license: get_in(params.licenses, [Access.at(0), :license_id]),
+					}
+				),
+				# economic system: points assignments
+				{:ok} = Wallet.add_points(idea_points().on_create, params.owner_id, :idea),
+				{:ok} = Wallet.add_points(strengths_points().on_create, params.owner_id, :strengths) do
+			{:ok, evt}
 		end
 	end)
 end

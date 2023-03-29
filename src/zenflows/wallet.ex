@@ -21,8 +21,8 @@ defmodule Zenflows.Wallet do
 A module to interact with Zenflows Wallet (idea and strengths wallet)
 """
 
-alias Zenflows.HTTPC
 alias Zenflows.DB.ID
+alias Zenflows.HTTPC
 
 def child_spec(_) do
 		Supervisor.child_spec(

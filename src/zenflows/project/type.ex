@@ -75,9 +75,14 @@ input_object :project_fork_params do
 	field :contribution_repository, non_null(:id)
 end
 
-object :project_fork do
+object :project_fork_result do
 	field :fork_event, non_null(:economic_event)
 	field :proposal, non_null(:proposal)
+end
+
+input_object :project_cite_params do
+	field :resource_id, non_null(:id)
+	field :process_id, non_null(:id)
 end
 
 object :mutation_project do
@@ -92,9 +97,19 @@ object :mutation_project do
 		resolve &Resolv.project_add_contributor/2
 	end
 
-	field :project_fork, :economic_event do
-		arg :contributor, non_null(:project_fork_params)
+	field :project_fork, :project_fork_result do
+		arg :fork, non_null(:project_fork_params)
 		resolve &Resolv.project_fork/2
+	end
+
+	field :project_cite, :economic_event do
+		arg :cite, non_null(:project_cite_params)
+		resolve &Resolv.project_cite/2
+	end
+
+	field :project_approve, :economic_event do
+		arg :proposal_id, non_null(:id)
+		resolve &Resolv.project_approve/2
 	end
 end
 end

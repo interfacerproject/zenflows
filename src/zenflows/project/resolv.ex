@@ -38,4 +38,14 @@ def project_fork(%{fork: params}, %{context: %{req_user: user}}) do
 	|> Map.put(:owner_id, user.id)
 	|> Domain.fork()
 end
+
+def project_cite(%{cite: params}, %{context: %{req_user: user}}) do
+	params
+	|> Map.put(:owner_id, user.id)
+	|> Domain.cite()
+end
+def project_cite(%{proposal_id: proposal_id}, %{context: %{req_user: user}}) do
+	%{proposal_id: proposal_id, owner_id: user.id}
+	|> Domain.approve()
+end
 end

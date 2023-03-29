@@ -258,4 +258,44 @@ def fork(params) do
 		end
 	end)
 end
+
+@spec cite(Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, Changeset.t()}
+def cite(params) do
+	inst_vars = InstVars.Domain.get()
+
+	Repo.multi(fn ->
+		# TODO: we should check that the `process_id` exist somehow.
+		with {:ok, resource} = EconomicResource.Domain.one(params.resource_id),
+				{:ok, evt} <- EconomicEvent.Domain.create(%{
+					action_id: "cite",
+					input_of_id: params.process_id,
+					provider_id: params.owner_id,
+					receiver_id: params.owner_id,
+					has_point_in_time: DateTime.utc_now(),
+					resource_inventoried_as_id: params.resource_id,
+					resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+				}),
+				# economic system: points assignments
+				{:ok} = Wallet.add_points(idea_points().on_cite, params.owner_id, :idea),
+				{:ok} = Wallet.add_points(strengths_points().on_cite, resource.primary_accountable_id, :strengths) do
+
+			{:ok, evt}
+		end
+	end)
+end
+
+@spec approve(Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, Changeset.t()}
+def approve(params) do
+	inst_vars = InstVars.Domain.get()
+
+	Repo.multi(fn ->
+		with {:ok, proposal} <- Proposal.Domain.one(params.proposal_id),
+				proposal <- Repo.preload(proposal, :primary_intents) do
+
+			{:ok, proposal}
+		end
+	end)
+end
 end

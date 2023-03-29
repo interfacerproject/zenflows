@@ -29,10 +29,12 @@ end
 describe "`onCreate` flow" do
 	setup do
 		agent = Factory.insert!(:agent)
+		proposal = Factory.insert!(:proposal)
 		contributor = Factory.insert!(:agent)
 		title = "Test project"
 		%{params: %{
 			agent: agent,
+			proposal: proposal,
 			contributor: contributor,
 			title: title,
 		}}
@@ -93,6 +95,31 @@ describe "`onCreate` flow" do
 		assert String.contains?(evt.resource_inventoried_as.name,
 				"forked")
 
+		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
+		assert coins_after - coins_before == 100
+
+		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
+
+		cite_params = %{
+			resource_id: evt.resource_inventoried_as_id,
+			process_id: evt.output_of_id,
+			owner_id: params.agent.id,
+		}
+		{:ok, result} = Domain.cite(cite_params)
+
+		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
+		assert coins_after - coins_before == 100
+
+
+
+		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
+
+
+		accept_params = %{
+			proposal_id: params.proposal.id,
+			owner_id: params.agent.id,
+		}
+		{:ok, result} = Domain.approve(accept_params) |> IO.inspect()
 		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
 		assert coins_after - coins_before == 100
 	end

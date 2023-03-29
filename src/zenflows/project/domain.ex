@@ -25,8 +25,11 @@ alias Zenflows.DB.{ID, Repo, Schema}
 alias Zenflows.VF.{
 	EconomicEvent,
 	EconomicResource,
+	Intent,
 	Person,
 	Process,
+	Proposal,
+	ProposedIntent,
 	SpatialThing,
 }
 alias Zenflows.Wallet
@@ -35,8 +38,6 @@ def idea_points(), do: %{
 	on_fork: 100,
 	on_create: 100,
 	on_contributions: 100,
-	on_star: 10,
-	on_watch: 10,
 	on_accept: 100,
 	on_cite: 100,
 }
@@ -44,8 +45,6 @@ def strengths_points(), do: %{
 	on_fork: 100,
 	on_create: 100,
 	on_contributions: 100,
-	on_star: 10,
-	on_watch: 10,
 	on_accept: 100,
 	on_cite: 100,
 }
@@ -144,19 +143,118 @@ def add_contributor(params) do
 	inst_vars = InstVars.Domain.get()
 
 	Repo.multi(fn ->
-		%{
-			action_id: "work",
-			provider_id: params.contributor_id,
-			receiver_id: params.contributor_id,
-			input_of_id: params.process_id,
-			has_point_in_time: DateTime.utc_now(),
-			resource_conforms_to_id: inst_vars.specs.spec_project_design.id,
-			effort_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
-		}
-		|> EconomicEvent.Domain.create()
-		|> case do
-			{:ok, evt} -> {:ok, evt}
-			{:error, reason} -> {:error, reason}
+		with {:ok, evt} <- EconomicEvent.Domain.create(%{
+					action_id: "work",
+					provider_id: params.contributor_id,
+					receiver_id: params.contributor_id,
+					input_of_id: params.process_id,
+					has_point_in_time: DateTime.utc_now(),
+					resource_conforms_to_id: inst_vars.specs.spec_project_design.id,
+					effort_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+				}),
+				# economic system: points assignments
+				{:ok} = Wallet.add_points(idea_points().on_contributions, params.owner_id, :idea),
+				{:ok} = Wallet.add_points(strengths_points().on_contributions, params.contributor_id, :strengths) do
+
+			{:ok, evt}
+		end
+	end)
+end
+
+@spec fork(Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, Changeset.t()}
+def fork(params) do
+	inst_vars = InstVars.Domain.get()
+
+	Repo.multi(fn ->
+		with {:ok, owner} <- Person.Domain.one(params.owner_id),
+				{:ok, resource} <- EconomicResource.Domain.one(params.resource_id),
+				{:ok, process} <-
+					%{name: "fork of #{resource.name} by #{owner.name}"}
+					|> Process.Domain.create(),
+				{:ok, _} <- EconomicEvent.Domain.create(
+					%{
+						action_id: "cite",
+						input_of_id: process.id,
+						provider_id: owner.id,
+						receiver_id: owner.id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_inventoried_as_id: resource.id,
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+					}
+				),
+				{:ok, forked_evt} <- EconomicEvent.Domain.create(
+					%{
+						action_id: "produce",
+						provider_id: owner.id,
+						receiver_id: owner.id,
+						output_of_id: process.id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_classified_as: resource.classified_as,
+						resource_conforms_to_id: resource.conforms_to_id,
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+						to_location_id: resource.current_location_id,
+						resource_metadata: if(resource.metadata[:relations] != nil,
+							do: put_in(resource.metadata, [:relations],
+									resource.metadata.relations ++ [resource.id]),
+							else: nil)
+					},
+					%{
+						name: "#{resource.name} resource forked by #{owner.name}",
+						note: params.description,
+						repo: params.contribution_repository,
+					}
+				),
+				{:ok, process_contribution} <-
+					%{name: "contribution of ${resource.name} by ${owner.name"}
+					|> Process.Domain.create(),
+				{:ok, proposal} <- Proposal.Domain.create(
+					%{name: process.name, note: params.description}
+				),
+
+				# Propose contribution
+				{:ok, cite_resource_forked} <- Intent.Domain.create(%{
+						action_id: "cite",
+						input_of_id: process_contribution.id,
+						provider_id: resource.primary_accountable_id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_inventoried_as_id: forked_evt.resource_inventoried_as_id,
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+					}),
+				{:ok, accept_resource_origin} <- Intent.Domain.create(%{
+						action_id: "accept",
+						input_of_id: process_contribution.id,
+						receiver_id: owner.id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_inventoried_as_id: resource.id,
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+					}),
+				{:ok, modify_resource_origin} <- Intent.Domain.create(%{
+						action_id: "modify",
+						output_of_id: process_contribution.id,
+						receiver_id: owner.id,
+						has_point_in_time: DateTime.utc_now(),
+						resource_inventoried_as_id: resource.id,
+						resource_quantity: %{has_numerical_value: 1, has_unit_id: inst_vars.units.unit_one.id},
+					}),
+				# Link proposal and intent
+				{:ok, _} <- ProposedIntent.Domain.create(%{
+						published_in_id: proposal.id,
+						publishes_id: cite_resource_forked.id,
+					}),
+				{:ok, _} <- ProposedIntent.Domain.create(%{
+						published_in_id: proposal.id,
+						publishes_id: accept_resource_origin.id,
+					}),
+				{:ok, _} <- ProposedIntent.Domain.create(%{
+						published_in_id: proposal.id,
+						publishes_id: modify_resource_origin.id,
+					}),
+				# economic system: points assignments
+				{:ok} = Wallet.add_points(idea_points().on_fork, resource.primary_accountable_id, :idea),
+				{:ok} = Wallet.add_points(strengths_points().on_fork, params.owner_id, :strengths) do
+
+			{:ok, %{proposal: proposal, fork_event: forked_evt}}
 		end
 	end)
 end

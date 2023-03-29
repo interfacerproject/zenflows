@@ -69,6 +69,17 @@ input_object :project_add_contributor_params do
 	field :process, :id
 end
 
+input_object :project_fork_params do
+	field :resource_id, non_null(:id)
+	field :description, non_null(:string)
+	field :contribution_repository, non_null(:id)
+end
+
+object :project_fork do
+	field :fork_event, non_null(:economic_event)
+	field :proposal, non_null(:proposal)
+end
+
 object :mutation_project do
 	@desc "Flow to create a new project (economic resource with PRODUCE action)"
 	field :project_create, :economic_event do
@@ -79,6 +90,11 @@ object :mutation_project do
 	field :project_add_contributor, :economic_event do
 		arg :contributor, non_null(:project_add_contributor_params)
 		resolve &Resolv.project_add_contributor/2
+	end
+
+	field :project_fork, :economic_event do
+		arg :contributor, non_null(:project_fork_params)
+		resolve &Resolv.project_fork/2
 	end
 end
 end

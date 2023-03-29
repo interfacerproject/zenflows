@@ -72,13 +72,30 @@ describe "`onCreate` flow" do
 		contribute_params = %{
 			contributor_id: params.contributor.id,
 			process_id: evt.output_of.id,
-			user: params.agent,
+			owner_id: params.agent.id,
 		}
+		{:ok, _} = Domain.add_contributor(contribute_params)
+
+		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
+		assert coins_after - coins_before == 200
+
+		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
+
+		create_params = %{
+			resource_id: evt.resource_inventoried_as.id,
+			description: "great description",
+			contribution_repository: "",
+			owner_id: params.agent.id,
+		}
+		{:ok, result} = Domain.fork(create_params)
+
+		evt = Repo.preload(result.fork_event, :resource_inventoried_as)
+		assert String.contains?(evt.resource_inventoried_as.name,
+				"forked")
+
 		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
 		assert coins_after - coins_before == 100
-		{:ok, _} = Domain.add_contributor(contribute_params)
 	end
-
 end
 
 end

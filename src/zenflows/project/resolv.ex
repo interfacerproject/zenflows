@@ -29,7 +29,13 @@ end
 
 def project_add_contributor(%{contributor: params}, %{context: %{req_user: user}}) do
 	params
-	|> Map.put(:user, user.id)
+	|> Map.put(:owner_id, user.id)
 	|> Domain.add_contributor()
+end
+
+def project_fork(%{fork: params}, %{context: %{req_user: user}}) do
+	params
+	|> Map.put(:owner_id, user.id)
+	|> Domain.fork()
 end
 end

@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
+# Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Test trace
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  run_server:
+    # services:
+    #   run_server:
+    #     runs-on: ubuntu-latest
+            
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+
+      # - name: Lint with flake8
+      #   run: |
+      #     # stop the build if there are Python syntax errors or undefined names
+      #     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      #     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+      #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: check-out repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build and run Docker image
+        env: 
+          IF_KEY: ${{ secrets.KEY }}
+        run: |
+          admin_key=${IF_KEY}
+          db_pass=$(openssl rand -hex 16)
+          room_salt=${IF_KEY}
+          # /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          cat devop/docker-compose.yml
+          ./mann devop.up
+
+  run_tester:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: check-out remote repo
+        uses: actions/checkout@v3
+        with:
+          repository: interfacerproject/Interfacer-notebook
+          path: notebook
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          # ls -l notebook/
+          python -m pip install --upgrade pip
+          pip install pytest
+          # pip install flake8
+          pip install zenroom requests notebook papermill plotly
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Test with pytest
+        env: 
+          IF_KEY: ${{ secrets.KEY }}
+        run: |
+          cd notebook
+          pytest --endpoint http://localhost:8000/api 

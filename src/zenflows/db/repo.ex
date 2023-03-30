@@ -23,23 +23,39 @@ use Ecto.Repo,
 	otp_app: :zenflows,
 	adapter: Ecto.Adapters.Postgres
 
-@spec multi((-> {:ok | :error, term()})
-		| (Ecto.Repo.t() -> {:ok | :error, term()}))
-	:: {:ok | :error, term()}
+@spec multi((-> :ok | :error | {:ok | :error, term()})
+		| (Ecto.Repo.t() -> :ok | :error | {:ok | :error, term()}))
+	:: :ok | :error | {:ok | :error, term()}
 def multi(fun) when is_function(fun, 0) do
 	transaction(fn ->
 		case fun.() do
-			{:ok, v} -> v
-			{:error, v} -> rollback(v)
+			:ok -> :atom
+			:error -> rollback(:atom)
+			{:ok, v} -> {:tuple, v}
+			{:error, v} -> rollback({:tuple, v})
 		end
 	end)
+	|> case do
+		{:ok, :atom} -> :ok
+		{:error, :atom} -> :error
+		{:ok, {:tuple, v}} -> {:ok, v}
+		{:error, {:tuple, v}} -> {:error, v}
+	end
 end
 def multi(fun) when is_function(fun, 1) do
 	transaction(fn repo ->
 		case fun.(repo) do
-			{:ok, v} -> v
-			{:error, v} -> rollback(v)
+			:ok -> :atom
+			:error -> rollback(:atom)
+			{:ok, v} -> {:tuple, v}
+			{:error, v} -> rollback({:tuple, v})
 		end
 	end)
+	|> case do
+		{:ok, :atom} -> :ok
+		{:error, :atom} -> :error
+		{:ok, {:tuple, v}} -> {:ok, v}
+		{:error, {:tuple, v}} -> {:error, v}
+	end
 end
 end

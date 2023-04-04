@@ -284,7 +284,12 @@ cmd_devop_serve() {
 
 cmd_devop_comp() {
 	cmd_devop_setup
-	docker-compose -p zenflows -f devop/docker-compose.yml "$@"
+	if which docker-compose >/dev/null
+	then
+		docker-compose -p zenflows -f devop/docker-compose.yml "$@"
+	else
+		docker compose -p zenflows -f devop/docker-compose.yml "$@"
+	fi
 }
 
 cmd_devop_build() {

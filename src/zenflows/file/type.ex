@@ -25,27 +25,22 @@ alias Zenflows.File.Resolv
 
 object :file do
 	field :hash, non_null(:url64)
+	field :size, non_null(:integer)
+	field :bin, :base64
 	field :name, non_null(:string)
 	field :description, non_null(:string)
-	field :date, non_null(:datetime), resolve: &Resolv.date/3
+	field :inserted_at, non_null(:datetime), name: "date"
 	field :mime_type, non_null(:string)
 	field :extension, non_null(:string)
-	field :size, non_null(:integer)
-	field :signature, non_null(:string)
-	field :width, :integer
-	field :height, :integer
-	field :bin, :base64
+	field :signature, :string
 end
 
 input_object :ifile, name: "IFile" do
 	field :hash, non_null(:url64)
+	field :size, non_null(:integer)
 	field :name, non_null(:string)
 	field :description, non_null(:string)
 	field :mime_type, non_null(:string)
 	field :extension, non_null(:string)
-	field :size, non_null(:integer)
-	field :signature, non_null(:string)
-	field :width, :integer
-	field :height, :integer
 end
 end

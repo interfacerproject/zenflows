@@ -27,13 +27,6 @@ require Logger
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.VF.{
-	Agent,
-	EconomicResource,
-	Intent,
-	RecipeResource,
-	ResourceSpecification,
-}
 
 @type t() :: %__MODULE__{
 	hash: String.t(),

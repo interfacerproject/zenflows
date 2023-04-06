@@ -21,6 +21,7 @@ defmodule Zenflows.VF.ResourceSpecification.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.File
 alias Zenflows.VF.ResourceSpecification
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -113,10 +114,10 @@ end
 		:images | :default_unit_of_resource | :default_unit_of_effort)
 	:: ResourceSpecification.t()
 def preload(res_spec, x) when x in ~w[
-	images default_unit_of_resource default_unit_of_effort
-]a do
-	Repo.preload(res_spec, x)
-end
+	default_unit_of_resource default_unit_of_effort
+]a, do: Repo.preload(res_spec, x)
+def preload(res_spec, :images),
+	do: File.Domain.preload_gql(res_spec, :images, :resource_specification_id)
 
 @spec multi_key() :: atom()
 def multi_key(), do: :resource_specification
@@ -128,7 +129,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, ResourceSpecification.changeset(params))
+	m
+	|> Multi.insert(key, ResourceSpecification.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :resource_specification_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -137,6 +140,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&ResourceSpecification.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :resource_specification_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

@@ -26,7 +26,6 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.{ResourceSpecification, Unit}
 
 @type t() :: %__MODULE__{
@@ -35,7 +34,7 @@ alias Zenflows.VF.{ResourceSpecification, Unit}
 	unit_of_effort: Unit.t() | nil,
 	resource_conforms_to: ResourceSpecification.t() | nil,
 	substitutable: boolean(),
-	images: [File.t()],
+	images: [map()],
 	note: String.t() | nil,
 }
 
@@ -46,7 +45,7 @@ schema "vf_recipe_resource" do
 	field :resource_classified_as, {:array, :string}
 	belongs_to :resource_conforms_to, ResourceSpecification
 	field :substitutable, :boolean, default: false
-	has_many :images, File
+	field :images, {:array, :map}, virtual: true
 	field :note, :string
 	timestamps()
 end
@@ -55,7 +54,7 @@ end
 @cast @reqr ++ ~w[
 	unit_of_resource_id unit_of_effort_id
 	resource_classified_as resource_conforms_to_id
-	substitutable note
+	substitutable note images
 ]a
 
 @doc false
@@ -66,7 +65,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:resource_conforms_to)
 	|> Changeset.assoc_constraint(:unit_of_resource)
 	|> Changeset.assoc_constraint(:unit_of_effort)

@@ -23,7 +23,6 @@ A person or group or organization with economic agency.
 
 use Zenflows.DB.Schema
 
-alias Zenflows.File
 alias Zenflows.VF.SpatialThing
 
 @type t() :: %__MODULE__{
@@ -31,7 +30,7 @@ alias Zenflows.VF.SpatialThing
 	type: :per | :org, # Person or Organization
 	name: String.t(),
 	note: String.t() | nil,
-	images: [File.t()],
+	images: [map()],
 	primary_location: SpatialThing.t() | nil,
 
 	# person
@@ -52,7 +51,7 @@ schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:per, :org]
 	field :name, :string
 	field :note, :string
-	has_many :images, File
+	field :images, {:array, :map}, virtual: true
 	belongs_to :primary_location, SpatialThing
 	timestamps()
 

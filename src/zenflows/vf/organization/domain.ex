@@ -21,6 +21,7 @@ defmodule Zenflows.VF.Organization.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.File
 alias Zenflows.VF.{Organization, Organization.Query}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -112,9 +113,10 @@ def delete!(id) do
 end
 
 @spec preload(Organization.t(), :images | :primary_location) :: Organization.t()
-def preload(org, x) when x in ~w[images primary_location]a do
-	Repo.preload(org, x)
-end
+def preload(org, x) when x in ~w[primary_location]a,
+	do: Repo.preload(org, x)
+def preload(org, :images),
+	do: File.Domain.preload_gql(org, :images, :agent_id)
 
 @spec multi_key() :: atom()
 def multi_key(), do: :organization
@@ -126,7 +128,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, Organization.changeset(params))
+	m
+	|> Multi.insert(key, Organization.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :agent_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -135,6 +139,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&Organization.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :agent_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

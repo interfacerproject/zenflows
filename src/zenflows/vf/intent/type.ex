@@ -80,9 +80,7 @@ goal has been met, and indicates that no more will be done.
 """
 @at_location "The place where an intent would occur.  Usually mappable."
 @at_location_id "(`SpatialThing`) #{@at_location}"
-@image """
-The base64-encoded image binary relevant to the intent, such as a photo.
-"""
+@images "The image files relevant to the intent, such as a photo."
 @name """
 An informal or formal textual identifier for an intent.  Does not imply
 uniqueness.
@@ -157,8 +155,8 @@ object :intent do
 	@desc @at_location
 	field :at_location, :spatial_thing, resolve: &Resolv.at_location/3
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:file)), resolve: &Resolv.images/3
 
 	@desc @name
 	field :name, :string
@@ -228,8 +226,8 @@ input_object :intent_create_params do
 	@desc @at_location_id
 	field :at_location_id, :id, name: "at_location"
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile))
 
 	@desc @name
 	field :name, :string
@@ -295,8 +293,8 @@ input_object :intent_update_params do
 	@desc @at_location_id
 	field :at_location_id, :id, name: "at_location"
 
-	@desc @image
-	field :image, :base64
+	@desc @images
+	field :images, list_of(non_null(:ifile))
 
 	@desc @name
 	field :name, :string

@@ -78,7 +78,7 @@ end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
-def exec(name, post_data) do
+defp exec(name, post_data) do
 	request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
 		name, post_data)
 end

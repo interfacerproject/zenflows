@@ -65,9 +65,7 @@ get "/:hash" do
 	hash = Map.fetch!(conn.path_params, "hash")
 	case File.Domain.one(hash: hash) do
 		{:ok, file} ->
-			conn
-			|> put_resp_content_type(file.mime_type)
-			|> send_resp(200, file.bin)
+			send_resp(conn, 200, file.bin)
 		_ -> send_resp(conn, 404, "Not Found")
 	end
 end

@@ -21,6 +21,7 @@ defmodule Zenflows.VF.Intent.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Intent,
@@ -114,7 +115,8 @@ end
 		| :provider | :receiver
 		| :resource_inventoried_as  | :resource_conforms_to
 		| :resource_quantity | :effort_quantity | :available_quantity
-		| :at_location | :published_in)
+		| :at_location | :published_in
+		| :images)
 	:: Intent.t()
 def preload(int, x) when x in ~w[
 	input_of output_of provider receiver resource_inventoried_as
@@ -126,6 +128,8 @@ def preload(int, x) when x in ~w[
 	effort_quantity available_quantity resource_quantity
 ]a,
 	do: Measure.preload(int, x)
+def preload(int, :images),
+	do: File.Domain.preload_gql(int, :images, :intent_id)
 
 @spec multi_key() :: atom()
 def multi_key(), do: :intent
@@ -137,7 +141,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, Intent.changeset(params))
+	m
+	|> Multi.insert(key, Intent.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :intent_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -146,6 +152,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&Intent.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :intent_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

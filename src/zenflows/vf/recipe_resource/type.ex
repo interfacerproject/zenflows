@@ -126,7 +126,6 @@ input_object :recipe_resource_update_params do
 	@desc @unit_of_effort_id
 	field :unit_of_effort_id, :id, name: "unit_of_effort"
 
-
 	@desc @images
 	field :images, list_of(non_null(:ifile))
 

@@ -141,7 +141,7 @@ defp create_file_if_not_exists(%{changes: %{hash: hash}} = cset) do
 	end)
 end
 
-@spec create!(Schema.params()) :: Organization.t()
+@spec create!(Schema.params()) :: File.Join.t()
 def create!(params) do
 	{:ok, value} = create(params)
 	value

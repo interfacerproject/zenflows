@@ -82,12 +82,12 @@ def token_validate(person, tok) do
 				hash = Base.encode64(hash_raw),
 				data = Base.encode64(data_raw),
 				:ok <- Restroom.hmac_verify(data, hash),
-				# `ID.cast/1` handles parsing of `id`
-				<<type_raw::binary-1, id::binary-16, ts_raw::binary>> = data_raw,
+				<<type_raw::binary-1, id_raw::binary-16, ts_raw::binary>> = data_raw,
 				{:ok, type} <- token_decode_type(type_raw),
 				{:ok, ts} <- ts_raw |> :binary.decode_unsigned() |> DateTime.from_unix(),
 				valid_until = DateTime.add(DateTime.utc_now(), expiry(), :second),
 				:lt <- DateTime.compare(ts, valid_until),
+				{:ok, id} <- ID.cast(id_raw),
 				true <- person.id == id do
 			# TODO: this needs to deal with in case if user changes email after
 			# this token was given in order to prevent verifying a fake email address.

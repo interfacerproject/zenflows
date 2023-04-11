@@ -74,10 +74,10 @@ end
 @spec request_email_verification(Person.t(), atom()) :: :ok | {:error, term()}
 def request_email_verification(person, template) do
 	url = case template do
-		:interfacer_deployment -> "https://interfacer.dyne.org/email/verify/"
-		:interfacer_staging -> "https://interfacer-gui.staging.dyne.org/email/verify/"
-		:interfacer_testing -> "https://interfacer-gui.testing.dyne.org/email/verify/"
-		:interfacer_debugging -> "https://interfacer-gui.debugging.dyne.org/email/verify/"
+		:interfacer_deployment -> "https://beta.interfacer.dyne.org/email/verify/"
+		:interfacer_staging -> "https://interfacer-gui-staging.dyne.org/email/verify/"
+		:interfacer_testing -> "http://localhost:3000/email/verify/"
+		:interfacer_debugging -> "http://localhost:3000/email/verify/"
 	end
 	Email.Domain.request_email_verification(person, url)
 end

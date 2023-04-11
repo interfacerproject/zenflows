@@ -39,6 +39,7 @@ alias Zenflows.VF.SpatialThing
 	ethereum_address: String.t() | nil,
 	reflow_public_key: String.t() | nil,
 	bitcoin_public_key: String.t() | nil,
+	is_verified: boolean(),
 }
 
 schema "vf_agent" do
@@ -54,6 +55,7 @@ schema "vf_agent" do
 	field :ethereum_address, :string
 	field :reflow_public_key, :string
 	field :bitcoin_public_key, :string
+	field :is_verified, :boolean, default: false
 	timestamps()
 end
 
@@ -65,10 +67,11 @@ end
 	ethereum_address
 	reflow_public_key
 	bitcoin_public_key
+	is_verified
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
-@update_cast ~w[name note primary_location_id user]a
+@update_cast ~w[name note primary_location_id user is_verified]a
 
 # insert changeset
 @doc false

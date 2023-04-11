@@ -91,7 +91,7 @@ object :person do
 	field :bitcoin_public_key, :string
 
 	@desc "Has the user verified their email address."
-	field :is_verified, :boolean
+	field :is_verified, non_null(:boolean)
 end
 
 @desc "Person eddsa public key"

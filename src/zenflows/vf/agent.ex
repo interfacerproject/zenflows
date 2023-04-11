@@ -32,6 +32,7 @@ alias Zenflows.VF.SpatialThing
 	note: String.t() | nil,
 	images: [map()],
 	primary_location: SpatialThing.t() | nil,
+	is_verified: boolean(),
 
 	# person
 	user: String.t() | nil,
@@ -53,6 +54,7 @@ schema "vf_agent" do
 	field :note, :string
 	field :images, {:array, :map}, virtual: true
 	belongs_to :primary_location, SpatialThing
+	field :is_verified, :boolean, default: false
 	timestamps()
 
 	# person

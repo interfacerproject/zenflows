@@ -47,8 +47,9 @@ def preload_gql(record, gql_key, id_key) do
 	result = from(f in File,
 		join: j in File.Join, on: j.hash == f.hash,
 		join: r in ^record.__struct__, on: field(j, ^id_key) == r.id,
-		select: %{
-			hash: f.hash,
+		where: r.id == ^record.id,
+		order_by: j.inserted_at,
+		select: %{ hash: f.hash,
 			size: f.size,
 			bin: f.bin,
 			name: j.name,
@@ -57,8 +58,7 @@ def preload_gql(record, gql_key, id_key) do
 			extension: j.extension,
 			inserted_at: j.inserted_at,
 			updated_at: j.updated_at,
-		},
-		order_by: j.inserted_at)
+		})
 	|> Repo.all()
 	Map.put(record, gql_key, result)
 end

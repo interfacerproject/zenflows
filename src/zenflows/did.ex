@@ -21,7 +21,7 @@ defmodule Zenflows.DID do
 A module to interact with the did controller instances over HTTPS.
 """
 
-alias Zenflows.HTTPC
+alias Zenflows.{HTTPC, Restroom}
 alias Zenflows.VF.Person
 
 def child_spec(_) do
@@ -38,7 +38,7 @@ end
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
 defp exec(name, post_data) do
-	Zenflows.Restroom.request(&HTTPC.request(__MODULE__, &1, &2, &3, &4),
+	Restroom.request(&HTTPC.request(__MODULE__, &1, &2, &3, &4),
 		"/v1/ifacer/#{name}", post_data)
 end
 
@@ -62,7 +62,7 @@ end
 
 @spec request_new_did(Person.t()) :: {:ok, map()} | {:error, term()}
 def request_new_did(person) do
-	did_request = %{
+	did_request = Map.merge(keyring(), %{
 		"proof" => %{
 			"type" => "EcdsaSecp256k1Signature2019",
 			"proofPurpose" => "assertionMethod"
@@ -89,13 +89,10 @@ def request_new_did(person) do
 		"reflow_public_key" => person.reflow_public_key,
 		"timestamp" =>
 			DateTime.utc_now() |> DateTime.to_unix(:millisecond) |> to_string
-	}
+	})
 
-	with {:ok, did} <-
-		Zenflows.Restroom.exec("pubkeys-request-signed",
-			Map.merge(did_request, keyring())),
-		{:ok, did_signed} <- exec("pubkeys-accept.chain", did)
-	do
+	with {:ok, did} <- Restroom.pubkeys_request_signed(did_request),
+			{:ok, did_signed} <- exec("pubkeys-accept.chain", did) do
 		{:ok, %{"created" => true, "did" => did_signed}}
 	end
 end

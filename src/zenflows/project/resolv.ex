@@ -44,8 +44,8 @@ def project_cite(%{cite: params}, %{context: %{req_user: user}}) do
 	|> Map.put(:owner_id, user.id)
 	|> Domain.cite()
 end
-def project_cite(%{proposal_id: proposal_id}, %{context: %{req_user: user}}) do
-	%{proposal_id: proposal_id, owner_id: user.id}
-	|> Domain.approve()
+
+def project_approve(%{proposal_id: proposal_id}, %{context: %{req_user: user}}) do
+	Domain.approve(%{proposal_id: proposal_id, owner_id: user.id})
 end
 end

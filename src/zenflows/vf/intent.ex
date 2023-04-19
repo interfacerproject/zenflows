@@ -25,7 +25,6 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,

@@ -20,109 +20,81 @@ defmodule ZenflowsTest.VF.EconomicEvent do
 use ZenflowsTest.Help.EctoCase, async: true
 
 alias Zenflows.Project.Domain
+alias Zenflows.VF.EconomicEvent
 alias Zenflows.Wallet
 
-setup_all do
-	[errmsg_exist_xnor: "exactly one of them must be provided"]
+test "create a project and add a contributor" do
+	owner = Factory.insert!(:agent)
+
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("0"))
+	create_params = %{
+		title: Factory.str("title"),
+		description: Factory.str("description"),
+		link: Factory.uri(),
+		tags: Factory.str_list("tags"),
+		location_name: Factory.str("location_name"),
+		location: %{
+			lat: Factory.decimal(),
+			lng: Factory.decimal(),
+			address: Factory.str("address"),
+		},
+		location_remote: Factory.bool(),
+		images: [],
+		licenses: [],
+		relations: [],
+		project_type: :design,
+		contributors: [],
+		declarations: [],
+		owner_id: owner.id,
+	}
+	assert {:ok, create_evt} = Domain.create(create_params)
+	create_evt = create_evt
+		|> EconomicEvent.Domain.preload(:output_of)
+		|> EconomicEvent.Domain.preload(:resource_inventoried_as)
+	assert create_evt.output_of.name == "creation of #{create_params.title} by #{owner.name}"
+	assert create_evt.resource_inventoried_as.name == create_params.title
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("100"))
+
+	contributor = Factory.insert!(:agent)
+	contribute_params = %{
+		contributor_id: contributor.id,
+		process_id: create_evt.output_of_id,
+		owner_id: owner.id,
+	}
+	assert {:ok, _} = Domain.add_contributor(contribute_params)
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("200"))
+
+	fork_params = %{
+		resource_id: create_evt.resource_inventoried_as_id,
+		description: Factory.str("description"),
+		contribution_repository: "",
+		owner_id: owner.id,
+	}
+	assert {:ok, result} = Domain.fork(fork_params)
+	forking_evt = EconomicEvent.Domain.preload(result.forking_evt, :resource_inventoried_as)
+	assert forking_evt.resource_inventoried_as.name
+		== "#{create_evt.resource_inventoried_as.name} resource forked by #{owner.name}"
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("300"))
+
+	cite_params = %{
+		resource_id: forking_evt.resource_inventoried_as_id,
+		process_id: forking_evt.output_of_id,
+		owner_id: owner.id,
+	}
+	assert {:ok, _} = Domain.cite(cite_params)
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("400"))
+
+	accept_params = %{
+		proposal_id: Factory.insert!(:proposal).id,
+		owner_id: owner.id,
+	}
+	assert {:ok, _} = Domain.approve(accept_params)
+	assert {:ok, amount} = Wallet.get_idea_points(owner.id)
+	assert Decimal.eq?(amount, Decimal.new("400"))
 end
-
-describe "`onCreate` flow" do
-	setup do
-		agent = Factory.insert!(:agent)
-		proposal = Factory.insert!(:proposal)
-		contributor = Factory.insert!(:agent)
-		title = "Test project"
-		%{params: %{
-			agent: agent,
-			proposal: proposal,
-			contributor: contributor,
-			title: title,
-		}}
-	end
-
-	test "create a project and add a contributor", %{params: params} do
-		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
-
-		create_params = %{
-			title: params.title,
-			description: "ciccio",
-			link: "example.com",
-			tags: ["aa", "bbb"],
-			location_name: "ciccio",
-			location: %{
-				lat: 13,
-				lng: 42,
-				address: "Main way"
-			},
-			location_remote: true,
-			images: [],
-			licenses: [],
-			relations: [],
-			project_type: "design",
-			contributors: [],
-			declarations: [],
-			owner_id: params.agent.id,
-		}
-		{:ok, evt} = Domain.create(create_params)
-		evt = evt
-			|> Repo.preload(:output_of)
-			|> Repo.preload(:resource_inventoried_as)
-
-		assert String.contains?(evt.output_of.name, params.title)
-		assert evt.resource_inventoried_as.name == params.title
-
-		contribute_params = %{
-			contributor_id: params.contributor.id,
-			process_id: evt.output_of.id,
-			owner_id: params.agent.id,
-		}
-		{:ok, _} = Domain.add_contributor(contribute_params)
-
-		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
-		assert coins_after - coins_before == 200
-
-		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
-
-		create_params = %{
-			resource_id: evt.resource_inventoried_as.id,
-			description: "great description",
-			contribution_repository: "",
-			owner_id: params.agent.id,
-		}
-		{:ok, result} = Domain.fork(create_params)
-
-		evt = Repo.preload(result.fork_event, :resource_inventoried_as)
-		assert String.contains?(evt.resource_inventoried_as.name,
-				"forked")
-
-		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
-		assert coins_after - coins_before == 100
-
-		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
-
-		cite_params = %{
-			resource_id: evt.resource_inventoried_as_id,
-			process_id: evt.output_of_id,
-			owner_id: params.agent.id,
-		}
-		{:ok, result} = Domain.cite(cite_params)
-
-		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
-		assert coins_after - coins_before == 100
-
-
-
-		{:ok, coins_before} = Wallet.get_points_amount(params.agent.id, :idea)
-
-
-		accept_params = %{
-			proposal_id: params.proposal.id,
-			owner_id: params.agent.id,
-		}
-		{:ok, result} = Domain.approve(accept_params) |> IO.inspect()
-		{:ok, coins_after} = Wallet.get_points_amount(params.agent.id, :idea)
-		assert coins_after - coins_before == 100
-	end
-end
-
 end

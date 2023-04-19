@@ -21,8 +21,6 @@ defmodule Zenflows.File.Type do
 
 use Absinthe.Schema.Notation
 
-alias Zenflows.File.Resolv
-
 object :file do
 	field :hash, non_null(:url64)
 	field :size, non_null(:integer)

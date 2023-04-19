@@ -90,14 +90,14 @@ Here's a truth table as a quick reference:
 | 1 | 1 | 0 |
 """
 @spec exist_xor(Changeset.t(), [atom(), ...], Keyword.t()) :: Changeset.t()
-def exist_xor(cset, [h | t] = fields, opts \\ []) do
+def exist_xor(cset, fields, opts \\ []) do
 	meth = Keyword.get(opts, :method, :change)
-	h_exists? = field_exists?(meth, cset, h)
-
-	if Enum.all?(t, &(h_exists? != field_exists?(meth, cset, &1))) do
-		cset
-	else
-		Enum.reduce(fields, cset,
+	Enum.filter(fields, &field_exists?(meth, cset, &1))
+	|> case do
+		[] -> Enum.reduce(fields, cset,
+			&Changeset.add_error(&2, &1, "exactly one of them must be provided"))
+		[_] -> cset
+		bad_fields -> Enum.reduce(bad_fields, cset,
 			&Changeset.add_error(&2, &1, "exactly one of them must be provided"))
 	end
 end
@@ -121,11 +121,12 @@ Here's a truth table as a quick reference:
 @spec exist_nand(Changeset.t(), [atom(), ...], Keyword.t()) :: Changeset.t()
 def exist_nand(cset, fields, opts \\ []) do
 	meth = Keyword.get(opts, :method, :change)
-	if Enum.all?(fields, &field_exists?(meth, cset, &1)) do
-		Enum.reduce(fields, cset,
-			&Changeset.add_error(&2, &1, "one or none of them must be provided"))
-	else
-		cset
+	Enum.filter(fields, &field_exists?(meth, cset, &1))
+	|> case do
+		[] -> cset
+		[_] -> cset
+		bad_fields -> Enum.reduce(bad_fields, cset,
+			&Changeset.add_error(&2, &1, "exactly one of them must be provided"))
 	end
 end
 

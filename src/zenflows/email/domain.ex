@@ -20,9 +20,9 @@ defmodule Zenflows.Email.Domain do
 @moduledoc false
 
 alias Zenflows.DB.{ID, Repo}
+alias Zenflows.Email
 alias Zenflows.Restroom
 alias Zenflows.VF.Person
-alias Zenflows.Email
 
 @spec request_email_verification(Person.t(), String.t()) :: :ok | {:error, term()}
 def request_email_verification(person, url) do

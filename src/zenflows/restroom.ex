@@ -44,6 +44,31 @@ def byte_equal?(left, right) do
 	end
 end
 
+@doc "Generate the EdDSA public key out of a Keyring."
+@spec generate_pubkey(map()) :: {:ok, String.t()} | {:error, term()}
+def generate_pubkey(keyring) do
+	data = %{keyring: keyring}
+	case exec("gen_pubkey", data) do
+		{:ok, %{"eddsa_public_key" => pubkey}} -> {:ok, pubkey}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@spec sign_graphql(map(), String.t())
+		:: {:ok, %{eddsa_signature: String.t(), gql: String.t(), hash: String.t()}}
+	| {:error, term()}
+def sign_graphql(keyring, gql) do
+	data = %{keyring: keyring, gql: Base.encode64(gql)}
+	case exec("sign_graphql", data) do
+		{:ok, %{
+			"eddsa_signature" => eddsa_sig,
+			"gql" => gql,
+			"hash" => hash,
+		}} -> {:ok, %{eddsa_signature: eddsa_sig, gql: gql, hash: hash}}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
 @doc """
 Given the GraphQL `body`, its `signature`, and `pubkey` of the user who
 executes the query, verify that everything matches.
@@ -72,6 +97,19 @@ def keypairoom_server(data) do
 	}
 	case exec("keypairoomServer-6-7", data) do
 		{:ok, %{"seedServerSideShard.HMAC" => hmac}} -> {:ok, hmac}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@doc """
+Generate a DID registration request signed with the admin key using
+pubkeys and identity of a user.
+"""
+@spec pubkeys_request_signed(%{String.t() => term()})
+	:: {:ok, %{String.t() => term()}} | {:error, term()}
+def pubkeys_request_signed(data) do
+	case exec("pubkeys-request-signed", data) do
+		{:ok, did} -> {:ok, did}
 		{:error, reason} -> {:error, reason}
 	end
 end

@@ -127,3 +127,14 @@ config :zenflows, Zenflows.GQL,
 	def_page_size: def_page_size,
 	max_page_size: max_page_size,
 	authenticate_calls?: auth?
+
+#
+# email / sendgrid
+#
+email_expiry = get_env_int.("EMAIL_EXPIRY", 60*60*24*4) # 4 days
+if email_expiry < 1,
+	do: raise "EMAIL_EXPIRY can't be less than a second"
+config :zenflows, Zenflows.Email,
+	email_from: fetch_env!("EMAIL_ADDR"),
+	api_key: fetch_env!("EMAIL_KEY"),
+	expiry: email_expiry

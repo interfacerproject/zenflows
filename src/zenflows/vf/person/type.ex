@@ -43,6 +43,13 @@ who have no physical location.
 @reflow_public_key "reflow public key, encoded by zenroom"
 @bitcoin_public_key "bitcoin public key, encoded by zenroom"
 
+enum :email_template do
+	value :interfacer_deployment
+	value :interfacer_staging
+	value :interfacer_testing
+	value :interfacer_debugging
+end
+
 @desc "A natural person."
 object :person do
 	interface :agent
@@ -82,6 +89,9 @@ object :person do
 
 	@desc @bitcoin_public_key
 	field :bitcoin_public_key, :string
+
+	@desc "Has the user verified their email address."
+	field :is_verified, non_null(:boolean)
 end
 
 @desc "Person eddsa public key"
@@ -232,6 +242,26 @@ object :mutation_person do
 	field :claim_person, non_null(:json) do
 		arg :id, non_null(:id)
 		resolve &Resolv.claim_person/2
+	end
+
+	@desc """
+	Send an email verification request to the user via email using email address if
+	available, else fails (some users are registered by admin without an email
+	address).
+	"""
+	field :person_request_email_verification, non_null(:boolean) do
+		@desc "The template to use for the email."
+		arg :template, non_null(:email_template)
+		resolve &Resolv.person_request_email_verification/2
+	end
+
+	@desc """
+	Verify an email verification request of the user using the token provided in
+	the verification request.
+	"""
+	field :person_verify_email_verification, non_null(:boolean) do
+		arg :token, non_null(:string)
+		resolve &Resolv.person_verify_email_verification/2
 	end
 end
 end

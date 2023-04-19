@@ -22,14 +22,14 @@ A module to interact with Restroom instances over (for now) HTTP.
 """
 
 def child_spec(_) do
-		Supervisor.child_spec(
-			{Zenflows.HTTPC,
-				name: __MODULE__,
-				scheme: scheme(),
-				host: host(),
-				port: port(),
-			},
-			id: __MODULE__)
+	Supervisor.child_spec(
+		{Zenflows.HTTPC,
+			name: __MODULE__,
+			scheme: scheme(),
+			host: host(),
+			port: port(),
+		},
+		id: __MODULE__)
 end
 
 @doc """
@@ -73,7 +73,7 @@ end
 Given the GraphQL `body`, its `signature`, and `pubkey` of the user who
 executes the query, verify that everything matches.
 """
-@spec verify_graphql(binary(), String.t(), String.t()) :: :ok | {:error, String.t()}
+@spec verify_graphql(binary(), String.t(), String.t()) :: :ok | {:error, term()}
 def verify_graphql(body, signature, pubkey) do
 	data = %{
 		"gql" => Base.encode64(body),
@@ -91,12 +91,37 @@ See https://github.com/dyne/keypairoom for details.
 """
 @spec keypairoom_server(map()) :: {:ok, String.t()} | {:error, term()}
 def keypairoom_server(data) do
-	data = %{
-		"userData" => data,
-		"serverSideSalt" => salt(),
-	}
+	data = %{"userData" => data, "serverSideSalt" => salt()}
 	case exec("keypairoomServer-6-7", data) do
 		{:ok, %{"seedServerSideShard.HMAC" => hmac}} -> {:ok, hmac}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@doc """
+Generate the HMAC (SHA256) signature of `data` using the server-side key.
+
+The returned value in the ok-tuble, `data`, and `key` are base64-encoded
+strings.
+"""
+@spec hmac_new(String.t()) :: {:ok, String.t()} | {:error, term()}
+def hmac_new(data) do
+	case exec("hmac_new", %{"data" => data, "key" => salt()}) do
+		{:ok, %{"HMAC" => sign}} -> {:ok, sign}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@doc """
+Verifies authencity of the HMAC (SHA256) signature of `expected`
+using the server-side key and `data`.
+strings.
+"""
+@spec hmac_verify(String.t(), String.t()) :: :ok | {:error, term()}
+def hmac_verify(data, expected) do
+	data = %{"data" => data, "expected" => expected, "key" => salt()}
+	case exec("hmac_verify", data) do
+		{:ok, %{"output" => ["1"]}} -> :ok
 		{:error, reason} -> {:error, reason}
 	end
 end
@@ -122,14 +147,14 @@ defp exec(name, post_data) do
 end
 
 @doc """
-Given the request function (wrapper of Zenflows.HTTPC.request), the path
-and the data to post, it makes the request and parse the result.
+Given the request function (wrapper of Zenflows.HTTPC.request), the path,
+data, and keys to post, it makes the request and parses the result.
 """
 @spec request(fun(), String.t(), map()) :: {:ok, map()} | {:error, term()}
-def request(request_fn, path, post_data) do
+def request(request_fn, path, post_data, post_keys \\ %{}) do
 	hdrs = [{"content-type", "application/json"}]
 
-	with {:ok, post_body} <- Jason.encode(%{data: post_data}),
+	with {:ok, post_body} <- Jason.encode(%{data: Map.merge(post_data, post_keys)}),
 			{:ok, %{status: stat, data: body}} when stat == 200 or stat == 500 <-
 				request_fn.("POST", "/api/#{path}", hdrs, post_body),
 			{:ok, data} <- Jason.decode(body) do

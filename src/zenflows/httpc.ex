@@ -18,13 +18,33 @@
 
 defmodule Zenflows.HTTPC do
 @moduledoc """
-An HTTP client implemented for Zenswarm and Restroom.
+An HTTP client implemented for Zenswarm, Restroom, and Sendgrid.
 """
 use GenServer
 
 require Logger
 
 alias Mint.HTTP
+
+@type state() :: %__MODULE__{
+	conn: Mint.HTTP.t(),
+	conn_info: {
+		Mint.Types.scheme(),
+		Mint.Types.address(),
+		:inet.port_number(),
+	},
+	requests: %{
+		Mint.Types.request_ref() => %{
+			from: GenServer.from(),
+			response: %{
+				status: Mint.Types.status(),
+				headers: Mint.Types.headers(),
+				data: binary(),
+				error: term(),
+			},
+		},
+	},
+}
 
 defstruct [:conn, conn_info: {}, requests: %{}]
 
@@ -36,13 +56,14 @@ def start_link(opts) do
 	GenServer.start_link(__MODULE__, {scheme, host, port}, name: name)
 end
 
-@spec request(term(), term(), term(), term())
-	:: {:ok, term()} | {:error, term()}
+@spec request(atom(), String.t(), String.t(), Mint.Types.headers())
+	:: {:ok, %{status: non_neg_integer(), data: binary(), headers: Mint.Types.headers()}}
+		| {:error, term()}
 def request(name, method, path, headers \\ [], body \\ nil, max \\ 5) do
 	headers =
 		case :lists.keyfind("user-agent", 1, headers) do
-		  {"user-agent", _} -> headers
-		  false -> [{"user-agent", "zenflows/#{Application.spec(:zenflows, :vsn)}"} | headers]
+			{"user-agent", _} -> headers
+			false -> [{"user-agent", "zenflows/#{Application.spec(:zenflows, :vsn)}"} | headers]
 		end
 	Enum.reduce_while(1..max, nil, fn x, _ ->
 		case GenServer.call(name, {:request, method, path, headers, body}) do
@@ -70,7 +91,7 @@ def handle_call({:request, method, path, headers, body}, from, state) do
 		{scheme, host, port} = state.conn_info
 		case HTTP.connect(scheme, host, port) do
 			{:ok, conn} ->
-		 		state = put_in(state.conn, conn)
+				state = put_in(state.conn, conn)
 				{:ok, state}
 			{:error, reason} ->
 				{:error, reason}
@@ -97,7 +118,7 @@ end
 def handle_info(message, state) do
 	case HTTP.stream(state.conn, message) do
 		:unknown ->
-			_ = Logger.error(fn -> "Received unknown message: " <> inspect(message) end)
+			Logger.error("Received unknown message: #{inspect(message)}")
 			{:noreply, state}
 
 		{:ok, conn, responses} ->
@@ -114,6 +135,11 @@ def handle_info(message, state) do
 	end
 end
 
+@spec process_response({:status, Mint.Types.request_ref(), Mint.Types.status()}
+	| {:headers, Mint.Types.request_ref(), Mint.Types.headers()}
+	| {:data, Mint.Types.request_ref(), binary()}
+	| {:done, Mint.Types.request_ref()}
+	| {:error, Mint.Types.request_ref(), term()}, state()) :: state()
 defp process_response({:status, request_ref, status}, state) do
 	put_in(state.requests[request_ref].response[:status], status)
 end
@@ -123,7 +149,7 @@ defp process_response({:headers, request_ref, headers}, state) do
 end
 
 defp process_response({:data, request_ref, new_data}, state) do
-	update_in(state.requests[request_ref].response[:data], fn data -> [(data || ""), new_data] end)
+	update_in(state.requests[request_ref].response[:data], fn data -> [data || "", new_data] end)
 end
 
 defp process_response({:error, request_ref, error}, state) do
@@ -131,7 +157,10 @@ defp process_response({:error, request_ref, error}, state) do
 end
 
 defp process_response({:done, request_ref}, state) do
-	state = update_in(state.requests[request_ref].response[:data], &IO.iodata_to_binary/1)
+	state = update_in(state.requests[request_ref].response[:data], fn
+		nil -> ""
+		x -> IO.iodata_to_binary(x)
+	end)
 	{%{response: response, from: from}, state} = pop_in(state.requests[request_ref])
 	GenServer.reply(from, {:ok, response})
 	state

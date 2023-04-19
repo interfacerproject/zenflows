@@ -18,11 +18,12 @@
 
 defmodule Zenflows.Wallet do
 @moduledoc """
-A module to interact with Zenflows Wallet (idea and strengths wallet)
+A module to interact with Zenflows Wallet (idea and strength wallet)
 """
 
+alias Mint
 alias Zenflows.DB.ID
-alias Zenflows.HTTPC
+alias Zenflows.{HTTPC, Restroom}
 
 def child_spec(_) do
 		Supervisor.child_spec(
@@ -35,48 +36,70 @@ def child_spec(_) do
 			id: __MODULE__)
 end
 
-def signature_headers(data) do
-	data = %{gql: "#{Base.encode64(data)}"}
-	with {:ok, %{
-				"eddsa_public_key" => eddsa_public_key,
-				"eddsa_signature" => eddsa_signature,
-			}} <- Zenflows.Restroom.exec("sign_graphql",
-				Map.merge(data, keyring())) do
+@spec add_idea_points(ID.t(), Decimal.t()) :: :ok | :error
+def add_idea_points(owner_id, amount) do
+	add_points(owner_id, amount, "idea")
+end
+
+@spec add_strength_points(ID.t(), Decimal.t()) :: :ok | :error
+def add_strength_points(owner_id, amount) do
+	add_points(owner_id, amount, "strength")
+end
+
+@spec add_points(ID.t(), Decimal.t(), String.t()) :: :ok | :error
+defp add_points(owner_id, amount, type) do
+	with {:ok, post_body} <- Jason.encode(%{
+				token: type,
+				amount: Decimal.to_string(amount, :normal),
+				owner: owner_id,
+			}),
+			{:ok, headers} <- signature_headers(post_body),
+			{:ok, %{status: 200, data: body}} <-
+				request("POST", "/token", headers, post_body),
+			{:ok, %{"success" => true}} <- Jason.decode(body) do
+		:ok
+	else _ ->
+		:error
+	end
+end
+
+@spec signature_headers(String.t()) :: {:ok, Mint.Types.headers()} | {:error, term()}
+defp signature_headers(data) do
+	with {:ok, pubkey} <- Restroom.generate_pubkey(keyring()),
+			{:ok, %{eddsa_signature: eddsa_sig}} <- Restroom.sign_graphql(keyring(), data) do
 		{:ok, [
-			{"did-sign", eddsa_signature},
-			{"did-pk", eddsa_public_key},
+			{"did-sign", eddsa_sig},
+			{"did-pk", pubkey},
 		]}
 	end
 end
 
-@spec add_points(Decimal.t(), ID.t(), atom()) :: {:ok, map()} | {:error, term()}
-def add_points(amount, id, token) do
-	with {:ok, request} <- Jason.encode(%{
-				token: Atom.to_string(token),
-				amount: amount,
-				owner: id
-			}),
-			{:ok, headers} <- signature_headers(request),
-			{:ok, %{status: 200, data: body}} <-
-				HTTPC.request(__MODULE__, "POST", "/token", headers, request),
-			{:ok, %{"success" => true}} <- Jason.decode(body) do
-		{:ok}
+@spec get_idea_points(ID.t()) :: {:ok, Decimal.t()} | :error
+def get_idea_points(owner_id) do
+	get_points(owner_id, "idea")
+end
+
+@spec get_strength_points(ID.t()) :: {:ok, Decimal.t()} | :error
+def get_strength_points(owner_id) do
+	get_points(owner_id, "strength")
+end
+
+@spec get_points(ID.t(), String.t())
+	:: {:ok, Decimal.t()} | :error
+def get_points(id, type) do
+	with {:ok, %{status: 200, data: body}} <- request("GET", "/token/#{type}/#{id}"),
+			{:ok, %{"success" => true, "amount" => amount}} <- Jason.decode(body),
+			{:ok, decimal} <- Decimal.cast(amount) do
+		{:ok, decimal}
 	else
-		_ ->
-			{:error, "Could update point balance"}
+		_ -> :error
 	end
 end
 
-@spec get_points_amount(ID.t(), atom()) :: {:ok, map()} | {:error, term()}
-def get_points_amount(id, token) do
-	url = "/token/#{Atom.to_string(token)}/#{id}"
-	with {:ok, %{status: 200, data: body}} <- HTTPC.request(__MODULE__, "GET", url),
-			{:ok, %{"success" => true, "amount" => amount}} <- Jason.decode(body) do
-		{:ok, amount}
-	else
-		_ ->
-			{:error, "Could not fetch balance"}
-	end
+@spec request(String.t(), String.t(), Mint.Types.headers(), nil | iodata())
+	:: {:ok, map()} | {:error, term()}
+defp request(method, path, headers \\ [], body \\ nil) do
+	HTTPC.request(__MODULE__, method, path, headers, body)
 end
 
 # Return the scheme of did from the configs.

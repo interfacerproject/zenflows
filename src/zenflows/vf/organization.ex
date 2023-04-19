@@ -33,6 +33,7 @@ alias Zenflows.VF.SpatialThing
 	primary_location: SpatialThing.t() | nil,
 	classified_as: [String.t()] | nil,
 	updated_at: DateTime.t(),
+	is_verified: boolean(),
 }
 
 schema "vf_agent" do
@@ -42,11 +43,12 @@ schema "vf_agent" do
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :classified_as, {:array, :string}
+	field :is_verified, :boolean, default: false
 	timestamps()
 end
 
 @reqr [:name]
-@cast @reqr ++ ~w[images classified_as note primary_location_id]a
+@cast @reqr ++ ~w[classified_as note primary_location_id images is_verified]a
 
 @doc false
 @spec changeset(Schema.t(), Schema.params()) :: Changeset.t()

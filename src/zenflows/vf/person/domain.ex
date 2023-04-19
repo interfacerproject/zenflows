@@ -22,6 +22,7 @@ defmodule Zenflows.VF.Person.Domain do
 import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Email
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.File
 alias Zenflows.VF.{Person, Person.Query}
@@ -68,6 +69,28 @@ def pubkey(id) do
 	|> case do
 		nil -> {:error, "not found"}
 		%{eddsa_public_key: pkey} -> {:ok, pkey}
+	end
+end
+
+@spec request_email_verification(Person.t(), atom()) :: :ok | {:error, term()}
+def request_email_verification(person, template) do
+	url = case template do
+		:interfacer_deployment -> "https://beta.interfacer.dyne.org/email/verify/"
+		:interfacer_staging -> "https://interfacer-gui-staging.dyne.org/email/verify/"
+		:interfacer_testing -> "http://localhost:3000/email/verify/"
+		:interfacer_debugging -> "http://localhost:3000/email/verify/"
+	end
+	Email.Domain.request_email_verification(person, url)
+end
+
+@spec verify_email_verification(Person.t(), String.t()) :: :ok | {:error, String.t() | Changeset.t()}
+def verify_email_verification(person, token) do
+	with :ok <- Email.Domain.verify_email_verification(person, token),
+			{:ok, _} <- __MODULE__.update(person.id, %{is_verified: true}) do
+		:ok
+	else
+		:error -> {:error, "verification failed"}
+		{:error, reason} -> {:error, reason}
 	end
 end
 

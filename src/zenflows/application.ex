@@ -31,6 +31,7 @@ def start(_type, _args) do
 		Zenflows.InstVars.Domain,
 		Zenflows.Restroom,
 		Zenflows.DID,
+		Zenflows.Email,
 		{Plug.Cowboy, scheme: :http, plug: Zenflows.Web.Router, options: [port: 8000]},
 	]
 

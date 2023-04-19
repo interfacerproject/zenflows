@@ -47,6 +47,7 @@ def change() do
 		add :name, :text, null: false
 		add :note, :text
 		add :primary_location_id, references("vf_spatial_thing")
+		add :is_verified, :boolean, default: false, null: false
 		timestamps()
 
 		# person

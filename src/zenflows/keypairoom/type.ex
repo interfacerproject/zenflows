@@ -28,7 +28,7 @@ object :mutation_keypairoom do
 		meta only_guest?: true
 
 		arg :first_registration, non_null(:boolean)
-		arg :user_data, non_null(:string)
+		arg :user_data, non_null(:json_object)
 		resolve &Resolv.keypairoom_server/2
 	end
 end

@@ -23,13 +23,12 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.SpatialThing
 
 @type t() :: %__MODULE__{
 	type: :per,
 	name: String.t(),
-	images: [File.t()],
+	images: [map()],
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
 	user: String.t(),
@@ -45,7 +44,7 @@ alias Zenflows.VF.SpatialThing
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:per], default: :per
 	field :name, :string
-	has_many :images, File, foreign_key: :agent_id
+	field :images, {:array, :map}, virtual: true
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :user, :string
@@ -67,11 +66,12 @@ end
 	ethereum_address
 	reflow_public_key
 	bitcoin_public_key
+	images
 	is_verified
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
-@update_cast ~w[name note primary_location_id user is_verified]a
+@update_cast ~w[name note primary_location_id user images is_verified]a
 
 # insert changeset
 @doc false
@@ -83,7 +83,6 @@ def changeset(params) do
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.name(:email)
-	|> Changeset.cast_assoc(:images)
 	|> Validate.note(:note)
 	|> Validate.key(:ecdh_public_key)
 	|> Validate.key(:eddsa_public_key)

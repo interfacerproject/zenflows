@@ -21,6 +21,7 @@ defmodule Zenflows.VF.RecipeResource.Domain do
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.File
 alias Zenflows.VF.RecipeResource
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -106,12 +107,15 @@ def delete!(id) do
 	value
 end
 
-@spec preload(RecipeResource.t(), :unit_of_resource | :unit_of_effort | :resource_conforms_to)
-	:: RecipeResource.t()
+@spec preload(RecipeResource.t(), :unit_of_resource | :unit_of_effort
+	| :resource_conforms_to | :images) :: RecipeResource.t()
 def preload(rec_res, x) when x in ~w[
 	unit_of_resource unit_of_effort resource_conforms_to
 ]a do
 	Repo.preload(rec_res, x)
+end
+def preload(rec_res, :images) do
+	File.Domain.preload_gql(rec_res, :images, :recipe_resource_id)
 end
 
 @spec multi_key() :: atom()
@@ -124,7 +128,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, RecipeResource.changeset(params))
+	m
+	|> Multi.insert(key, RecipeResource.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :recipe_resource_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -133,6 +139,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&RecipeResource.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :recipe_resource_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

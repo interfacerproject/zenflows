@@ -23,13 +23,12 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.SpatialThing
 
 @type t() :: %__MODULE__{
 	type: :org,
 	name: String.t(),
-	images: [File.t()],
+	images: [map()],
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
 	classified_as: [String.t()] | nil,
@@ -40,7 +39,7 @@ alias Zenflows.VF.SpatialThing
 schema "vf_agent" do
 	field :type, Ecto.Enum, values: [:org], default: :org
 	field :name, :string
-	has_many :images, File, foreign_key: :agent_id
+	field :images, {:array, :map}, virtual: true
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
 	field :classified_as, {:array, :string}
@@ -49,7 +48,7 @@ schema "vf_agent" do
 end
 
 @reqr [:name]
-@cast @reqr ++ ~w[classified_as note primary_location_id is_verified]a
+@cast @reqr ++ ~w[classified_as note primary_location_id images is_verified]a
 
 @doc false
 @spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
@@ -59,7 +58,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.validate_required(@reqr)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:classified_as)
 	|> Changeset.assoc_constraint(:primary_location)
 end

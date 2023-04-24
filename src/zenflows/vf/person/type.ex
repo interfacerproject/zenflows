@@ -147,6 +147,9 @@ input_object :person_update_params do
 	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
+	@desc @images
+	field :images, list_of(non_null(:ifile))
+
 	@desc @user
 	field :user, :string
 end

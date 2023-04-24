@@ -106,6 +106,11 @@ def at_location(int, _, _) do
 	{:ok, int.at_location}
 end
 
+def images(int, _, _) do
+	int = Domain.preload(int, :images)
+	{:ok, int.images}
+end
+
 def published_in(int, _, _) do
 	int = Domain.preload(int, :published_in)
 	{:ok, int.published_in}

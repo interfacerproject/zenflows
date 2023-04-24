@@ -20,6 +20,7 @@ defmodule Zenflows.VF.EconomicResource.Domain do
 @moduledoc "Domain logic of EconomicResources."
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.File
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
@@ -235,7 +236,7 @@ end
 		| :unit_of_effort | :previous_event)
 	:: EconomicResource.t()
 def preload(eco_res, x) when x in ~w[
-	images conforms_to primary_accountable custodian lot
+	conforms_to primary_accountable custodian lot
 	stage current_location contained_in unit_of_effort previous_event
 ]a,
 	do: Repo.preload(eco_res, x)
@@ -243,6 +244,8 @@ def preload(eco_res, x) when x in ~w[accounting_quantity onhand_quantity]a,
 	do: Measure.preload(eco_res, x)
 def preload(eco_res, :state),
 	do: Action.preload(eco_res, :state)
+def preload(eco_res, :images),
+	do: File.Domain.preload_gql(eco_res, :images, :economic_resource_id)
 
 @spec multi_key() :: atom()
 def multi_key(), do: :economic_resource
@@ -254,7 +257,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, EconomicResource.changeset(params))
+	m
+	|> Multi.insert(key, EconomicResource.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :economic_resource_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -263,6 +268,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&EconomicResource.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :economic_resource_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

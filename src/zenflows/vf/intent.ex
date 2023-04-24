@@ -25,7 +25,6 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -58,7 +57,7 @@ alias Zenflows.VF.{
 	has_point_in_time: DateTime.t() | nil,
 	due: DateTime.t() | nil,
 	finished: boolean(),
-	images: [File.t()],
+	images: [map()],
 	note: String.t() | nil,
 	# in_scope_of:
 	agreed_in: String.t() | nil,
@@ -92,7 +91,7 @@ schema "vf_intent" do
 	field :has_point_in_time, :utc_datetime_usec
 	field :due, :utc_datetime_usec
 	field :finished, :boolean, default: false
-	has_many :images, File
+	field :images, {:array, :map}, virtual: true
 	field :note, :string
 	# field :in_scope_of
 	field :agreed_in, :string
@@ -109,6 +108,7 @@ end
 	resource_quantity effort_quantity available_quantity
 	at_location_id has_beginning has_end has_point_in_time due
 	finished note agreed_in
+	images
 ]a # in_scope_of_id
 
 @doc false
@@ -120,7 +120,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Validate.exist_xor([:provider_id, :receiver_id], method: :both)
 	|> Validate.name(:name)
 	|> Validate.note(:note)
-	|> Changeset.cast_assoc(:images)
 	|> Validate.class(:resource_classified_as)
 	|> Measure.cast(:resource_quantity)
 	|> Measure.cast(:effort_quantity)

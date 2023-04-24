@@ -23,7 +23,6 @@ use Zenflows.DB.Schema
 
 alias Ecto.Changeset
 alias Zenflows.DB.{Schema, Validate}
-alias Zenflows.File
 alias Zenflows.VF.{
 	Action,
 	Agent,
@@ -40,7 +39,7 @@ alias Zenflows.VF.{
 @type t() :: %__MODULE__{
 	name: String.t(),
 	note: String.t() | nil,
-	images: [File.t()],
+	images: [map()],
 	tracking_identifier: String.t() | nil,
 	classified_as: [String.t()] | nil,
 	conforms_to: ResourceSpecification.t(),
@@ -83,7 +82,7 @@ alias Zenflows.VF.{
 schema "vf_economic_resource" do
 	field :name, :string
 	field :note, :string
-	has_many :images, File
+	field :images, {:array, :map}, virtual: true
 	field :tracking_identifier, :string
 	field :classified_as, {:array, :string}
 	belongs_to :conforms_to, ResourceSpecification
@@ -126,6 +125,7 @@ end
 	stage_id state_id current_location_id
 	lot_id contained_in_id unit_of_effort_id
 	okhv repo version licensor license metadata
+	images
 ]a
 
 @doc false
@@ -143,7 +143,6 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Validate.name(:licensor)
 	|> Validate.name(:license)
 	|> Validate.value_eq([:accounting_quantity_has_unit_id, :onhand_quantity_has_unit_id])
-	|> Changeset.cast_assoc(:images)
 	|> Changeset.assoc_constraint(:conforms_to)
 	|> Changeset.assoc_constraint(:accounting_quantity_has_unit)
 	|> Changeset.assoc_constraint(:onhand_quantity_has_unit)

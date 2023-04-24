@@ -49,7 +49,8 @@ def preload_gql(record, gql_key, id_key) do
 		join: r in ^record.__struct__, on: field(j, ^id_key) == r.id,
 		where: r.id == ^record.id,
 		order_by: j.inserted_at,
-		select: %{ hash: f.hash,
+		select: %{
+			hash: f.hash,
 			size: f.size,
 			bin: f.bin,
 			name: j.name,

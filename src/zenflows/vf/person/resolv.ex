@@ -71,6 +71,20 @@ def claim_person(%{id: id}, _) do
 	Domain.claim(id)
 end
 
+def person_request_email_verification(%{template: tpl}, %{context: %{req_user: user}}) do
+	case Domain.request_email_verification(user, tpl) do
+		:ok -> {:ok, true}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+def person_verify_email_verification(%{token: tok}, %{context: %{req_user: user}}) do
+	case Domain.verify_email_verification(user, tok) do
+		:ok -> {:ok, true}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
 def images(per, _, _) do
 	per = Domain.preload(per, :images)
 	{:ok, per.images}

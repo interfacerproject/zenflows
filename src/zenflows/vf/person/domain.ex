@@ -22,7 +22,9 @@ defmodule Zenflows.VF.Person.Domain do
 import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Email
 alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.File
 alias Zenflows.VF.{Person, Person.Query}
 
 @spec one(Ecto.Repo.t(), Schema.id() | map() | Keyword.t())
@@ -67,6 +69,28 @@ def pubkey(id) do
 	|> case do
 		nil -> {:error, "not found"}
 		%{eddsa_public_key: pkey} -> {:ok, pkey}
+	end
+end
+
+@spec request_email_verification(Person.t(), atom()) :: :ok | {:error, term()}
+def request_email_verification(person, template) do
+	url = case template do
+		:interfacer_deployment -> "https://beta.interfacer.dyne.org/email/verify/"
+		:interfacer_staging -> "https://interfacer-gui-staging.dyne.org/email/verify/"
+		:interfacer_testing -> "http://localhost:3000/email/verify/"
+		:interfacer_debugging -> "http://localhost:3000/email/verify/"
+	end
+	Email.Domain.request_email_verification(person, url)
+end
+
+@spec verify_email_verification(Person.t(), String.t()) :: :ok | {:error, String.t() | Changeset.t()}
+def verify_email_verification(person, token) do
+	with :ok <- Email.Domain.verify_email_verification(person, token),
+			{:ok, _} <- __MODULE__.update(person.id, %{is_verified: true}) do
+		:ok
+	else
+		:error -> {:error, "verification failed"}
+		{:error, reason} -> {:error, reason}
 	end
 end
 
@@ -140,9 +164,10 @@ def delete!(id) do
 end
 
 @spec preload(Person.t(), :images | :primary_location) :: Person.t()
-def preload(per, x) when x in ~w[images primary_location]a do
-	Repo.preload(per, x)
-end
+def preload(per, x) when x in ~w[primary_location]a,
+	do: Repo.preload(per, x)
+def preload(per, :images),
+	do: File.Domain.preload_gql(per, :images, :agent_id)
 
 @spec multi_key() :: atom()
 def multi_key(), do: :person
@@ -154,7 +179,9 @@ end
 
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, Person.changeset(params))
+	m
+	|> Multi.insert(key, Person.changeset(params))
+	|> File.Domain.multi_insert(key, :images, :agent_id)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
@@ -163,6 +190,7 @@ def multi_update(m, key \\ multi_key(), id, params) do
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&Person.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :agent_id)
 end
 
 @spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()

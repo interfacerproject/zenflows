@@ -19,8 +19,6 @@
 defmodule ZenflowsTest.File do
 use ZenflowsTest.Help.EctoCase, async: true
 
-alias Ecto.Changeset
-alias Zenflows.File
 alias Zenflows.VF.{
 	EconomicEvent,
 	EconomicResource,
@@ -32,8 +30,8 @@ alias Zenflows.VF.{
 }
 
 test "works on RecipeResource" do
-	assert {:ok, %RecipeResource{} = rec_res} =
-		RecipeResource.Domain.create(%{
+	assert %RecipeResource{} = rec_res =
+		RecipeResource.Domain.create!(%{
 			name: Factory.str("name"),
 			images: [
 				%{
@@ -44,8 +42,6 @@ test "works on RecipeResource" do
 					extension: "aaaaaaa",
 					size: 42,
 					signature: "aaaaaaaaaaaaaaaaaaaaaa",
-					width: 42,
-					height: 42,
 				},
 				%{
 					hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -53,32 +49,92 @@ test "works on RecipeResource" do
 					description: "bbbbbbbb",
 					mime_type: "bbbbbb",
 					extension: "bbbbbbb",
-					size: 42,
+					size: 43,
 					signature: "bbbbbbbbbbbbbbbbbbbbbb",
-					width: 42,
-					height: 42,
 				},
 			],
 		})
+		|> RecipeResource.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = rec_res.images
 
-	assert [%File{}, %File{}] = rec_res.images
+	assert %RecipeResource{} = rec_res =
+		RecipeResource.Domain.update!(rec_res.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
+		})
+		|> RecipeResource.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = rec_res.images
 end
 
 test "works on EconomicResource" do
 	agent = Factory.insert!(:agent)
-	unit = Factory.insert!(:unit)
-	spec = Factory.insert!(:resource_specification)
-	{:ok, %EconomicEvent{} = evt} =
-		EconomicEvent.Domain.create(
+	%EconomicResource{} = res =
+		EconomicEvent.Domain.create!(
 			%{
 				action_id: "raise",
 				provider_id: agent.id,
 				receiver_id: agent.id,
 				has_point_in_time: Factory.now(),
-				resource_conforms_to_id: spec.id,
+				resource_conforms_to_id: Factory.insert!(:resource_specification).id,
 				resource_quantity: %{
 					has_numerical_value: 1,
-					has_unit_id: unit.id,
+					has_unit_id: Factory.insert!(:unit).id,
 				},
 			},
 			%{
@@ -92,8 +148,6 @@ test "works on EconomicResource" do
 						extension: "aaaaaaa",
 						size: 42,
 						signature: "aaaaaaaaaaaaaaaaaaaaaa",
-						width: 42,
-						height: 42,
 					},
 					%{
 						hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -101,23 +155,84 @@ test "works on EconomicResource" do
 						description: "bbbbbbbb",
 						mime_type: "bbbbbb",
 						extension: "bbbbbbb",
-						size: 42,
+						size: 43,
 						signature: "bbbbbbbbbbbbbbbbbbbbbb",
-						width: 42,
-						height: 42,
 					},
 				],
 			})
+		|> EconomicEvent.Domain.preload(:resource_inventoried_as)
+		|> Map.fetch!(:resource_inventoried_as)
+		|> EconomicResource.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = res.images
 
-	evt = EconomicEvent.Domain.preload(evt, :resource_inventoried_as)
-	res = EconomicResource.Domain.preload(evt.resource_inventoried_as, :images)
-
-	[%File{}, %File{}] = res.images
+	assert %EconomicResource{} = res =
+		EconomicResource.Domain.update!(res.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
+		})
+		|> EconomicResource.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = res.images
 end
 
 test "works on Person Agent" do
-	assert {:ok, %Person{} = per} =
-		Person.Domain.create(%{
+	assert %Person{} = per =
+		Person.Domain.create!(%{
 			name: Factory.str("name"),
 			user: Factory.str("user"),
 			email: "#{Factory.str("user")}@example.com",
@@ -130,8 +245,6 @@ test "works on Person Agent" do
 					extension: "aaaaaaa",
 					size: 42,
 					signature: "aaaaaaaaaaaaaaaaaaaaaa",
-					width: 42,
-					height: 42,
 				},
 				%{
 					hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -139,21 +252,85 @@ test "works on Person Agent" do
 					description: "bbbbbbbb",
 					mime_type: "bbbbbb",
 					extension: "bbbbbbb",
-					size: 42,
+					size: 43,
 					signature: "bbbbbbbbbbbbbbbbbbbbbb",
-					width: 42,
-					height: 42,
 				},
 			],
 		})
+		|> Person.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = per.images
 
-	assert [%File{}, %File{}] = per.images
+	assert %Person{} = per =
+		Person.Domain.update!(per.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
+		})
+		|> Person.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = per.images
 end
 
 test "works on Organization Agent" do
-	assert {:ok, %Organization{} = org} =
-		Organization.Domain.create(%{
+	assert %Organization{} = org =
+		Organization.Domain.create!(%{
 			name: Factory.str("name"),
+			user: Factory.str("user"),
+			email: "#{Factory.str("user")}@example.com",
 			images: [
 				%{
 					hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -163,8 +340,6 @@ test "works on Organization Agent" do
 					extension: "aaaaaaa",
 					size: 42,
 					signature: "aaaaaaaaaaaaaaaaaaaaaa",
-					width: 42,
-					height: 42,
 				},
 				%{
 					hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -172,20 +347,82 @@ test "works on Organization Agent" do
 					description: "bbbbbbbb",
 					mime_type: "bbbbbb",
 					extension: "bbbbbbb",
-					size: 42,
+					size: 43,
 					signature: "bbbbbbbbbbbbbbbbbbbbbb",
-					width: 42,
-					height: 42,
 				},
 			],
 		})
+		|> Organization.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = org.images
 
-	assert [%File{}, %File{}] = org.images
+	assert %Organization{} = org =
+		Organization.Domain.update!(org.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
+		})
+		|> Organization.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = org.images
 end
 
 test "works on ResourceSpecification" do
-	assert {:ok, %ResourceSpecification{} = spec} =
-		ResourceSpecification.Domain.create(%{
+	assert %ResourceSpecification{} = spec =
+		ResourceSpecification.Domain.create!(%{
 			name: Factory.str("name"),
 			images: [
 				%{
@@ -196,8 +433,6 @@ test "works on ResourceSpecification" do
 					extension: "aaaaaaa",
 					size: 42,
 					signature: "aaaaaaaaaaaaaaaaaaaaaa",
-					width: 42,
-					height: 42,
 				},
 				%{
 					hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -205,20 +440,82 @@ test "works on ResourceSpecification" do
 					description: "bbbbbbbb",
 					mime_type: "bbbbbb",
 					extension: "bbbbbbb",
-					size: 42,
+					size: 43,
 					signature: "bbbbbbbbbbbbbbbbbbbbbb",
-					width: 42,
-					height: 42,
 				},
 			],
 		})
+		|> ResourceSpecification.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = spec.images
 
-	assert [%File{}, %File{}] = spec.images
+	assert %ResourceSpecification{} = spec =
+		ResourceSpecification.Domain.update!(spec.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
+		})
+		|> ResourceSpecification.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = spec.images
 end
 
 test "works on Intent" do
-	assert {:ok, %Intent{} = int} =
-		Intent.Domain.create(%{
+	assert %Intent{} = int =
+		Intent.Domain.create!(%{
 			action_id: "raise",
 			provider_id: Factory.insert!(:agent).id,
 			images: [
@@ -230,8 +527,6 @@ test "works on Intent" do
 					extension: "aaaaaaa",
 					size: 42,
 					signature: "aaaaaaaaaaaaaaaaaaaaaa",
-					width: 42,
-					height: 42,
 				},
 				%{
 					hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -239,31 +534,76 @@ test "works on Intent" do
 					description: "bbbbbbbb",
 					mime_type: "bbbbbb",
 					extension: "bbbbbbb",
-					size: 42,
+					size: 43,
 					signature: "bbbbbbbbbbbbbbbbbbbbbb",
-					width: 42,
-					height: 42,
 				},
 			],
 		})
+		|> Intent.Domain.preload(:images)
+	assert [
+		%{
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			size: 42,
+			bin: nil,
+			name: "aaaaaaaaaaaaaaa",
+			description: "aaaaaaaa",
+			mime_type: "aaaaaa",
+			extension: "aaaaaaa",
+		},
+		%{
+			hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			size: 43,
+			bin: nil,
+			name: "bbbbbbbbbbbbbbb",
+			description: "bbbbbbbb",
+			mime_type: "bbbbbb",
+			extension: "bbbbbbb",
+		},
+	] = int.images
 
-	assert [%File{}, %File{}] = int.images
-end
-
-test "doesn't work without a belongs_to field" do
-	{:error, %Changeset{errors: errs}} =
-		File.changeset(%File{}, %{
-				hash: "asnotehusnatoheusntaoehusntaeohu",
-				name: "satoehusnoaethu",
-				description: "foobaour",
-				mime_type: "foobar",
-				extension: "jpeeeeg",
-				size: 25,
-				signature: "faaosnetuhaoenthuousth",
-				width: 200,
-				height: 300,
+	assert %Intent{} = int =
+		Intent.Domain.update!(int.id, %{
+			images: [
+				%{
+					hash: "cccccccccccccccc",
+					name: "cccccccc",
+					description: "cccc",
+					mime_type: "ccc",
+					extension: "cccc",
+					size: 44,
+					signature: "ccccccccccc",
+				},
+				%{
+					hash: "dddddddddddddddddddddddddddddddd",
+					name: "ddddddddddddddd",
+					description: "dddddddd",
+					mime_type: "dddddd",
+					extension: "ddddddd",
+					size: 45,
+					signature: "dddddddddddddddddddddd",
+				},
+			],
 		})
-		|> Repo.insert()
-	assert Keyword.has_key?(errs, :general)
+		|> Intent.Domain.preload(:images)
+	assert [
+		%{
+			hash: "cccccccccccccccc",
+			size: 44,
+			bin: nil,
+			name: "cccccccc",
+			description: "cccc",
+			mime_type: "ccc",
+			extension: "cccc",
+		},
+		%{
+			hash: "dddddddddddddddddddddddddddddddd",
+			size: 45,
+			bin: nil,
+			name: "ddddddddddddddd",
+			description: "dddddddd",
+			mime_type: "dddddd",
+			extension: "ddddddd",
+		},
+	] = int.images
 end
 end

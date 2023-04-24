@@ -19,24 +19,25 @@
 defmodule Zenflows.Keypairoom.Resolv do
 @moduledoc "Resolvers of keypairoom-related queries."
 
+alias Ecto.Changeset
+alias Zenflows.DB.{Schema, Validate}
+
 require Logger
 
 alias Zenflows.Keypairoom.Domain
-
 def keypairoom_server(%{first_registration: first?, user_data: data}, _) do
-	case Jason.decode(data) do
-		{:ok, %{"email" => email} = data} when is_binary(email) ->
-			case Domain.keypairoom_server(first?, data) do
-				{:ok, value} ->
-					{:ok, value}
-
-				{:error, reason} ->
-					{:error, reason}
-			end
-		{:ok, _} ->
-			{:error, "invalid user-data must contain email that is a string"}
-		{:error, reason} ->
-			{:error, reason}
+	with {:ok, %{email: email}} <- parse_keypairoom_server(data) do
+		Domain.keypairoom_server(first?, email, data)
 	end
+end
+
+@spec parse_keypairoom_server(Schema.params())
+	:: {:ok, map()} | {:error, Changeset.t()}
+defp parse_keypairoom_server(params) do
+	{%{}, %{email: :string}}
+	|> Changeset.cast(params, [:email])
+	|> Changeset.validate_required(:email)
+	|> Validate.email(:email)
+	|> Changeset.apply_action(nil)
 end
 end

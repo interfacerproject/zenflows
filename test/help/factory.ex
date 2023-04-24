@@ -106,21 +106,21 @@ def uri() do
 end
 
 @doc "Returns a file list."
-@spec file_list(non_neg_integer(), non_neg_integer()) :: [File.t()]
+@spec file_list(non_neg_integer(), non_neg_integer()) :: [map()]
 def file_list(min \\ 1, max \\ 10) do
 	max = Enum.random(1..max)
 	Enum.map(min..max, fn _ ->
 		bin = str("some binary")
 		hash = :crypto.hash(:sha512, bin) |> Base.url_encode64(padding: false)
-		%Zenflows.File{
+		%{
+			hash: hash,
+			size: byte_size(bin),
+			bin: bin,
 			name: str("some name"),
 			description: str("some description"),
 			mime_type: str("some mime type"),
 			extension: str("some extension"),
 			signature: str("some signature"),
-			bin: bin,
-			hash: hash,
-			size: byte_size(bin),
 		}
 	end)
 end

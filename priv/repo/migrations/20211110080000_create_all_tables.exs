@@ -25,6 +25,7 @@ def change() do
 	execute "CREATE EXTENSION citext", "DROP EXTENSION citext"
 
 	create table("zf_file")
+	create table("zf_file_join")
 	create table("zf_process_group")
 
 	create table("vf_unit")

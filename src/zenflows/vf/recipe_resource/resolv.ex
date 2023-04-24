@@ -61,6 +61,11 @@ def unit_of_effort(rec_res, _, _) do
 	{:ok, rec_res.unit_of_effort}
 end
 
+def images(rec_res, _, _) do
+	rec_res = Domain.preload(rec_res, :images)
+	{:ok, rec_res.images}
+end
+
 def resource_conforms_to(rec_res, _, _) do
 	rec_res = Domain.preload(rec_res, :resource_conforms_to)
 	{:ok, rec_res.resource_conforms_to}

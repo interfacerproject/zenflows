@@ -230,6 +230,9 @@ input_object :economic_resource_update_params do
 	@desc @note
 	field :note, :string
 
+	@desc @images
+	field :images, list_of(non_null(:ifile))
+
 	@desc @classified_as
 	field :classified_as, list_of(non_null(:uri))
 

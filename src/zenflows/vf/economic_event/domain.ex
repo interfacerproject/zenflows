@@ -87,13 +87,25 @@ def trace_dpp_before(evt, depth, visited, children) do
 				nil ->
 					{visited, []}
 				%EconomicEvent{} = evt ->
-					visited = MapSet.put(visited, "evt#{evt.id}")
-					trace_dpp_before(evt, depth - 1, visited, [])
+					if MapSet.member?(visited, "evt#{evt.id}") do
+						{visited, []}
+					else
+						visited = MapSet.put(visited, "evt#{evt.id}")
+						trace_dpp_before(evt, depth - 1, visited, [])
+					end
 				%EconomicResource{} = res ->
-					EconomicResource.Domain.trace_dpp_before(res, depth - 1, visited, [])
+					if MapSet.member?(visited, "res#{res.id}") do
+						{visited, []}
+					else
+						EconomicResource.Domain.trace_dpp_before(res, depth - 1, visited, [])
+					end
 				%Process{} = proc ->
-					visited = MapSet.put(visited, "proc#{proc.id}")
-					Process.Domain.trace_dpp_before(proc, depth - 1, visited, [])
+					if MapSet.member?(visited, "proc#{proc.id}") do
+						{visited, []}
+					else
+						visited = MapSet.put(visited, "proc#{proc.id}")
+						Process.Domain.trace_dpp_before(proc, depth - 1, visited, [])
+					end
 			end
 		child = %{type: "EconomicEvent", node: evt, children: Enum.reverse(evt_children)}
 		children = [child | children]

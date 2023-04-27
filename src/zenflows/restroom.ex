@@ -103,21 +103,9 @@ end
 
 # Execute a Zencode specified by `name` with JSON data `data`.
 @spec exec(String.t(), map()) :: {:ok, map()} | {:error, term()}
-defp exec(name, post_data) do
+def exec(name, post_data) do
 	request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
 		name, post_data)
-@doc """
-Generate the HMAC (SHA256) signature of `data` using the server-side key.
-
-The returned value in the ok-tuble, `data`, and `key` are base64-encoded
-strings.
-"""
-@spec hmac_new(String.t()) :: {:ok, String.t()} | {:error, term()}
-def hmac_new(data) do
-	case exec("hmac_new", %{"data" => data}, %{"key" => salt()}) do
-		{:ok, %{"HMAC" => sign}} -> {:ok, sign}
-		{:error, reason} -> {:error, reason}
-	end
 end
 
 @doc """

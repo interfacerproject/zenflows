@@ -47,6 +47,7 @@ jobs:
       - name: check-out repository
         uses: actions/checkout@v3
         with:
+          ref: 'CI_notebook'
           submodules: true
       - name: Build and run Docker image
         env: 
@@ -55,8 +56,8 @@ jobs:
           admin_key=${IF_KEY}
           db_pass=$(openssl rand -hex 16)
           room_salt=$(openssl rand -hex 16)
-          # /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
-          /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
           # cat devop/docker-compose.yml
           ./mann devop.up -d
 

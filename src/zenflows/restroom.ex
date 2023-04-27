@@ -66,10 +66,37 @@ See https://github.com/dyne/keypairoom for details.
 """
 @spec keypairoom_server(map()) :: {:ok, String.t()} | {:error, term()}
 def keypairoom_server(data) do
-	data = %{"userData" => data}
-	keys = %{"serverSideSalt" => salt()}
-	case exec("keypairoomServer-6-7", data, keys) do
+	data = %{"userData" => data, "serverSideSalt" => salt()}
+	case exec("keypairoomServer-6-7", data) do
 		{:ok, %{"seedServerSideShard.HMAC" => hmac}} -> {:ok, hmac}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@doc """
+Generate the HMAC (SHA256) signature of `data` using the server-side key.
+
+The returned value in the ok-tuble, `data`, and `key` are base64-encoded
+strings.
+"""
+@spec hmac_new(String.t()) :: {:ok, String.t()} | {:error, term()}
+def hmac_new(data) do
+	case exec("hmac_new", %{"data" => data, "key" => salt()}) do
+		{:ok, %{"HMAC" => sign}} -> {:ok, sign}
+		{:error, reason} -> {:error, reason}
+	end
+end
+
+@doc """
+Verifies authencity of the HMAC (SHA256) signature of `expected`
+using the server-side key and `data`.
+strings.
+"""
+@spec hmac_verify(String.t(), String.t()) :: :ok | {:error, term()}
+def hmac_verify(data, expected) do
+	data = %{"data" => data, "expected" => expected, "key" => salt()}
+	case exec("hmac_verify", data) do
+		{:ok, %{"output" => ["1"]}} -> :ok
 		{:error, reason} -> {:error, reason}
 	end
 end
@@ -91,28 +118,6 @@ def hmac_new(data) do
 		{:ok, %{"HMAC" => sign}} -> {:ok, sign}
 		{:error, reason} -> {:error, reason}
 	end
-end
-
-@doc """
-Verifies authencity of the HMAC (SHA256) signature of `expected`
-using the server-side key and `data`.
-strings.
-"""
-@spec hmac_verify(String.t(), String.t()) :: :ok | {:error, term()}
-def hmac_verify(data, expected) do
-	data = %{"data" => data, "expected" => expected}
-	keys = %{"key" => salt()}
-	case exec("hmac_verify", data, keys) do
-		{:ok, %{"output" => ["1"]}} -> :ok
-		{:error, reason} -> {:error, reason}
-	end
-end
-
-# Execute a Zencode specified by `name` with JSON objects `data` and `keys`.
-@spec exec(String.t(), map(), map()) :: {:ok, map()} | {:error, term()}
-def exec(name, data, keys \\ %{}) do
-	request(&Zenflows.HTTPC.request(__MODULE__, &1, &2, &3, &4),
-		name, data, keys)
 end
 
 @doc """

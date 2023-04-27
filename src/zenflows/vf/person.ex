@@ -66,11 +66,12 @@ end
 	ethereum_address
 	reflow_public_key
 	bitcoin_public_key
+	images
 	is_verified
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
-@update_cast ~w[name note primary_location_id user is_verified]a
+@update_cast ~w[name note primary_location_id user images is_verified]a
 
 # insert changeset
 @doc false

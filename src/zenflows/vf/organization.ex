@@ -48,7 +48,7 @@ schema "vf_agent" do
 end
 
 @reqr [:name]
-@cast @reqr ++ ~w[classified_as note primary_location_id is_verified]a
+@cast @reqr ++ ~w[classified_as note primary_location_id images is_verified]a
 
 @doc false
 @spec changeset(Schema.t(), Schema.params()) :: Changeset.t()

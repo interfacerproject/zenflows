@@ -30,6 +30,8 @@ services:
       - 8000:8000
     environment:
       ADMIN_KEY: @ADMIN_KEY
+      EMAIL_ADDR: @EMAIL_ADDR
+      EMAIL_KEY: @EMAIL_KEY
 
       DB_HOST: db
       DB_NAME: &db_name zenflows

@@ -29,9 +29,9 @@ name: Test trace
 
 on:
   push:
-    branches: ['master']
+    branches: ['CI_notebook']
   pull_request:
-    branches: [ "master" ]
+    branches: [ "CI_notebook" ]
 
 jobs:
 
@@ -60,7 +60,7 @@ jobs:
           email_key='a_fake_email_key'
           /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"', ; s,@EMAIL_ADDR,'"$email_addr"', ; s,@EMAIL_KEY,'"$email_key"',' devop/.docker-compose.templ > devop/docker-compose.yml
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
-          # cat devop/docker-compose.yml
+          cat devop/docker-compose.yml
           ./mann devop.up -d
 
   # run_tester:

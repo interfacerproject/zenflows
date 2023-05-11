@@ -72,14 +72,16 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: interfacerproject/Interfacer-notebook
-          path: &nb_path notebook
+          # path: &nb_path notebook
+          path: notebook
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
           python-version: "3.11"
       - name: Install dependencies
         env: 
-            NB_PATH: *nb_path
+            # NB_PATH: *nb_path
+            NB_PATH: notebook
         run: |
           # ls -l ${NB_PATH}
           python -m pip install --upgrade pip
@@ -90,7 +92,8 @@ jobs:
       - name: Test with pytest
         env: 
           IF_KEY: ${{ secrets.KEY }}
-          NB_PATH: *nb_path
+          # NB_PATH: *nb_path
+          NB_PATH: notebook
         run: |
           cd ${NB_PATH}
           pytest --endpoint http://localhost:8000/api

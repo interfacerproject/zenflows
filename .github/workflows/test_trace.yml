@@ -44,12 +44,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: check-out repository
+      - name: check-out this repository
         uses: actions/checkout@v3
         with:
           ref: 'CI_notebook'
           submodules: true
-      - name: Build and run Docker image
+      - name: Set up zenflows container
         env: 
           IF_KEY: ${{ secrets.KEY }}
         run: |
@@ -60,43 +60,82 @@ jobs:
           email_key='a_fake_email_key'
           /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"', ; s,@EMAIL_ADDR,'"$email_addr"', ; s,@EMAIL_KEY,'"$email_key"',' devop/.docker-compose.templ > devop/docker-compose.yml
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod a+x /usr/local/bin/yq
+          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
           cat devop/docker-compose.yml
-          ./mann devop.up -d
-          while : ; do curl http://localhost:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
 
-  # run_tester:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #   steps:
       - name: check-out jupyter notebook repo
         uses: actions/checkout@v3
         with:
           repository: interfacerproject/Interfacer-notebook
           # path: &nb_path notebook
           path: notebook
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.11"
-      - name: Install dependencies
-        env: 
-            # NB_PATH: *nb_path
-            NB_PATH: notebook
+      - name: Create docker file for testing with notebook 
         run: |
-          # ls -l ${NB_PATH}
-          python -m pip install --upgrade pip
-          pip install pytest
-          # pip install flake8
-          pip install zenroom requests notebook papermill plotly
-          if [ -f ${NB_PATH}/requirements.txt ]; then pip install -r ${NB_PATH}/requirements.txt; fi
-      - name: Test with pytest
+            cat <<- EOF > ./notebook/tmp.docker
+            FROM python:3
+            RUN pip install notebook zenroom requests plotly pytest papermill
+            RUN useradd -ms /bin/bash app
+            USER app
+            WORKDIR /app
+            ADD . .
+            EOF
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build test image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./notebook
+          file: "./notebook/tmp.docker"
+          push: false
+          load: true
+          tags: notebook:latest
+
+      - name: Build and run the container with all the images
         env: 
           IF_KEY: ${{ secrets.KEY }}
-          # NB_PATH: *nb_path
-          NB_PATH: notebook
         run: |
-          cd ${NB_PATH}
-          pytest --endpoint http://localhost:8000/api
-          cd ..
-          ./mann devop.down
+          # ./mann devop.run --service-ports --rm notebook pytest --endpoint http://localhost:8000/api
+          ./mann devop.up -d
+          # while : ; do curl http://localhost:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
+
+
+  # run_tester:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #   steps:
+      # - name: check-out jupyter notebook repo
+      #   uses: actions/checkout@v3
+      #   with:
+      #     repository: interfacerproject/Interfacer-notebook
+      #     # path: &nb_path notebook
+      #     path: notebook
+      # - name: Set up Python 3.11
+      #   uses: actions/setup-python@v3
+      #   with:
+      #     python-version: "3.11"
+      # - name: Install dependencies
+      #   env: 
+      #       # NB_PATH: *nb_path
+      #       NB_PATH: notebook
+      #   run: |
+      #     # ls -l ${NB_PATH}
+      #     python -m pip install --upgrade pip
+      #     pip install pytest
+      #     # pip install flake8
+      #     pip install zenroom requests notebook papermill plotly
+      #     if [ -f ${NB_PATH}/requirements.txt ]; then pip install -r ${NB_PATH}/requirements.txt; fi
+      # - name: Test with pytest
+      #   env: 
+      #     IF_KEY: ${{ secrets.KEY }}
+      #     # NB_PATH: *nb_path
+      #     NB_PATH: notebook
+      #   run: |
+      #     cd ${NB_PATH}
+      #     pytest --endpoint http://localhost:8000/api
+      #     cd ..
+      #     ./mann devop.down

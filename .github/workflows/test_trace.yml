@@ -62,6 +62,7 @@ jobs:
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
           cat devop/docker-compose.yml
           ./mann devop.up -d
+          while : ; do curl http://localhost:8000/ 2>/dev/null && echo "Server UP" && break ; sleep 1 ; done
 
   # run_tester:
   #   runs-on: ubuntu-latest

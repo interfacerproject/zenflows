@@ -35,16 +35,12 @@ on:
 
 jobs:
 
-  run_server:
-    # services:
-    #   run_server:
-    #     runs-on: ubuntu-latest
-            
+  run_tests:            
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: check-out this repository
+      - name: check-out zenflows repository
         uses: actions/checkout@v3
         with:
           ref: 'CI_notebook'
@@ -85,7 +81,7 @@ jobs:
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build test image
+      - name: Build notebook image
         uses: docker/build-push-action@v4
         with:
           context: ./notebook
@@ -94,12 +90,13 @@ jobs:
           load: true
           tags: notebook:latest
 
-      - name: Build and run the container with all the images
+      - name: Build and run tests on notebook container
         env: 
           IF_KEY: ${{ secrets.KEY }}
         run: |
-          ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api
+          ./mann devop.run --rm --env IF_KEY=${IF_KEY} notebook pytest --endpoint http://srv:8000/api
           # ./mann devop.up -d
+          # ./mann devop.down
           # while : ; do curl http://localhost:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
 
 

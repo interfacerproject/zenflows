@@ -58,7 +58,8 @@ jobs:
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod a+x /usr/local/bin/yq
-          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
+          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true, "environment": {"IF_KEY": "'"$admin_key"'"}}' -i devop/docker-compose.yml
+          # yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
           cat devop/docker-compose.yml
 
       - name: check-out jupyter notebook repo
@@ -94,9 +95,9 @@ jobs:
         env:
           IF_KEY: ${{ secrets.KEY }}
         run: |
+          ./mann devop.up -d
           ./mann devop.logs -ft srv &
-          ./mann devop.run --rm -e IF_KEY=${IF_KEY} notebook pytest --endpoint http://srv:8000/api
-          # ./mann devop.up -d
+          ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api
           # while : ; do curl http://srv:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
           # ./mann devop.down
           

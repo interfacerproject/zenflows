@@ -96,8 +96,8 @@ jobs:
         env:
           IF_KEY: ${{ secrets.KEY }}
         run: |
-          ./mann devop.up -d
-          ./mann devop.logs -ft srv &
+          # ./mann devop.up -d
+          # ./mann devop.logs -ft srv &
           ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api
           # while : ; do curl http://srv:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
           # ./mann devop.down

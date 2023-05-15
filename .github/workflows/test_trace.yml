@@ -37,6 +37,7 @@ jobs:
 
   run_tests:
     runs-on: ubuntu-latest
+    environment: test_trace
     permissions:
       contents: read
     steps:

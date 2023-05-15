@@ -35,7 +35,7 @@ on:
 
 jobs:
 
-  run_tests:            
+  run_tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,7 +46,7 @@ jobs:
           ref: 'CI_notebook'
           submodules: true
       - name: Set up zenflows container
-        env: 
+        env:
           IF_KEY: ${{ secrets.KEY }}
         run: |
           admin_key=${IF_KEY}
@@ -58,7 +58,7 @@ jobs:
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod a+x /usr/local/bin/yq
-          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
+          yq e '.services.srv.ports = [] | .services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
           cat devop/docker-compose.yml
 
       - name: check-out jupyter notebook repo
@@ -67,7 +67,7 @@ jobs:
           repository: interfacerproject/Interfacer-notebook
           # path: &nb_path notebook
           path: notebook
-      - name: Create docker file for testing with notebook 
+      - name: Create docker file for testing with notebook
         run: |
             cat <<- EOF > ./notebook/tmp.docker
             FROM python:3
@@ -91,7 +91,7 @@ jobs:
           tags: notebook:latest
 
       - name: Build and run tests on notebook container
-        env: 
+        env:
           IF_KEY: ${{ secrets.KEY }}
         run: |
           ./mann devop.run --rm -e IF_KEY=${IF_KEY} notebook pytest --endpoint http://srv:8000/api
@@ -116,7 +116,7 @@ jobs:
       #   with:
       #     python-version: "3.11"
       # - name: Install dependencies
-      #   env: 
+      #   env:
       #       # NB_PATH: *nb_path
       #       NB_PATH: notebook
       #   run: |
@@ -127,7 +127,7 @@ jobs:
       #     pip install zenroom requests notebook papermill plotly
       #     if [ -f ${NB_PATH}/requirements.txt ]; then pip install -r ${NB_PATH}/requirements.txt; fi
       # - name: Test with pytest
-      #   env: 
+      #   env:
       #     IF_KEY: ${{ secrets.KEY }}
       #     # NB_PATH: *nb_path
       #     NB_PATH: notebook

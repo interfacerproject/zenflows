@@ -40,17 +40,33 @@ defp all_f(q, {:user, v}),
 	do: where(q, [x], ilike(x.user, ^"%#{v}%"))
 defp all_f(q, {:user_or_name, v}),
 	do: where(q, [x], ilike(x.user, ^"%#{v}%") or ilike(x.name, ^"%#{v}%"))
+defp all_f(q, {:classified_as, v}),
+	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
+defp all_f(q, {:or_classified_as, v}),
+	do: or_where(q, [x], fragment("? @> ?", x.classified_as, ^v))
 
 @spec all_validate(Schema.params()) ::
 	{:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
-	{%{}, %{name: :string, user: :string, user_or_name: :string}}
-	|> Changeset.cast(params, ~w[name user user_or_name]a)
+	{%{}, %{
+		name: :string,
+		user: :string,
+		user_or_name: :string,
+		classified_as: {:array, :string},
+		or_classified_as: {:array, :string},
+	}}
+	|> Changeset.cast(params, ~w[
+		name user user_or_name
+		classified_as or_classified_as
+	]a)
 	|> Validate.name(:name)
 	|> Validate.name(:user)
 	|> Validate.name(:user_or_name)
-	|> Validate.exist_xor([:name, :user_or_name])
-	|> Validate.exist_xor([:user, :user_or_name])
+	|> Validate.class(:classified_as)
+	|> Validate.class(:or_classified_as)
+	|> Validate.exist_nand([:classified_as, :or_classified_as])
+	|> Validate.exist_nand([:name, :user_or_name])
+	|> Validate.exist_nand([:user, :user_or_name])
 	|> Validate.escape_like(:name)
 	|> Validate.escape_like(:user)
 	|> Validate.escape_like(:user_or_name)

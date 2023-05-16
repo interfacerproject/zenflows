@@ -34,6 +34,10 @@ occur and mail can be sent.	 This is usually a mappable geographic
 location.  It also could be a website address, as in the case of agents
 who have no physical location.
 """
+@classified_as """
+References one or more concepts in a common taxonomy or other
+classification scheme for purposes of categorization or grouping.
+"""
 @primary_location_id "(`SpatialThing`) #{@primary_location}"
 @user "Username of the agent.  Implies uniqueness."
 @email "Email address of the agent.  Implies uniqueness."
@@ -68,6 +72,9 @@ object :person do
 	@desc @primary_location
 	field :primary_location, :spatial_thing,
 		resolve: &Resolv.primary_location/3
+
+	@desc @classified_as
+	field :classified_as, list_of(non_null(:uri))
 
 	@desc @user
 	field :user, non_null(:string)
@@ -113,6 +120,9 @@ input_object :person_create_params do
 	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
+	@desc @classified_as
+	field :classified_as, list_of(non_null(:uri))
+
 	@desc @user
 	field :user, non_null(:string)
 
@@ -147,6 +157,9 @@ input_object :person_update_params do
 	@desc @primary_location_id
 	field :primary_location_id, :id, name: "primary_location"
 
+	@desc @classified_as
+	field :classified_as, list_of(non_null(:uri))
+
 	@desc @images
 	field :images, list_of(non_null(:ifile))
 
@@ -172,6 +185,8 @@ input_object :person_filter_params do
 	field :name, :string
 	field :user, :string
 	field :user_or_name, :string
+	field :classified_as, list_of(non_null(:uri))
+	field :or_classified_as, list_of(non_null(:uri))
 end
 
 object :query_person do

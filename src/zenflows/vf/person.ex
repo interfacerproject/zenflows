@@ -31,6 +31,7 @@ alias Zenflows.VF.SpatialThing
 	images: [map()],
 	note: String.t() | nil,
 	primary_location: SpatialThing.t() | nil,
+	classified_as: [String.t()] | nil,
 	user: String.t(),
 	email: String.t(),
 	ecdh_public_key: String.t() | nil,
@@ -47,6 +48,7 @@ schema "vf_agent" do
 	field :images, {:array, :map}, virtual: true
 	field :note, :string
 	belongs_to :primary_location, SpatialThing
+	field :classified_as, {:array, :string}
 	field :user, :string
 	field :email, :string
 	field :ecdh_public_key, :string
@@ -61,6 +63,7 @@ end
 @insert_reqr ~w[name user email]a
 @insert_cast @insert_reqr ++ ~w[
 	note primary_location_id
+	classified_as
 	ecdh_public_key
 	eddsa_public_key
 	ethereum_address
@@ -71,7 +74,10 @@ end
 ]a
 # TODO: Maybe add email to @update_cast as well?
 # TODO: Maybe add the pubkeys to @update_cast as well?
-@update_cast ~w[name note primary_location_id user images is_verified]a
+@update_cast ~w[
+	name note primary_location_id classified_as
+	user images is_verified
+]a
 
 # insert changeset
 @doc false
@@ -90,6 +96,7 @@ def changeset(params) do
 	|> Validate.key(:reflow_public_key)
 	|> Validate.key(:bitcoin_public_key)
 	|> Validate.email(:email)
+	|> Validate.class(:classified_as)
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.unique_constraint(:email)
@@ -106,6 +113,7 @@ def changeset(schema, params) do
 	|> Validate.name(:user)
 	|> Validate.note(:note)
 	|> Validate.email(:email)
+	|> Validate.class(:classified_as)
 	|> Changeset.unique_constraint(:user)
 	|> Changeset.unique_constraint(:name)
 	|> Changeset.assoc_constraint(:primary_location)

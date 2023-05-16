@@ -267,6 +267,7 @@ def build(:person) do
 		primary_location: build(:spatial_thing),
 		user: str("some user"),
 		email: "#{str("user")}@example.com",
+		classified_as: str_list("some uri"),
 		# Normally, these are encoded by zenroom (with whatever
 		# encodings it chooses to use), but for testing, this'll
 		# work alright.

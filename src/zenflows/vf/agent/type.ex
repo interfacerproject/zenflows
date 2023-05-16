@@ -36,6 +36,10 @@ occur and mail can be sent.  This is usually a mappable geographic
 location.  It also could be a website address, as in the case of agents
 who have no physical location.
 """
+@classified_as """
+References one or more concepts in a common taxonomy or other
+classification scheme for purposes of categorization or grouping.
+"""
 
 @desc "A person or group or organization with economic agency."
 interface :agent do
@@ -53,6 +57,9 @@ interface :agent do
 	@desc @primary_location
 	field :primary_location, :spatial_thing,
 		resolve: &Resolv.primary_location/3
+
+	@desc @classified_as
+	field :classified_as, list_of(non_null(:uri))
 
 	resolve_type fn
 		%Agent{type: :per}, _ -> :person

@@ -33,6 +33,7 @@ alias Zenflows.VF.SpatialThing
 	images: [map()],
 	primary_location: SpatialThing.t() | nil,
 	is_verified: boolean(),
+	classified_as: [String.t()] | nil,
 
 	# person
 	user: String.t() | nil,
@@ -44,7 +45,7 @@ alias Zenflows.VF.SpatialThing
 	bitcoin_public_key: String.t() | nil,
 
 	# organization
-	classified_as: [String.t()] | nil,
+	# n/a
 }
 
 schema "vf_agent" do
@@ -55,6 +56,7 @@ schema "vf_agent" do
 	field :images, {:array, :map}, virtual: true
 	belongs_to :primary_location, SpatialThing
 	field :is_verified, :boolean, default: false
+	field :classified_as, {:array, :string}
 	timestamps()
 
 	# person
@@ -67,6 +69,6 @@ schema "vf_agent" do
 	field :bitcoin_public_key, :string
 
 	# organization
-	field :classified_as, {:array, :string}
+	# n/a
 end
 end

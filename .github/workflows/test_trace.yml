@@ -59,7 +59,7 @@ jobs:
           # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod a+x /usr/local/bin/yq
-          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true, "environment": {"IF_KEY": "'"$admin_key"'"}}' -i devop/docker-compose.yml
+          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true, "profiles": ["test"],"environment": {"IF_KEY": "'"$admin_key"'"}}' -i devop/docker-compose.yml
           # yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
           cat devop/docker-compose.yml
 

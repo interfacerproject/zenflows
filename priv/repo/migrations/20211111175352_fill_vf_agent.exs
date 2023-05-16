@@ -19,26 +19,6 @@
 defmodule Zenflows.DB.Repo.Migrations.Fill_vf_agent do
 use Ecto.Migration
 
-@mutex_check """
-(
-	type = 'per'
-	AND "user" IS NOT NULL
-	AND email IS NOT NULL
-	AND classified_as IS NULL
-)
-OR
-(
-	type = 'org'
-	AND "user" IS NULL
-	AND email IS NULL
-	AND ecdh_public_key IS NULL
-	AND eddsa_public_key IS NULL
-	AND ethereum_address IS NULL
-	AND reflow_public_key IS NULL
-	AND bitcoin_public_key IS NULL
-)
-"""
-
 def change() do
 	alter table("vf_agent") do
 		add :type, :vf_agent_type, null: false
@@ -66,6 +46,20 @@ def change() do
 	create index("vf_agent", :type)
 	create unique_index("vf_agent", :user, when: "user IS NOT NULL")
 	create unique_index("vf_agent", :email, when: "email IS NOT NULL")
-	create constraint("vf_agent", :type_mutex, check: @mutex_check)
+	create constraint("vf_agent", :type_mutex, check: """
+		"type" = 'per'
+		AND "user" IS NOT NULL
+		AND "email" IS NOT NULL
+		AND "classified_as" IS NULL
+	OR
+		"type" = 'org'
+		AND "user" IS NULL
+		AND "email" IS NULL
+		AND "ecdh_public_key" IS NULL
+		AND "eddsa_public_key" IS NULL
+		AND "ethereum_address" IS NULL
+		AND "reflow_public_key" IS NULL
+		AND "bitcoin_public_key" IS NULL
+	""")
 end
 end

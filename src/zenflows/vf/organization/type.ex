@@ -60,7 +60,7 @@ object :organization do
 	field :note, :string
 
 	@desc @classified_as
-	field :classified_as, list_of(non_null(:string))
+	field :classified_as, list_of(non_null(:uri))
 end
 
 input_object :organization_create_params do
@@ -77,7 +77,7 @@ input_object :organization_create_params do
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @classified_as
-	field :classified_as, list_of(non_null(:string))
+	field :classified_as, list_of(non_null(:uri))
 end
 
 input_object :organization_update_params do
@@ -93,7 +93,7 @@ input_object :organization_update_params do
 	field :primary_location_id, :id, name: "primary_location"
 
 	@desc @classified_as
-	field :classified_as, list_of(non_null(:string))
+	field :classified_as, list_of(non_null(:uri))
 end
 
 object :organization_response do

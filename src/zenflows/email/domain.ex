@@ -28,8 +28,8 @@ alias Zenflows.VF.Person
 def request_email_verification(person, url) do
 	Repo.multi(fn ->
 		with {:ok, token} <- token_new(:email_verification, person),
-				subj = "Zenflows - Verify your email address",
-				body = "Visit to verify your email address: #{url <> token}",
+				subj = "Interfacer - Verify your email address",
+				body = "Click on the link to verify your email address on Interfacer: #{url <> token}",
 				{:ok, _} <- Email.request(person.email, subj, body) do
 			:ok
 		end

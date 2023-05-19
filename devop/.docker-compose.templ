@@ -30,21 +30,16 @@ services:
       - 8000:8000
     environment:
       ADMIN_KEY: @ADMIN_KEY
-      EMAIL_ADDR: @EMAIL_ADDR
-      EMAIL_KEY: @EMAIL_KEY
+      EMAIL_ADDR: please fill in these
+      EMAIL_KEY: please fill in these
 
       DB_HOST: db
       DB_NAME: &db_name zenflows
       DB_USER: &db_user zenflows_dbuser
       DB_PASS: &db_pass @DB_PASS
-      # DB_PORT: 5432
 
       ROOM_URI: http://zvmlet:3000
       ROOM_SALT: @ROOM_SALT
-
-      GQL_AUTH_CALLS: "true"
-      GQL_DEF_PAGE_SIZE: 50
-      GQL_MAX_PAGE_SIZE: 100
     depends_on:
       - zvmlet
       - db

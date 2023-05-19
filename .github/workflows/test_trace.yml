@@ -26,15 +26,12 @@
 # You can also reference a tag or branch, but the action may change without warning.
 
 name: Test trace
-
 on:
   push:
-    branches: ['CI_notebook']
+    branches: ["master"]
   pull_request:
-    branches: [ "CI_notebook" ]
-
+    branches: [ "master" ]
 jobs:
-
   run_tests:
     runs-on: ubuntu-latest
     environment: test_trace
@@ -44,30 +41,40 @@ jobs:
       - name: check-out zenflows repository
         uses: actions/checkout@v3
         with:
-          ref: 'CI_notebook'
           submodules: true
-      - name: Set up zenflows container
-        env:
-          IF_KEY: ${{ secrets.KEY }}
+      - name: set up zenflows container
         run: |
-          admin_key=${IF_KEY}
+          admin_key=${{ secrets.KEY }}
           db_pass=$(openssl rand -hex 16)
           room_salt=$(openssl rand -hex 16)
-          email_addr='fake@dyne.org'
-          email_key='a_fake_email_key'
-          /usr/bin/sed 's,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"', ; s,@EMAIL_ADDR,'"$email_addr"', ; s,@EMAIL_KEY,'"$email_key"',' devop/.docker-compose.templ > devop/docker-compose.yml
-          # /usr/bin/sed 's,image: zenflows:latest,image: zenflows-debug:latest, ; s,@ADMIN_KEY,'"$admin_key"', ; s,@DB_PASS,'"$db_pass"', ; s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ > devop/docker-compose.yml
+          # TODO: this is an ***INSECURE*** way to install the yq software; find a better way.
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod a+x /usr/local/bin/yq
-          yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true, "profiles": ["test"],"environment": {"IF_KEY": "'"$admin_key"'"}}' -i devop/docker-compose.yml
-          # yq e '.services.notebook = {"image": "notebook:latest", "depends_on": ["srv"], "stdin_open": true, "tty": true}' -i devop/docker-compose.yml
+          yq e '
+            .services.srv = {
+              "environment": {
+                "ADMIN_KEY": "'"$admin_key"'",
+                "EMAIL_ADDR": "",
+                "EMAIL_KEY": "",
+              }
+            }
+            |
+            .services.notebook = {
+               "image": "notebook:latest",
+               "depends_on": ["srv"],
+               "stdin_open": true,
+               "tty": true,
+               "profiles": ["test"],
+               "environment": {
+                 "IF_KEY": "'"$admin_key"'"
+               }
+            }' devop/.docker-compose.templ >devop/docker-compose.yml
           cat devop/docker-compose.yml
 
       - name: check-out jupyter notebook repo
         uses: actions/checkout@v3
         with:
-          repository: interfacerproject/Interfacer-notebook
-          # path: &nb_path notebook
+          repository: interfacerproject/interfacer-notebook
           path: notebook
       - name: Create docker file for testing with notebook
         run: |
@@ -79,65 +86,20 @@ jobs:
             WORKDIR /app
             ADD . .
             EOF
-      - name: Set up QEMU
+      - name: set up qemu
         uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
+      - name: set up docker buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build notebook image
+      - name: build notebook image
         uses: docker/build-push-action@v4
         with:
           context: ./notebook
-          file: "./notebook/tmp.docker"
+          file: ./notebook/tmp.docker
           push: false
           load: true
           tags: notebook:latest
-
-      - name: Build and run tests on notebook container
-        env:
-          IF_KEY: ${{ secrets.KEY }}
+      - name: build and run tests on notebook container
         run: |
           ./mann devop.up -d
           sleep 5
-          # ./mann devop.logs -ft srv &
           ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api
-          # while : ; do curl http://srv:8000/ 2>/dev/null && echo "Server UP" && break || docker compose -p zenflows -f devop/docker-compose.yml ps; sleep 5 ; done
-          # ./mann devop.down
-          
-
-
-  # run_tester:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #   steps:
-      # - name: check-out jupyter notebook repo
-      #   uses: actions/checkout@v3
-      #   with:
-      #     repository: interfacerproject/Interfacer-notebook
-      #     # path: &nb_path notebook
-      #     path: notebook
-      # - name: Set up Python 3.11
-      #   uses: actions/setup-python@v3
-      #   with:
-      #     python-version: "3.11"
-      # - name: Install dependencies
-      #   env:
-      #       # NB_PATH: *nb_path
-      #       NB_PATH: notebook
-      #   run: |
-      #     # ls -l ${NB_PATH}
-      #     python -m pip install --upgrade pip
-      #     pip install pytest
-      #     # pip install flake8
-      #     pip install zenroom requests notebook papermill plotly
-      #     if [ -f ${NB_PATH}/requirements.txt ]; then pip install -r ${NB_PATH}/requirements.txt; fi
-      # - name: Test with pytest
-      #   env:
-      #     IF_KEY: ${{ secrets.KEY }}
-      #     # NB_PATH: *nb_path
-      #     NB_PATH: notebook
-      #   run: |
-      #     cd ${NB_PATH}
-      #     pytest --endpoint http://localhost:8000/api
-      #     cd ..
-      #     ./mann devop.down

@@ -22,7 +22,7 @@ use Mix.Project
 def project() do
 	[
 		app: :zenflows,
-		version: "0.3.0",
+		version: "0.4.0",
 		elixir: "~> 1.14", # erlang/otp 24-25
 		start_permanent: Mix.env() == :prod,
 		config_path: "conf/buildtime.exs",

@@ -2,7 +2,7 @@ defmodule ExDoc.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/elixir-lang/ex_doc"
-  @version "0.29.0"
+  @version "0.29.4"
 
   def project do
     [
@@ -15,9 +15,7 @@ defmodule ExDoc.Mixfile do
       escript: escript(),
       elixirc_paths: elixirc_paths(Mix.env()),
       source_url: @source_url,
-      test_coverage: [tool: ExCoveralls],
       test_elixirc_options: [docs: true, debug_info: true],
-      preferred_cli_env: [coveralls: :test],
       name: "ExDoc",
       description: "ExDoc is a documentation generation tool for Elixir",
       docs: docs()
@@ -33,7 +31,7 @@ defmodule ExDoc.Mixfile do
 
   defp deps do
     [
-      {:earmark_parser, "~> 1.4.19"},
+      {:earmark_parser, "~> 1.4.31"},
       {:makeup_elixir, "~> 0.14"},
       {:makeup_erlang, "~> 0.1"},
       {:makeup_html, ">= 0.0.0", only: :dev},
@@ -48,7 +46,7 @@ defmodule ExDoc.Mixfile do
       clean: [&clean_test_fixtures/1, "clean"],
       fix: ["format", "cmd --cd assets npm run lint:fix"],
       lint: ["format --check-formatted", "cmd --cd assets npm run lint"],
-      setup: ["deps.get", "cmd --cd assets npm install"]
+      setup: ["deps.get", "cmd mkdir -p tmp/handlebars", "cmd --cd assets npm install"]
     ]
   end
 

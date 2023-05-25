@@ -188,16 +188,22 @@ defmodule NimbleParsec.Compiler do
       {next, step} = build_next(step, config)
       args = quote(do: [rest, acc, stack, context, line, offset])
       success_body = {next, [], args}
-      {_, _, _, failure_body} = build_catch_all(kind, current, combinators, config)
 
-      {success_body, failure_body} =
-        if kind == :positive, do: {success_body, failure_body}, else: {failure_body, success_body}
+      {_, [_bin | negative_head], _, failure_body} =
+        build_catch_all(kind, current, combinators, config)
+
+      {success_body, failure_body, head} =
+        if kind == :positive do
+          {success_body, failure_body, quote(do: [acc, stack, context, line, offset])}
+        else
+          {failure_body, success_body, negative_head}
+        end
 
       defs =
         for choice <- choices do
           {[], inputs, guards, _, _, metadata} = take_bound_combinators(choice)
           {bin, _} = compile_bound_bin_pattern(inputs, metadata, quote(do: _))
-          head = quote(do: [unquote(bin) = rest, acc, stack, context, line, offset])
+          head = quote(do: [unquote(bin) = rest]) ++ quote(do: unquote(head))
           guards = guards_list_to_quoted(guards)
           {current, head, guards, success_body}
         end
@@ -423,10 +429,10 @@ defmodule NimbleParsec.Compiler do
         res
 
       {acc, context} when acc != :error ->
-        # IO.warn(
-        #   "Returning a two-element tuple {acc, context} in pre_traverse/post_traverse is deprecated, " <>
-        #     "please return {rest, acc, context} instead"
-        # )
+        IO.warn(
+          "Returning a two-element tuple {acc, context} in pre_traverse/post_traverse is deprecated, " <>
+            "please return {rest, acc, context} instead"
+        )
 
         {:{}, [], [rest, acc, context]}
 
@@ -568,8 +574,8 @@ defmodule NimbleParsec.Compiler do
     {defs, inline, next, step, :catch_none}
   end
 
-  defp compile_time_repeat_while({:cont, quote(do: context)}), do: :cont
-  defp compile_time_repeat_while({:halt, quote(do: context)}), do: :halt
+  defp compile_time_repeat_while({:cont, {:context, _, __MODULE__}}), do: :cont
+  defp compile_time_repeat_while({:halt, {:context, _, __MODULE__}}), do: :halt
   defp compile_time_repeat_while(_), do: :none
 
   defp repeat_while(quoted, true_name, true_args, false_name, false_args) do
@@ -583,8 +589,8 @@ defmodule NimbleParsec.Compiler do
       :none ->
         quote do
           case unquote(quoted) do
-            {:cont, context} -> unquote({true_name, [], true_args})
-            {:halt, context} -> unquote({false_name, [], false_args})
+            {:cont, unquote(Enum.at(true_args, 3))} -> unquote({true_name, [], true_args})
+            {:halt, unquote(Enum.at(false_args, 3))} -> unquote({false_name, [], false_args})
           end
         end
     end
@@ -1074,7 +1080,7 @@ defmodule NimbleParsec.Compiler do
   end
 
   defp printable?(codepoint), do: List.ascii_printable?([codepoint])
-  defp inspect_char(codepoint), do: inspect([codepoint], charlists: :as_charlists)
+  defp inspect_char(codepoint), do: inspect(<<codepoint::utf8>>)
 
   defp apply_bin_modifier(expr, :integer), do: expr
 

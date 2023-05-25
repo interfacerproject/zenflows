@@ -1,7 +1,7 @@
 defmodule MakeupElixir.Mixfile do
   use Mix.Project
 
-  @version "0.16.0"
+  @version "0.16.1"
   @url "https://github.com/elixir-makeup/makeup_elixir"
 
   def project do
@@ -26,7 +26,7 @@ defmodule MakeupElixir.Mixfile do
   defp package do
     [
       name: :makeup_elixir,
-      licenses: ["BSD"],
+      licenses: ["BSD-2-Clause"],
       maintainers: ["Tiago Barroso <tmbb@campus.ul.pt>"],
       links: %{"GitHub" => @url}
     ]
@@ -44,7 +44,7 @@ defmodule MakeupElixir.Mixfile do
   defp deps do
     [
       {:makeup, "~> 1.0"},
-      {:nimble_parsec, "~> 1.2.3"},
+      {:nimble_parsec, "~> 1.2.3 or ~> 1.3"},
       # Generate unicode character lists
       {:unicode_set, "~> 1.1.0", only: :dev},
       # Benchmarking utilities

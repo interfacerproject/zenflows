@@ -2,7 +2,7 @@ defmodule ExDoc.Formatter.HTML.Templates do
   @moduledoc false
   require EEx
 
-  import ExDoc.Utils, only: [h: 1]
+  import ExDoc.Utils, only: [h: 1, before_closing_body_tag: 2, before_closing_head_tag: 2]
 
   # TODO: It should not depend on the parent module. Move required HTML functions to Utils.
   # TODO: Add tests that assert on the returned structured, not on JSON
@@ -117,7 +117,6 @@ defmodule ExDoc.Formatter.HTML.Templates do
         extra =
           module
           |> module_summary()
-          |> Enum.reject(fn {_type, nodes_map} -> nodes_map == [] end)
           |> case do
             [] -> []
             entries -> [nodeGroups: Enum.map(entries, &sidebar_entries/1)]
@@ -146,7 +145,7 @@ defmodule ExDoc.Formatter.HTML.Templates do
             "#{node.name}/#{node.arity}"
           end
 
-        %{id: id, anchor: URI.encode(node.id)}
+        %{id: id, title: node.signature, anchor: URI.encode(node.id)}
       end
 
     %{key: HTML.text_to_id(group), name: group, nodes: nodes}
@@ -183,11 +182,14 @@ defmodule ExDoc.Formatter.HTML.Templates do
   end
 
   def module_summary(module_node) do
-    [Types: module_node.typespecs] ++
-      function_groups(module_node.function_groups, module_node.docs)
+    entries =
+      [Types: module_node.typespecs] ++
+        docs_groups(module_node.docs_groups, module_node.docs)
+
+    Enum.reject(entries, fn {_type, nodes} -> nodes == [] end)
   end
 
-  defp function_groups(groups, docs) do
+  defp docs_groups(groups, docs) do
     for group <- groups, do: {group, Enum.filter(docs, &(&1.group == group))}
   end
 

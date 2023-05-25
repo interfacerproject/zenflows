@@ -30,7 +30,7 @@ on:
   push:
     branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 jobs:
   run_tests:
     runs-on: ubuntu-latest
@@ -44,23 +44,15 @@ jobs:
           submodules: true
       - name: set up zenflows container
         run: |
-          admin_key=${{ secrets.KEY }}
+          admin_key=$(openssl rand -hex 64)
           db_pass=$(openssl rand -hex 16)
-          room_salt=$(openssl rand -hex 16)
+          room_salt=$(openssl rand -base64 16)
           # TODO: this is an ***INSECURE*** way to install the yq software; find a better way.
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod a+x /usr/local/bin/yq
           yq e '
-            .services.srv = {
-              "environment": {
-                "ADMIN_KEY": "'"$admin_key"'",
-                "EMAIL_ADDR": "",
-                "EMAIL_KEY": "",
-              }
-            }
-            |
             .services.notebook = {
-               "image": "notebook:latest",
+               "image": "notebook",
                "depends_on": ["srv"],
                "stdin_open": true,
                "tty": true,
@@ -68,8 +60,14 @@ jobs:
                "environment": {
                  "IF_KEY": "'"$admin_key"'"
                }
-            }' devop/.docker-compose.templ >devop/docker-compose.yml
-          cat devop/docker-compose.yml
+            }
+            | .services.srv.environment.ADMIN_KEY = "'"$admin_key"'"
+            | .services.srv.environment.ROOM_SALT = "'"$room_salt"'"
+            | .services.srv.environment.EMAIL_ADDR = ""
+            | .services.srv.environment.EMAIL_KEY = ""
+            | .services.srv.environment.DB_PASS = "'"$db_pass"'"
+            | .services.db.environment.POSTGRES_PASSWORD = "'"$db_pass"'"
+          ' devop/.docker-compose.templ >devop/docker-compose.yml
 
       - name: check-out jupyter notebook repo
         uses: actions/checkout@v3
@@ -100,6 +98,4 @@ jobs:
           tags: notebook:latest
       - name: build and run tests on notebook container
         run: |
-          ./mann devop.up -d
-          sleep 5
           ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api

@@ -98,4 +98,6 @@ jobs:
           tags: notebook:latest
       - name: build and run tests on notebook container
         run: |
+          ./mann devop.up -d
+          sleep 5
           ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api

@@ -504,12 +504,8 @@ defmodule Mint.Core.Transport.SSL do
   # therefore the only pattern used in commercially issued certificates.
   defp match_fun({:dns_id, reference}, {:dNSName, [?*, ?. | presented]}) do
     case domain_without_host(reference) do
-      '' ->
-        :default
-
-      domain ->
-        # TODO: replace with `:string.casefold/1` eventually
-        :string.to_lower(domain) == :string.to_lower(presented)
+      '' -> :default
+      domain -> :string.casefold(domain) == :string.casefold(presented)
     end
   end
 
@@ -607,7 +603,10 @@ defmodule Mint.Core.Transport.SSL do
   end
 
   defp decode_cacerts(certs) do
-    Enum.map(certs, &:public_key.pkix_decode_cert(&1, :plain))
+    Enum.map(certs, fn
+      cert when is_binary(cert) -> :public_key.pkix_decode_cert(cert, :plain)
+      {:cert, _, otp_certificate} -> otp_certificate
+    end)
   end
 
   def partial_chain(cacerts, certs) do
@@ -709,6 +708,9 @@ defmodule Mint.Core.Transport.SSL do
     |> String.split(".")
     |> Enum.map(&String.to_integer/1)
   end
+
+  # Dialyzer warns on :ssl.cipher_suites/1 for now.
+  @dialyzer {:nowarn_function, get_ciphers_for_versions: 1}
 
   @doc false
   def get_ciphers_for_versions(versions) do

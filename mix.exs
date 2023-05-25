@@ -65,8 +65,8 @@ defp deps() do
 
 		# http
 		{:plug_cowboy, "~> 2.6"},
-		{:mint, "~> 1.4"},
-		{:castore, "~> 0.1"},
+		{:mint, "~> 1.5"},
+		{:castore, ">= 0.0.0"},
 
 		# graphql
 		{:absinthe, "~> 1.7"},

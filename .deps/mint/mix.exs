@@ -1,14 +1,14 @@
 defmodule Mint.MixProject do
   use Mix.Project
 
-  @version "1.4.2"
+  @version "1.5.1"
   @repo_url "https://github.com/elixir-mint/mint"
 
   def project do
     [
       app: :mint,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
@@ -69,13 +69,14 @@ defmodule Mint.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:castore, "~> 0.1.0", optional: true},
+      {:castore, "~> 0.1.0 or ~> 1.0", optional: true},
       {:hpax, "~> 0.1.1"},
 
       # Dev/test dependencies
-      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.20", only: :dev},
       {:excoveralls, "~> 0.14.5", only: :test},
+      {:mox, "~> 1.0", only: :test},
       {:stream_data, "~> 0.5.0", only: [:dev, :test]}
     ]
   end

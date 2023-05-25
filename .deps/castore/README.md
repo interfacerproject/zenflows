@@ -1,6 +1,9 @@
 # CAStore
 
-Up-to-date CA certificate store.
+[![hex.pm badge](https://img.shields.io/badge/Package%20on%20hex.pm-informational)](https://hex.pm/packages/castore)
+[![Documentation badge](https://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/castore)
+
+Up-to-date CA certificate store for Elixir.
 
 ## Installation
 
@@ -9,7 +12,7 @@ In your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:castore, "~> 0.1.0"}
+    {:castore, "~> 1.0"}
   ]
 end
 ```
@@ -26,6 +29,10 @@ CAStore.file_path()
 ```
 
 See [the documentation](https://hexdocs.pm/castore).
+
+## Updates
+
+Every time there is an update to the CA certificate store, we'll release a new **patch version** of the library. For example, `1.0.12` → `1.0.13`.
 
 ## Contributing
 

@@ -78,7 +78,7 @@ defp deps() do
 
 		# static analysis
 		{:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-		{:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+		{:dialyxir, "~> 1.3", only: [:dev], runtime: false},
 
 		# doc
 		{:ex_doc, "~> 0.29", only: :dev, runtime: false},

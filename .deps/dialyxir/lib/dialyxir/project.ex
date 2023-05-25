@@ -42,7 +42,7 @@ defmodule Dialyxir.Project do
 
   def cons_apps do
     # compile & load all deps paths
-    Mix.Tasks.Deps.Loadpaths.run([])
+    _ = Mix.Tasks.Deps.Loadpaths.run([])
     # compile & load current project paths
     Mix.Task.run("compile")
     apps = plt_apps() || plt_add_apps() ++ include_deps()
@@ -107,6 +107,13 @@ defmodule Dialyxir.Project do
 
   def dialyzer_flags do
     Mix.Project.config()[:dialyzer][:flags] || []
+  end
+
+  def no_umbrella? do
+    case dialyzer_config()[:no_umbrella] do
+      true -> true
+      _other -> false
+    end
   end
 
   defp skip?({file, warning, line}, {file, warning, line, _}), do: true

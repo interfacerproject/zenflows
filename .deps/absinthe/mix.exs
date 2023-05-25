@@ -2,7 +2,7 @@ defmodule Absinthe.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/absinthe-graphql/absinthe"
-  @version "1.7.0"
+  @version "1.7.1"
 
   def project do
     [
@@ -71,7 +71,7 @@ defmodule Absinthe.Mixfile do
 
   defp deps do
     [
-      {:nimble_parsec, "~> 0.5 or ~> 1.0"},
+      {:nimble_parsec, "~> 1.2.2 or ~> 1.3.0"},
       {:telemetry, "~> 1.0 or ~> 0.4"},
       {:dataloader, "~> 1.0.0", optional: true},
       {:decimal, "~> 1.0 or ~> 2.0", optional: true},
@@ -152,7 +152,6 @@ defmodule Absinthe.Mixfile do
         Absinthe.Type,
         Absinthe.Type.Custom,
         Absinthe.Type.Argument,
-        Absinthe.Type.Custom,
         Absinthe.Type.Directive,
         Absinthe.Type.Enum,
         Absinthe.Type.Enum.Value,

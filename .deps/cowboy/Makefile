@@ -2,7 +2,7 @@
 
 PROJECT = cowboy
 PROJECT_DESCRIPTION = Small, fast, modern HTTP server.
-PROJECT_VERSION = 2.9.0
+PROJECT_VERSION = 2.10.0
 PROJECT_REGISTERED = cowboy_clock
 
 # Options.
@@ -15,7 +15,7 @@ CT_OPTS += -ct_hooks cowboy_ct_hook [] # -boot start_sasl
 LOCAL_DEPS = crypto
 
 DEPS = cowlib ranch
-dep_cowlib = git https://github.com/ninenines/cowlib 2.11.0
+dep_cowlib = git https://github.com/ninenines/cowlib 2.12.1
 dep_ranch = git https://github.com/ninenines/ranch 1.8.0
 
 DOC_DEPS = asciideck
@@ -40,8 +40,8 @@ define HEX_TARBALL_EXTRA_METADATA
 #{
 	licenses => [<<"ISC">>],
 	links => #{
-		<<"User guide">> => <<"https://ninenines.eu/docs/en/cowboy/2.9/guide/">>,
-		<<"Function reference">> => <<"https://ninenines.eu/docs/en/cowboy/2.9/manual/">>,
+		<<"User guide">> => <<"https://ninenines.eu/docs/en/cowboy/2.10/guide/">>,
+		<<"Function reference">> => <<"https://ninenines.eu/docs/en/cowboy/2.10/manual/">>,
 		<<"GitHub">> => <<"https://github.com/ninenines/cowboy">>,
 		<<"Sponsor">> => <<"https://github.com/sponsors/essen">>
 	}
@@ -87,13 +87,6 @@ $(H2SPEC):
 	$(gen_verbose) mkdir -p $(GOPATH)/src/github.com/summerwind
 	$(verbose) git clone --depth 1 https://github.com/summerwind/h2spec $(dir $(H2SPEC)) || true
 	$(verbose) $(MAKE) -C $(dir $(H2SPEC)) build MAKEFLAGS= || true
-
-# Use erl_make_certs from the tested release during CI
-# and ensure that ct_helper is always recompiled.
-
-ci-setup:: clean deps test-deps
-	$(gen_verbose) cp ~/.kerl/builds/$(CI_OTP_RELEASE)/otp_src_git/lib/ssl/test/erl_make_certs.erl deps/ct_helper/src/ || true
-	$(gen_verbose) $(MAKE) -C $(DEPS_DIR)/ct_helper clean app
 
 # Prepare for the release.
 

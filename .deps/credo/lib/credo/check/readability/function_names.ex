@@ -1,5 +1,6 @@
 defmodule Credo.Check.Readability.FunctionNames do
   use Credo.Check,
+    id: "EX3004",
     base_priority: :high,
     param_defaults: [
       allow_acronyms: false
@@ -34,7 +35,7 @@ defmodule Credo.Check.Readability.FunctionNames do
   @all_sigil_atoms Enum.map(@all_sigil_chars, &:"sigil_#{&1}")
 
   # all non-special-form operators
-  @all_nonspecial_operators ~W(! && ++ -- .. <> =~ @ |> || != !== * + - / < <= == === > >= ||| &&& <<< >>> <<~ ~>> <~ ~> <~> <|> ^^^ ~~~)a
+  @all_nonspecial_operators ~W(! && ++ -- .. <> =~ @ |> || != !== * + - / < <= == === > >= ||| &&& <<< >>> <<~ ~>> <~ ~> <~> <|> ^^^ ~~~ +++ ---)a
 
   @doc false
   @impl true
@@ -92,6 +93,24 @@ defmodule Credo.Check.Readability.FunctionNames do
     # ignore non-special-form (overridable) operators
     defp traverse(
            {unquote(op), _meta, [{operator, _at_meta, _args} | _tail]} = ast,
+           issues,
+           _issue_meta,
+           _allow_acronyms?
+         )
+         when operator in @all_nonspecial_operators do
+      {ast, issues}
+    end
+
+    # ignore non-special-form (overridable) operators
+    defp traverse(
+           {unquote(op), _meta,
+            [
+              {:when, _,
+               [
+                 {operator, _, _} | _
+               ]}
+              | _
+            ]} = ast,
            issues,
            _issue_meta,
            _allow_acronyms?

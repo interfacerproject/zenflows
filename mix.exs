@@ -77,7 +77,7 @@ defp deps() do
 		{:exsync, "~> 0.2", only: :dev},
 
 		# static analysis
-		{:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+		{:credo, "~> 1.7", only: [:dev, :test], runtime: false},
 		{:dialyxir, "~> 1.0", only: [:dev], runtime: false},
 
 		# doc

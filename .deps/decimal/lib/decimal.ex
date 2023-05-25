@@ -122,6 +122,15 @@ defmodule Decimal do
 
   @doc """
   Returns `true` if number is NaN, otherwise `false`.
+
+  ## Examples
+
+      iex> Decimal.nan?(Decimal.new("NaN"))
+      true
+
+      iex> Decimal.nan?(Decimal.new(42))
+      false
+
   """
   @spec nan?(t) :: boolean
   def nan?(%Decimal{coef: :NaN}), do: true
@@ -129,6 +138,18 @@ defmodule Decimal do
 
   @doc """
   Returns `true` if number is ±Infinity, otherwise `false`.
+
+  ## Examples
+
+      iex> Decimal.inf?(Decimal.new("+Infinity"))
+      true
+
+      iex> Decimal.inf?(Decimal.new("-Infinity"))
+      true
+
+      iex> Decimal.inf?(Decimal.new("1.5"))
+      false
+
   """
   @spec inf?(t) :: boolean
   def inf?(%Decimal{coef: :inf}), do: true
@@ -187,6 +208,18 @@ defmodule Decimal do
 
   @doc """
   The absolute value of given number. Sets the number's sign to positive.
+
+  ## Examples
+
+      iex> Decimal.abs(Decimal.new("1"))
+      Decimal.new("1")
+
+      iex> Decimal.abs(Decimal.new("-1"))
+      Decimal.new("1")
+
+      iex> Decimal.abs(Decimal.new("NaN"))
+      Decimal.new("NaN")
+
   """
   @spec abs(t) :: t
   def abs(%Decimal{coef: :NaN} = num), do: %{num | sign: 1}
@@ -203,10 +236,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.add(1, "1.1")
-      #Decimal<2.1>
+      Decimal.new("2.1")
 
       iex> Decimal.add(1, "Inf")
-      #Decimal<Infinity>
+      Decimal.new("Infinity")
 
   """
   @spec add(decimal, decimal) :: t
@@ -254,10 +287,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.sub(1, "0.1")
-      #Decimal<0.9>
+      Decimal.new("0.9")
 
       iex> Decimal.sub(1, "Inf")
-      #Decimal<-Infinity>
+      Decimal.new("-Infinity")
 
   """
   @spec sub(decimal, decimal) :: t
@@ -309,16 +342,63 @@ defmodule Decimal do
   def compare(_num1, %Decimal{coef: :NaN} = num2),
     do: error(:invalid_operation, "operation on NaN", num2)
 
+  def compare(%Decimal{coef: 0}, %Decimal{coef: 0}), do: :eq
+
+  def compare(%Decimal{sign: 1}, %Decimal{coef: 0}), do: :gt
+  def compare(%Decimal{coef: 0}, %Decimal{sign: 1}), do: :lt
+  def compare(%Decimal{sign: -1}, %Decimal{coef: 0}), do: :lt
+  def compare(%Decimal{coef: 0}, %Decimal{sign: -1}), do: :gt
+
+  def compare(%Decimal{sign: 1}, %Decimal{sign: -1}), do: :gt
+  def compare(%Decimal{sign: -1}, %Decimal{sign: 1}), do: :lt
+
   def compare(%Decimal{} = num1, %Decimal{} = num2) do
-    case sub(num1, num2) do
-      %Decimal{coef: 0} -> :eq
-      %Decimal{sign: 1} -> :gt
-      %Decimal{sign: -1} -> :lt
+    adjusted_exp1 = adjust_exp(num1)
+    adjusted_exp2 = adjust_exp(num2)
+
+    sign =
+      cond do
+        adjusted_exp1 == adjusted_exp2 ->
+          padded_num1 = pad_num(num1, num1.exp - num2.exp)
+          padded_num2 = pad_num(num2, num2.exp - num1.exp)
+
+          cond do
+            padded_num1 == padded_num2 -> 0
+            padded_num1 < padded_num2 -> -num1.sign
+            true -> num1.sign
+          end
+
+        adjusted_exp1 < adjusted_exp2 ->
+          -num1.sign
+
+        true ->
+          num1.sign
+      end
+
+    case sign do
+      0 -> :eq
+      1 -> :gt
+      -1 -> :lt
     end
   end
 
   def compare(num1, num2) do
     compare(decimal(num1), decimal(num2))
+  end
+
+  defp adjust_exp(%Decimal{coef: coef, exp: exp}) do
+    coef_adjustment = coef_length(coef)
+    exp + coef_adjustment - 1
+  end
+
+  def coef_length(0), do: 1
+  def coef_length(coef), do: coef_length(coef, 0)
+
+  def coef_length(0, length), do: length
+  def coef_length(coef, length), do: coef_length(Kernel.div(coef, 10), length + 1)
+
+  defp pad_num(%Decimal{coef: coef}, n) do
+    coef * pow10(Kernel.max(n, 0) + 1)
   end
 
   @deprecated "Use compare/2 instead"
@@ -418,10 +498,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.div(3, 4)
-      #Decimal<0.75>
+      Decimal.new("0.75")
 
       iex> Decimal.div("Inf", -1)
-      #Decimal<-Infinity>
+      Decimal.new("-Infinity")
 
   """
   @spec div(decimal, decimal) :: t
@@ -484,10 +564,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.div_int(5, 2)
-      #Decimal<2>
+      Decimal.new("2")
 
       iex> Decimal.div_int("Inf", -1)
-      #Decimal<-Infinity>
+      Decimal.new("-Infinity")
 
   """
   @spec div_int(decimal, decimal) :: t
@@ -558,7 +638,7 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.rem(5, 2)
-      #Decimal<1>
+      Decimal.new("1")
 
   """
   @spec rem(decimal, decimal) :: t
@@ -700,13 +780,13 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.max(1, "2.0")
-      #Decimal<2.0>
+      Decimal.new("2.0")
 
       iex> Decimal.max(1, "NaN")
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.max("NaN", "NaN")
-      #Decimal<NaN>
+      Decimal.new("NaN")
 
   """
   @spec max(decimal, decimal) :: t
@@ -749,13 +829,13 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.min(1, "2.0")
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.min(1, "NaN")
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.min("NaN", "NaN")
-      #Decimal<NaN>
+      Decimal.new("NaN")
 
   """
   @spec min(decimal, decimal) :: t
@@ -796,10 +876,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.negate(1)
-      #Decimal<-1>
+      Decimal.new("-1")
 
       iex> Decimal.negate("-Inf")
-      #Decimal<Infinity>
+      Decimal.new("Infinity")
 
   """
   doc_since("1.9.0")
@@ -816,7 +896,22 @@ defmodule Decimal do
   def apply_context(%Decimal{} = num), do: context(num)
 
   @doc """
-  Check if given number is positive
+  Returns `true` if given number is positive, otherwise `false`.
+
+  ## Examples
+
+      iex> Decimal.positive?(Decimal.new("42"))
+      true
+
+      iex> Decimal.positive?(Decimal.new("-42"))
+      false
+
+      iex> Decimal.positive?(Decimal.new("0"))
+      false
+
+      iex> Decimal.positive?(Decimal.new("NaN"))
+      false
+
   """
   doc_since("1.5.0")
   @spec positive?(t) :: boolean
@@ -826,7 +921,22 @@ defmodule Decimal do
   def positive?(%Decimal{sign: 1}), do: true
 
   @doc """
-  Check if given number is negative
+  Returns `true` if given number is negative, otherwise `false`.
+
+  ## Examples
+
+      iex> Decimal.negative?(Decimal.new("-42"))
+      true
+
+      iex> Decimal.negative?(Decimal.new("42"))
+      false
+
+      iex> Decimal.negative?(Decimal.new("0"))
+      false
+
+      iex> Decimal.negative?(Decimal.new("NaN"))
+      false
+
   """
   doc_since("1.5.0")
   @spec negative?(t) :: boolean
@@ -846,10 +956,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.mult("0.5", 3)
-      #Decimal<1.5>
+      Decimal.new("1.5")
 
       iex> Decimal.mult("Inf", -1)
-      #Decimal<-Infinity>
+      Decimal.new("-Infinity")
 
   """
   @spec mult(decimal, decimal) :: t
@@ -893,10 +1003,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.normalize(Decimal.new("1.00"))
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.normalize(Decimal.new("1.01"))
-      #Decimal<1.01>
+      Decimal.new("1.01")
 
   """
   doc_since("1.9.0")
@@ -926,10 +1036,10 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.round("1.234")
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.round("1.234", 1)
-      #Decimal<1.2>
+      Decimal.new("1.2")
 
   """
   @spec round(decimal, integer, rounding) :: t
@@ -957,7 +1067,7 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.sqrt("100")
-      #Decimal<10>
+      Decimal.new("10")
 
   """
   doc_since("1.7.0")
@@ -1074,10 +1184,11 @@ defmodule Decimal do
   ## Examples
 
       iex> Decimal.new(1)
-      #Decimal<1>
+      Decimal.new("1")
 
       iex> Decimal.new("3.14")
-      #Decimal<3.14>
+      Decimal.new("3.14")
+
   """
   @spec new(decimal) :: t
   def new(%Decimal{sign: sign, coef: coef, exp: exp} = num)
@@ -1101,8 +1212,14 @@ defmodule Decimal do
 
   A decimal number will always be created exactly as specified with all digits
   kept - it will not be rounded with the context.
+
+  ## Examples
+
+      iex> Decimal.new(1, 42, 0)
+      Decimal.new("42")
+
   """
-  @spec new(1 | -1, non_neg_integer | :NaN | :inf, integer) :: t
+  @spec new(sign :: 1 | -1, coef :: non_neg_integer | :NaN | :inf, exp :: integer) :: t
   def new(sign, coef, exp)
       when sign in [1, -1] and ((is_integer(coef) and coef >= 0) or coef in [:NaN, :inf]) and
              is_integer(exp),
@@ -1123,14 +1240,14 @@ defmodule Decimal do
       0.30000000000000004
 
       iex> Enum.reduce([Decimal.new("0.1"), Decimal.new("0.1"), Decimal.new("0.1")], &Decimal.add/2)
-      #Decimal<0.3>
+      Decimal.new("0.3")
 
   For this reason, it's recommended to build decimals with `new/1`, which is always precise, instead.
 
   ## Examples
 
       iex> Decimal.from_float(3.14)
-      #Decimal<3.14>
+      Decimal.new("3.14")
 
   """
   doc_since("1.5.0")
@@ -1154,7 +1271,7 @@ defmodule Decimal do
 
       iex> {:ok, decimal} = Decimal.cast(3)
       iex> decimal
-      #Decimal<3>
+      Decimal.new("3")
 
       iex> Decimal.cast("bad")
       :error
@@ -1221,6 +1338,23 @@ defmodule Decimal do
     * `:xsd` - number converted to the [canonical XSD representation](https://www.w3.org/TR/xmlschema-2/#decimal).
     * `:raw` - number converted to its raw, internal format.
 
+  ## Examples
+
+      iex> Decimal.to_string(Decimal.new("1.00"))
+      "1.00"
+
+      iex> Decimal.to_string(Decimal.new("123e1"), :scientific)
+      "1.23E+3"
+
+      iex> Decimal.to_string(Decimal.new("42.42"), :normal)
+      "42.42"
+
+      iex> Decimal.to_string(Decimal.new("1.00"), :xsd)
+      "1.0"
+
+      iex> Decimal.to_string(Decimal.new("4321.768"), :raw)
+      "4321768E-3"
+
   """
   @spec to_string(t, :scientific | :normal | :xsd | :raw) :: String.t()
   def to_string(num, type \\ :scientific)
@@ -1245,7 +1379,7 @@ defmodule Decimal do
         if diff > 0 do
           List.insert_at(list, diff, ?.)
         else
-          '0.' ++ :lists.duplicate(-diff, ?0) ++ list
+          ~c"0." ++ :lists.duplicate(-diff, ?0) ++ list
         end
       end
 
@@ -1276,8 +1410,8 @@ defmodule Decimal do
 
         true ->
           list = if length > 1, do: List.insert_at(list, 1, ?.), else: list
-          list = list ++ 'E'
-          list = if exp >= 0, do: list ++ '+', else: list
+          list = list ++ ~c"E"
+          list = if exp >= 0, do: list ++ ~c"+", else: list
           list ++ integer_to_charlist(adjusted)
       end
 
@@ -1317,6 +1451,18 @@ defmodule Decimal do
   Returns the decimal represented as an integer.
 
   Fails when loss of precision will occur.
+
+  ## Examples
+
+      iex> Decimal.to_integer(Decimal.new("42"))
+      42
+
+      iex> Decimal.to_integer(Decimal.new("1.00"))
+      1
+
+      iex> Decimal.to_integer(Decimal.new("1.10"))
+      ** (ArgumentError) cannot convert Decimal.new("1.1") without losing precision. Use Decimal.round/3 first.
+
   """
   @spec to_integer(t) :: integer
   def to_integer(%Decimal{sign: sign, coef: coef, exp: 0})
@@ -1331,11 +1477,22 @@ defmodule Decimal do
       when is_integer(coef) and exp < 0 and Kernel.rem(coef, 10) == 0,
       do: to_integer(%Decimal{sign: sign, coef: Kernel.div(coef, 10), exp: exp + 1})
 
+  def to_integer(%Decimal{coef: coef} = decimal) when is_integer(coef) do
+    raise ArgumentError,
+          "cannot convert #{inspect(decimal)} without losing precision. Use Decimal.round/3 first."
+  end
+
   @doc """
   Returns the decimal converted to a float.
 
   The returned float may have lower precision than the decimal. Fails if
   the decimal cannot be converted to a float.
+
+  ## Examples
+
+      iex> Decimal.to_float(Decimal.new("1.5"))
+      1.5
+
   """
   @spec to_float(t) :: float
   def to_float(%Decimal{sign: sign, coef: coef, exp: exp}) when is_integer(coef) do
@@ -1358,6 +1515,29 @@ defmodule Decimal do
         decimal_to_float(sign, num, den, exp)
     end
   end
+
+  @doc """
+  Returns the scale of the decimal.
+
+  A decimal's scale is the number of digits after the decimal point. This
+  includes trailing zeros; see `normalize/1` to remove them.
+
+  ## Examples
+
+      iex> Decimal.scale(Decimal.new("42"))
+      0
+
+      iex> Decimal.scale(Decimal.new(1, 2, 26))
+      0
+
+      iex> Decimal.scale(Decimal.new("99.12345"))
+      5
+
+      iex> Decimal.scale(Decimal.new("1.50"))
+      2
+  """
+  @spec scale(t) :: non_neg_integer()
+  def scale(%Decimal{exp: exp}), do: Kernel.max(0, -exp)
 
   defp scale_up(num, den, exp) when num >= den, do: {num, exp}
   defp scale_up(num, den, exp), do: scale_up(num <<< 1, den, exp - 1)
@@ -1401,9 +1581,10 @@ defmodule Decimal do
 
       iex> Decimal.integer?("1.10")
       false
+
   """
   doc_since("2.0.0")
-  @spec integer?(t) :: boolean
+  @spec integer?(decimal()) :: boolean
   def integer?(%Decimal{coef: :NaN}), do: false
   def integer?(%Decimal{coef: :inf}), do: false
   def integer?(%Decimal{coef: coef, exp: exp}), do: exp >= 0 or zero_after_dot?(coef, exp)
@@ -1412,8 +1593,8 @@ defmodule Decimal do
   defp zero_after_dot?(coef, exp) when coef >= 10 and exp < 0,
     do: Kernel.rem(coef, 10) == 0 and zero_after_dot?(Kernel.div(coef, 10), exp + 1)
 
-  defp zero_after_dot?(_coef, exp),
-    do: exp == 0
+  defp zero_after_dot?(coef, exp),
+    do: coef == 0 or exp == 0
 
   ## ARITHMETIC ##
 
@@ -1684,8 +1865,8 @@ defmodule Decimal do
     if int == [] and float == [] do
       :error
     else
-      int = if int == [], do: '0', else: int
-      exp = if exp == [], do: '0', else: exp
+      int = if int == [], do: ~c"0", else: int
+      exp = if exp == [], do: ~c"0", else: exp
 
       number = %Decimal{
         coef: List.to_integer(int ++ float),
@@ -1774,7 +1955,7 @@ end
 
 defimpl Inspect, for: Decimal do
   def inspect(dec, _opts) do
-    "#Decimal<" <> Decimal.to_string(dec) <> ">"
+    "Decimal.new(\"" <> Decimal.to_string(dec) <> "\")"
   end
 end
 

@@ -12,13 +12,13 @@ defmodule Ecto.Query.Builder.From do
   ## Examples
 
       iex> escape(quote(do: MySchema), __ENV__)
-      {quote(do: MySchema), []}
+      {MySchema, []}
 
       iex> escape(quote(do: p in posts), __ENV__)
       {quote(do: posts), [p: 0]}
 
       iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
-      {quote(do: {"posts", MySchema}), [p: 0]}
+      {{"posts", MySchema}, [p: 0]}
 
       iex> escape(quote(do: [p, q] in posts), __ENV__)
       {quote(do: posts), [p: 0, q: 1]}
@@ -44,12 +44,24 @@ defmodule Ecto.Query.Builder.From do
     {query, []}
   end
 
-  defp escape_source({:fragment, _, _} = fragment, env) do
-    {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
-    {fragment, Builder.escape_params(params)}
-  end
+  defp escape_source(query, env) do
+    case Macro.expand_once(query, env) do
+      {:fragment, _, _} = fragment->
+        {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
+        {fragment, Builder.escape_params(params)}
 
-  defp escape_source(query, _env), do: query
+      ^query ->
+        case query do
+          {left, right} -> {left, Macro.expand(right, env)}
+          _ -> query
+        end
+
+      other ->
+        escape_source(other, env)
+    end
+  end
+  
+  @typep hints :: [String.t() | {atom, term}]
 
   @doc """
   Builds a quoted expression.
@@ -58,24 +70,23 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, String.t | nil, nil | {:ok, String.t | nil} | [String.t]) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, String.t | nil} | nil, hints) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
-  def build(query, env, as, prefix, maybe_hints) do
-    hints = List.wrap(maybe_hints)
-
+  def build(query, env, as, prefix, hints) do
     unless Enum.all?(hints, &is_valid_hint/1) do
       Builder.error!(
-        "`hints` must be a compile time string, list of strings, or a tuple " <>
-          "got: `#{Macro.to_string(maybe_hints)}`"
+        "`hints` must be a compile time string, list of strings, a tuple, or a list of tuples " <>
+          "got: `#{Macro.to_string(hints)}`"
       )
     end
 
-    case prefix do
-      nil -> :ok
-      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> :ok
-      _ -> Builder.error!("`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`")
+    prefix = case prefix do
+      nil -> nil
+      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> {:ok, prefix}
+      {:ok, {:^, _, [prefix]}} -> {:ok, quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))}
+      {:ok, prefix} -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
-    
+
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as
@@ -84,7 +95,7 @@ defmodule Ecto.Query.Builder.From do
 
     {query, binds} = escape(query, env)
 
-    case expand_from(query, env) do
+    case query do
       schema when is_atom(schema) ->
         # Get the source at runtime so no unnecessary compile time
         # dependencies between modules are added
@@ -127,18 +138,17 @@ defmodule Ecto.Query.Builder.From do
     {:%, [], [Ecto.Query, {:%{}, [], query_fields}]}
   end
 
-  defp expand_from({left, right}, env) do
-    {left, Macro.expand(right, env)}
-  end
-
-  defp expand_from(other, env) do
-    Macro.expand(other, env)
-  end
+  @doc """
+  Validates a prefix at runtime.
+  """
+  @spec prefix!(any) :: nil | String.t()
+  def prefix!(prefix) when is_binary(prefix) or is_nil(prefix), do: prefix
+  def prefix!(prefix), do: raise("`prefix` must be a string, got: #{inspect(prefix)}")
 
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, hints) :: Ecto.Query.t()
   def apply(query, binds, as, prefix, hints) do
     query =
       query

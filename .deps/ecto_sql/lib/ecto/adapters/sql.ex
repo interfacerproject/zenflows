@@ -234,6 +234,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  @timeout 15_000
+
   @doc """
   Converts the given query to SQL according to its kind and the
   adapter in the given repository.
@@ -309,23 +311,27 @@ defmodule Ecto.Adapters.SQL do
 
   Adapter          | Supported opts
   ---------------- | --------------
-  Postgrex         | `analyze`, `verbose`, `costs`, `settings`, `buffers`, `timing`, `summary`
-  MyXQL            | None
+  Postgrex         | `analyze`, `verbose`, `costs`, `settings`, `buffers`, `timing`, `summary`, `format`
+  MyXQL            | `format`
 
-  _Postgrex_: Check [PostgreSQL doc](https://www.postgresql.org/docs/current/sql-explain.html)
-  for version compatibility.
+  All options except `format` are boolean valued and default to `false`.
 
-  Also note that:
+  The allowed `format` values are `:map`, `:yaml`, and `:text`:
+    * `:map` is the deserialized JSON encoding.
+    * `:yaml` and `:text` return the result as a string.
 
-    * Currently `:map`, `:yaml`, and `:text` format options are supported
-      for PostgreSQL. `:map` is the deserialized JSON encoding. The last two
-      options return the result as a string;
+  The built-in adapters support the following formats:
+    * Postgrex: `:map`, `:yaml` and `:text`
+    * MyXQL: `:map` and `:text`
 
-    * Any other value passed to `opts` will be forwarded to the underlying
-      adapter query function, including Repo shared options such as `:timeout`;
+  Any other value passed to `opts` will be forwarded to the underlying adapter query function, including
+  shared Repo options such as `:timeout`. Non built-in adapters may have specific behaviour and you should
+  consult their documentation for more details.
 
-    * Non built-in adapters may have specific behavior and you should consult
-      their own documentation.
+  For version compatiblity, please check your database's documentation:
+
+    * _Postgrex_: [PostgreSQL doc](https://www.postgresql.org/docs/current/sql-explain.html).
+    * _MyXQL_: [MySQL doc](https://dev.mysql.com/doc/refman/8.0/en/explain.html).
 
   """
   @spec explain(pid() | Ecto.Repo.t | Ecto.Adapter.adapter_meta,
@@ -451,6 +457,7 @@ defmodule Ecto.Adapters.SQL do
   ## Options
 
     * `:log` - When false, does not log the query
+    * `:timeout` - Execute request timeout, accepts: `:infinity` (default: `#{@timeout}`);
 
   ## Examples
 
@@ -508,6 +515,7 @@ defmodule Ecto.Adapters.SQL do
   ## Options
 
     * `:log` - When false, does not log the query
+    * `:timeout` - Execute request timeout, accepts: `:infinity` (default: `#{@timeout}`);
 
   ## Examples
 
@@ -558,11 +566,11 @@ defmodule Ecto.Adapters.SQL do
   Returns `true` if the `table` exists in the `repo`, otherwise `false`.
   The table is checked against the current database/schema in the connection.
   """
-  @spec table_exists?(Ecto.Repo.t, table :: String.t) :: boolean
-  def table_exists?(repo, table) when is_atom(repo) do
+  @spec table_exists?(Ecto.Repo.t, table :: String.t, opts :: Keyword.t) :: boolean
+  def table_exists?(repo, table, opts \\ []) when is_atom(repo) do
     %{sql: sql} = adapter_meta = Ecto.Adapter.lookup_meta(repo)
     {query, params} = sql.table_exists_query(table)
-    query!(adapter_meta, query, params, []).num_rows != 0
+    query!(adapter_meta, query, params, opts).num_rows != 0
   end
 
   # Returns a formatted table for a given query `result`.
@@ -1043,6 +1051,7 @@ defmodule Ecto.Adapters.SQL do
     query = String.Chars.to_string(query)
     result = with {:ok, _query, res} <- result, do: {:ok, res}
     stacktrace = Keyword.get(opts, :stacktrace)
+    log_params = opts[:cast_params] || params
 
     acc =
       if idle_time, do: [idle_time: idle_time], else: []
@@ -1059,6 +1068,7 @@ defmodule Ecto.Adapters.SQL do
       repo: repo,
       result: result,
       params: params,
+      cast_params: opts[:cast_params],
       query: query,
       source: source,
       stacktrace: stacktrace,
@@ -1069,21 +1079,24 @@ defmodule Ecto.Adapters.SQL do
       :telemetry.execute(event_name, measurements, metadata)
     end
 
-    case Keyword.get(opts, :log, log) do
-      true ->
+    case {opts[:log], log} do
+      {false, _level} ->
+        :ok
+
+      {opts_level, false} when opts_level in [nil, true] ->
+        :ok
+
+      {true, level} ->
         Logger.log(
-          log,
-          fn -> log_iodata(measurements, repo, source, query, opts[:cast_params] || params, result, stacktrace) end,
+          level,
+          fn -> log_iodata(measurements, repo, source, query, log_params, result, stacktrace) end,
           ansi_color: sql_color(query)
         )
 
-      false ->
-        :ok
-
-      level ->
+      {opts_level, args_level} ->
         Logger.log(
-          level,
-          fn -> log_iodata(measurements, repo, source, query, opts[:cast_params] || params, result, stacktrace) end,
+          opts_level || args_level,
+          fn -> log_iodata(measurements, repo, source, query, log_params, result, stacktrace) end,
           ansi_color: sql_color(query)
         )
     end

@@ -44,38 +44,33 @@ if Code.ensure_loaded?(MyXQL) do
       MyXQL.stream(conn, sql, params, opts)
     end
 
+    @quotes ~w(" ' `)
+
     @impl true
     def to_constraints(%MyXQL.Error{mysql: %{name: :ER_DUP_ENTRY}, message: message}, opts) do
-      case :binary.split(message, " for key ") do
-        [_, quoted] -> [unique: normalize_index_name(quoted, opts[:source])]
+      with [_, quoted] <- :binary.split(message, " for key "),
+           [_, index | _] <- :binary.split(quoted, @quotes, [:global]) do
+        [unique: strip_source(index, opts[:source])]
+      else
         _ -> []
       end
     end
+
     def to_constraints(%MyXQL.Error{mysql: %{name: name}, message: message}, _opts)
         when name in [:ER_ROW_IS_REFERENCED_2, :ER_NO_REFERENCED_ROW_2] do
-      case :binary.split(message, [" CONSTRAINT ", " FOREIGN KEY "], [:global]) do
-        [_, quoted, _] -> [foreign_key: strip_quotes(quoted)]
+      with [_, quoted] <- :binary.split(message, [" CONSTRAINT ", " FOREIGN KEY "]),
+           [_, index | _] <- :binary.split(quoted, @quotes, [:global]) do
+        [foreign_key: index]
+      else
         _ -> []
       end
     end
+
     def to_constraints(_, _),
       do: []
 
-    defp strip_quotes(quoted) do
-      size = byte_size(quoted) - 2
-      <<_, unquoted::binary-size(size), _>> = quoted
-      unquoted
-    end
-
-    defp normalize_index_name(quoted, source) do
-      name = strip_quotes(quoted)
-
-      if source do
-        String.trim_leading(name, "#{source}.")
-      else
-        name
-      end
-    end
+    defp strip_source(name, nil), do: name
+    defp strip_source(name, source), do: String.trim_leading(name, "#{source}.")
 
     ## Query
 
@@ -222,10 +217,18 @@ if Code.ensure_loaded?(MyXQL) do
     end
 
     @impl true
-    # DB explain opts are deprecated, so they aren't used to build the explain query.
+    # DB explain opts, except format, are deprecated.
     # See Notes at https://dev.mysql.com/doc/refman/5.7/en/explain.html
     def explain_query(conn, query, params, opts) do
-      case query(conn, build_explain_query(query), params, opts) do
+      {explain_opts, opts} = Keyword.split(opts, ~w[format]a)
+      map_format? = {:format, :map} in explain_opts
+
+      case query(conn, build_explain_query(query, explain_opts), params, opts) do
+        {:ok, %MyXQL.Result{rows: rows}} when map_format? ->
+          json_library = MyXQL.json_library()
+          decoded_result = Enum.map(rows, &json_library.decode!(&1))
+          {:ok, decoded_result}
+
         {:ok, %MyXQL.Result{} = result} ->
           {:ok, SQL.format_table(result)}
 
@@ -234,8 +237,13 @@ if Code.ensure_loaded?(MyXQL) do
       end
     end
 
-    def build_explain_query(query) do
+    def build_explain_query(query, []) do
       ["EXPLAIN ", query]
+      |> IO.iodata_to_binary()
+    end
+
+    def build_explain_query(query, [format: value]) do
+      ["EXPLAIN #{String.upcase("#{format_to_sql(value)}")} ", query]
       |> IO.iodata_to_binary()
     end
 
@@ -300,7 +308,11 @@ if Code.ensure_loaded?(MyXQL) do
 
     defp cte(%{with_ctes: _}, _), do: []
 
-    defp cte_expr({name, cte}, sources, query) do
+    defp cte_expr({_name, %{materialized: materialized}, _cte}, _sources, query) when is_boolean(materialized) do
+      error!(query, "MySQL adapter does not support materialized CTEs")
+    end
+
+    defp cte_expr({name, _opts, cte}, sources, query) do
       [quote_name(name), " AS ", cte_query(cte, sources, query)]
     end
 
@@ -375,6 +387,7 @@ if Code.ensure_loaded?(MyXQL) do
     end
 
     defp join_on(:cross, true, _sources, _query), do: []
+    defp join_on(:cross_lateral, true, _sources, _query), do: []
     defp join_on(_qual, expr, sources, query), do: [" ON " | expr(expr, sources, query)]
 
     defp join_qual(:inner, _), do: " INNER JOIN "
@@ -384,6 +397,7 @@ if Code.ensure_loaded?(MyXQL) do
     defp join_qual(:right, _), do: " RIGHT OUTER JOIN "
     defp join_qual(:full, _),  do: " FULL OUTER JOIN "
     defp join_qual(:cross, _), do: " CROSS JOIN "
+    defp join_qual(:cross_lateral, _), do: " CROSS JOIN LATERAL "
 
     defp where(%{wheres: wheres} = query, sources) do
       boolean(" WHERE ", wheres, sources, query)
@@ -444,7 +458,10 @@ if Code.ensure_loaded?(MyXQL) do
     end
 
     defp limit(%{limit: nil}, _sources), do: []
-    defp limit(%{limit: %QueryExpr{expr: expr}} = query, sources) do
+    defp limit(%{limit: %{with_ties: true}} = query, _sources) do
+      error!(query, "MySQL adapter does not support the `:with_ties` limit option")
+    end
+    defp limit(%{limit: %{expr: expr}} = query, sources) do
       [" LIMIT " | expr(expr, sources, query)]
     end
 
@@ -816,6 +833,11 @@ if Code.ensure_loaded?(MyXQL) do
     def execute_ddl({:drop_if_exists, %Index{}, _}),
       do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
+    def execute_ddl({:rename, %Index{} = index, new_name}) do
+      [["ALTER TABLE ", quote_table(index.table), " RENAME INDEX ",
+      quote_name(index.name), " TO ", quote_name(new_name)]]
+    end
+
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
       [["RENAME TABLE ", quote_table(current_table.prefix, current_table.name),
         " TO ", quote_table(new_table.prefix, new_table.name)]]
@@ -919,7 +941,7 @@ if Code.ensure_loaded?(MyXQL) do
       after_column = Keyword.get(opts, :after)
       comment = Keyword.get(opts, :comment)
 
-      [default_expr(default), null_expr(null), after_expr(after_column), comment_expr(comment)]
+      [default_expr(default), null_expr(null), comment_expr(comment), after_expr(after_column)]
     end
 
     defp comment_expr(comment, create_table? \\ false)
@@ -1031,6 +1053,9 @@ if Code.ensure_loaded?(MyXQL) do
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete({:nilify, _columns}) do
+      error!(nil, "MySQL adapter does not support the `{:nilify, columns}` action for `:on_delete`")
+    end
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(:restrict), do: " ON DELETE RESTRICT"
     defp reference_on_delete(_), do: []
@@ -1079,6 +1104,9 @@ if Code.ensure_loaded?(MyXQL) do
       end
       [?`, name, ?`]
     end
+
+    defp format_to_sql(:map), do: "FORMAT=JSON"
+    defp format_to_sql(:text), do: "FORMAT=TRADITIONAL"
 
     defp intersperse_map(list, separator, mapper, acc \\ [])
     defp intersperse_map([], _separator, _mapper, acc),

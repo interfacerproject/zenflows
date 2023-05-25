@@ -224,7 +224,8 @@ defmodule Ecto.Migration.Runner do
     do: {:create, index}
   defp reverse({:drop_if_exists, %Index{} = index, _}),
     do: {:create_if_not_exists, index}
-
+  defp reverse({:rename, %Index{} = index, new_name}),
+    do: {:rename, %{index | name: new_name}, index.name}
   defp reverse({:create, %Table{} = table, _columns}),
     do: {:drop, table, :restrict}
   defp reverse({:create_if_not_exists, %Table{} = table, _columns}),
@@ -266,8 +267,8 @@ defmodule Ecto.Migration.Runner do
         table_reverse(t, [{:modify, name, reverse_type, reverse_opts} | acc])
     end
   end
-  defp table_reverse([{:add, name, _type, _opts} | t], acc) do
-    table_reverse(t, [{:remove, name} | acc])
+  defp table_reverse([{:add, name, type, _opts} | t], acc) do
+    table_reverse(t, [{:remove, name, type, []} | acc])
   end
   defp table_reverse([_ | _], _acc) do
     false
@@ -325,12 +326,15 @@ defmodule Ecto.Migration.Runner do
     meta = Ecto.Adapter.lookup_meta(repo.get_dynamic_repo())
     {:ok, logs} = repo.__adapter__().execute_ddl(meta, command, timeout: :infinity, log: sql)
 
-    Enum.each(logs, fn {level, message, metadata} ->
-      log(level, message, metadata)
+    Enum.each(logs, fn {ddl_log_level, message, metadata} ->
+      ddl_log(ddl_log_level, level, message, metadata)
     end)
 
     :ok
   end
+
+  defp ddl_log(_level, false, _msg, _metadata), do: :ok
+  defp ddl_log(level, _, msg, metadata), do: log(level, msg, metadata)
 
   defp log(level, msg, metadata \\ [])
   defp log(false, _msg, _metadata), do: :ok
@@ -415,6 +419,8 @@ defmodule Ecto.Migration.Runner do
     do: "drop index #{quote_name(index.prefix, index.name)}#{drop_mode(mode)}"
   defp command({:drop_if_exists, %Index{} = index, mode}),
     do: "drop index if exists #{quote_name(index.prefix, index.name)}#{drop_mode(mode)}"
+  defp command({:rename, %Index{} = index_current, new_name}),
+    do: "rename index #{quote_name(index_current.name)} to #{new_name}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{quote_name(current_table.prefix, current_table.name)} to #{quote_name(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),

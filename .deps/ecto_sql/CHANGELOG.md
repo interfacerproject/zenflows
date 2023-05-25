@@ -1,5 +1,51 @@
 # Changelog for v3.x
 
+## v3.10.1 (2022-04-11)
+
+### Enhancements
+
+  * [postgres] Allow Postgrex v0.17.x
+
+## v3.10.0 (2022-04-10)
+
+### Enhancements
+
+  * [Ecto.Migrator] Allow running the migrator in your supervision tree
+  * [Ecto.Migrator] Allow renaming an index
+  * [Ecto.Migrator] Add `execute_file/1` and `execute_file/2`
+  * [mix ecto.dump] Support dumping  multiple prefixes on PostgreSQL and MySQL
+  * [mysql] Improve constraint matching support on alternative implementations
+  * [postgres] Allow `CASCADE` when dropping a constraint on postgres
+
+### Bug fixes
+
+  * [mix ecto.load] Suppress query logs in mix ecto.load when quiet flag is given
+
+## v3.9.2 (2022-12-20)
+
+### Enhancements
+
+  * [migrator] Raise if target version in `to`/`exclusive_to` is not an integer
+  * [mysql] Add support for cross lateral joins
+  * [postgres] Add support for cross lateral joins
+  * [postgres] Add support for materialized CTEs
+  * [telemetry] Send `cast_params` metadata to telemetry events
+
+## v3.9.1 (2022-11-18)
+
+### Enhancements
+
+  * [mysql] Support `:format` option on `explain`
+  * [postgres] Permit outer joins when using `update_all`
+  * [sql] Add support for `ONLY` in index creation
+
+### Bug fixes
+
+  * [mysql] Ensure locks are quoted
+  * [mysql] Do not crash on `mix ecto.drop` when the database is unreachable
+  * [postgres] Fix empty array compare in PostgreSQL
+  * [sql] Allow function sources whose name begins with 'select'
+
 ## v3.9.0 (2022-09-27)
 
 ### Enhancements

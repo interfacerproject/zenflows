@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.5.0 (2022-04-10)
+
+* Internal changes
+  * No longer depend on `connection`
+
+## v2.4.3 (2022-11-22)
+
+* Bug fixes
+  * Fix bug where `disconnect_all/2` interval would be disabled above 4294ms
+  * Add `:idle_limit` to limit the amount of disconnections on a ping
+
 ## v2.4.2 (2022-03-03)
 
 * Enhancements

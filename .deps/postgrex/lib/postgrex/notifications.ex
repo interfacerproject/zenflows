@@ -20,7 +20,7 @@ defmodule Postgrex.Notifications do
 
       {:notification, notification_pid, listen_ref, channel, message}
 
-  ## Async connect and auto-reconnects
+  ## Async connect, auto-reconnects and missed notifications
 
   By default, the notification system establishes a connection to the
   database on initialization, you can configure the connection to happen
@@ -32,10 +32,22 @@ defmodule Postgrex.Notifications do
   and cannot be recovered. Similarly, any listen command will be queued until
   the connection is up.
 
+  There is a race condition between starting to listen and notifications being
+  issued "at the same time", as explained (in the PostgreSQL documentation)[https://www.postgresql.org/docs/current/sql-listen.html].
+  If your application needs to keep a consistent representation of data, follow
+  the three-step approach of first subscribing, then obtaining the current
+  state of data, then handling the incoming notifications.
+
+  Beware that the same
+  race condition applies to auto-reconnects. A simple way of dealing with this
+  issue is not using the auto-reconnect feature directly, but monitoring and
+  re-starting the Notifications process, then subscribing to channel messages
+  over again, using the same three-step approach.
+
   ## A note on casing
 
   While PostgreSQL seems to behave as case-insensitive, it actually has a very
-  perculiar behaviour on casing. When you write:
+  peculiar behaviour on casing. When you write:
 
       SELECT * FROM POSTS
 
@@ -62,6 +74,9 @@ defmodule Postgrex.Notifications do
     2. If you cannot wrap the channel name in quotes when sending a notification,
        then make sure to give the lowercased channel name when listening
   """
+
+  @typedoc since: "0.17.0"
+  @type server :: :gen_statem.from()
 
   alias Postgrex.SimpleConnection
 
@@ -134,7 +149,7 @@ defmodule Postgrex.Notifications do
 
     * `:timeout` - Call timeout (default: `#{@timeout}`)
   """
-  @spec listen(GenServer.server(), String.t(), Keyword.t()) ::
+  @spec listen(server, String.t(), Keyword.t()) ::
           {:ok, reference} | {:eventually, reference}
   def listen(pid, channel, opts \\ []) do
     SimpleConnection.call(pid, {:listen, channel}, Keyword.get(opts, :timeout, @timeout))
@@ -143,7 +158,7 @@ defmodule Postgrex.Notifications do
   @doc """
   Listens to an asynchronous notification channel `channel`. See `listen/2`.
   """
-  @spec listen!(GenServer.server(), String.t(), Keyword.t()) :: reference
+  @spec listen!(server, String.t(), Keyword.t()) :: reference
   def listen!(pid, channel, opts \\ []) do
     {:ok, ref} = listen(pid, channel, opts)
     ref
@@ -157,7 +172,7 @@ defmodule Postgrex.Notifications do
 
     * `:timeout` - Call timeout (default: `#{@timeout}`)
   """
-  @spec unlisten(GenServer.server(), reference, Keyword.t()) :: :ok | :error
+  @spec unlisten(server, reference, Keyword.t()) :: :ok | :error
   def unlisten(pid, ref, opts \\ []) do
     SimpleConnection.call(pid, {:unlisten, ref}, Keyword.get(opts, :timeout, @timeout))
   end
@@ -166,7 +181,7 @@ defmodule Postgrex.Notifications do
   Stops listening on the given channel by passing the reference returned from
   `listen/2`.
   """
-  @spec unlisten!(GenServer.server(), reference, Keyword.t()) :: :ok
+  @spec unlisten!(server, reference, Keyword.t()) :: :ok
   def unlisten!(pid, ref, opts \\ []) do
     case unlisten(pid, ref, opts) do
       :ok -> :ok

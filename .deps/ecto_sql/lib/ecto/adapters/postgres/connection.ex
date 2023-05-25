@@ -409,8 +409,15 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp cte(%{with_ctes: _}, _), do: []
 
-    defp cte_expr({name, cte}, sources, query) do
-      [quote_name(name), " AS ", cte_query(cte, sources, query)]
+    defp cte_expr({name, opts, cte}, sources, query) do
+      materialized_opt =
+        case opts[:materialized] do
+          nil -> ""
+          true -> "MATERIALIZED"
+          false -> "NOT MATERIALIZED"
+        end
+
+      [quote_name(name), " AS ", materialized_opt, cte_query(cte, sources, query)]
     end
 
     defp cte_query(%Ecto.Query{} = query, sources, parent_query) do
@@ -453,6 +460,31 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp using_join(%{joins: []}, _kind, _prefix, _sources), do: {[], []}
+
+    defp using_join(%{joins: joins} = query, :update_all, prefix, sources) do
+      {inner_joins, other_joins} = Enum.split_while(joins, & &1.qual == :inner)
+
+      if inner_joins == [] and other_joins != [] do
+        error!(query, "Need at least one inner join at the beginning to use other joins with update_all")
+      end
+
+      froms =
+        intersperse_map(inner_joins, ", ", fn
+          %JoinExpr{qual: :inner, ix: ix, source: source} ->
+            {join, name} = get_source(query, sources, ix, source)
+            [join, " AS " | [name]]
+        end)
+
+      join_clauses = join(%{query | joins: other_joins}, sources)
+
+      wheres =
+        for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- inner_joins,
+            value != true,
+            do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
+
+      {[?\s, prefix, ?\s, froms | join_clauses], wheres}
+    end
+
     defp using_join(%{joins: joins} = query, kind, prefix, sources) do
       froms =
         intersperse_map(joins, ", ", fn
@@ -485,6 +517,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp join_on(:cross, true, _sources, _query), do: []
+    defp join_on(:cross_lateral, true, _sources, _query), do: []
     defp join_on(_qual, expr, sources, query), do: [" ON " | expr(expr, sources, query)]
 
     defp join_qual(:inner), do: "INNER JOIN "
@@ -494,6 +527,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp join_qual(:right), do: "RIGHT OUTER JOIN "
     defp join_qual(:full),  do: "FULL OUTER JOIN "
     defp join_qual(:cross), do: "CROSS JOIN "
+    defp join_qual(:cross_lateral), do: "CROSS JOIN LATERAL "
 
     defp where(%{wheres: wheres} = query, sources) do
       boolean(" WHERE ", wheres, sources, query)
@@ -560,7 +594,14 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp limit(%{limit: nil}, _sources), do: []
-    defp limit(%{limit: %QueryExpr{expr: expr}} = query, sources) do
+    defp limit(%{limit: %{with_ties: true}, order_bys: []} = query, _sources) do
+      error!(query, "PostgreSQL adapter requires an `order_by` clause if the " <>
+                    "`:with_ties` limit option is `true`")
+    end
+    defp limit(%{limit: %{expr: expr, with_ties: true}} = query, sources) do
+      [" FETCH FIRST ", expr(expr, sources, query) | " ROWS WITH TIES"]
+    end
+    defp limit(%{limit: %{expr: expr}} = query, sources) do
       [" LIMIT " | expr(expr, sources, query)]
     end
 
@@ -599,7 +640,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp operator_to_boolean(:or), do: " OR "
 
     defp parens_for_select([first_expr | _] = expr) do
-      if is_binary(first_expr) and String.match?(first_expr, ~r/^\s*select/i) do
+      if is_binary(first_expr) and String.match?(first_expr, ~r/^\s*select\s/i) do
         [?(, expr, ?)]
       else
         expr
@@ -744,6 +785,20 @@ if Code.ensure_loaded?(Postgrex) do
         {:fun, fun} ->
           [fun, ?(, modifier, intersperse_map(args, ", ", &expr(&1, sources, query)), ?)]
       end
+    end
+
+    defp expr([], _sources, _query) do
+      # We cannot compare in postgres with the empty array
+      # i. e. `where array_column = ARRAY[];`
+      # as that will result in an error:
+      #   ERROR:  cannot determine type of empty array
+      #   HINT:  Explicitly cast to the desired type, for example ARRAY[]::integer[].
+      #
+      # On the other side comparing with '{}' works
+      # because '{}' represents the pseudo-type "unknown"
+      # and thus the type gets inferred based on the column
+      # it is being compared to so `where array_column = '{}';` works.
+      "'{}'"
     end
 
     defp expr(list, sources, query) when is_list(list) do
@@ -925,6 +980,7 @@ if Code.ensure_loaded?(Postgrex) do
                   if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
                   quote_name(index.name),
                   " ON ",
+                  if_do(index.only, "ONLY "),
                   quote_table(index.prefix, index.table),
                   if_do(index.using, [" USING " , to_string(index.using)]),
                   ?\s, ?(, fields, ?),
@@ -941,6 +997,11 @@ if Code.ensure_loaded?(Postgrex) do
         if_do(command == :drop_if_exists, "IF EXISTS "),
         quote_table(index.prefix, index.name),
         drop_mode(mode)]]
+    end
+
+    def execute_ddl({:rename, %Index{} = current_index, new_name}) do
+      [["ALTER INDEX ", quote_name(current_index.name),
+        " RENAME TO ", quote_name(new_name)]]
     end
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
@@ -961,12 +1022,13 @@ if Code.ensure_loaded?(Postgrex) do
       queries ++ comments_on("CONSTRAINT", constraint.name, constraint.comment, table_name)
     end
 
-    def execute_ddl({command, %Constraint{}, :cascade}) when command in @drops,
-      do: error!(nil, "PostgreSQL does not support `CASCADE` in DROP CONSTRAINT commands")
-
-    def execute_ddl({command, %Constraint{} = constraint, :restrict}) when command in @drops do
-      [["ALTER TABLE ", quote_table(constraint.prefix, constraint.table),
-        " DROP CONSTRAINT ", if_do(command == :drop_if_exists, "IF EXISTS "), quote_name(constraint.name)]]
+    def execute_ddl({command, %Constraint{} = constraint, mode}) when command in @drops do
+      [["ALTER TABLE ",
+        quote_table(constraint.prefix, constraint.table),
+        " DROP CONSTRAINT ",
+        if_do(command == :drop_if_exists, "IF EXISTS "),
+        quote_name(constraint.name),
+        drop_mode(mode)]]
     end
 
     def execute_ddl(string) when is_binary(string), do: [string]
@@ -1256,6 +1318,8 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete({:nilify, columns}),
+      do: [" ON DELETE SET NULL (", quote_names(columns), ")"]
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(:restrict), do: " ON DELETE RESTRICT"
     defp reference_on_delete(_), do: []

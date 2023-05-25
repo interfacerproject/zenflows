@@ -212,6 +212,11 @@ defmodule Ecto.Integration.PreloadTest do
     assert c.post_permalink == nil
   end
 
+  test "preload through with nil struct" do
+    %Comment{} = c = TestRepo.insert!(%Comment{})
+    [%Comment{}, nil] = TestRepo.preload([c, nil], [:post, :post_permalink])
+  end
+
   test "preload has_many through-through" do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
     %Post{id: pid2} = TestRepo.insert!(%Post{})
@@ -364,6 +369,7 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from u in User,
              join: pu in "posts_users",
+             on: true,
              where: pu.post_id in ^post_ids and pu.user_id == u.id,
              order_by: u.id,
              select: map(u, [:id])
@@ -378,6 +384,7 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from u in User,
              join: pu in "posts_users",
+             on: true,
              where: pu.post_id in ^post_ids and pu.user_id == u.id,
              order_by: u.id,
              select: {pu.post_id, map(u, [:id])}

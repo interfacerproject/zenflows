@@ -107,7 +107,7 @@ defmodule Ecto.Migration do
 
   Having to write both `up/0` and `down/0` functions for every
   migration is tedious and error prone. For this reason, Ecto allows
-  you to defined a `change/0` callback with all of the code you want
+  you to define a `change/0` callback with all of the code you want
   to execute when migrating and Ecto will automatically figure out
   the `down/0` for you. For example, the migration above can be
   written as:
@@ -139,7 +139,7 @@ defmodule Ecto.Migration do
 
   ## Field Types
 
-  The Ecto primitive types are mapped to the appropriate database
+  The [Ecto primitive types](https://hexdocs.pm/ecto/Ecto.Schema.html#module-primitive-types) are mapped to the appropriate database
   type by the various database adapters. For example, `:string` is
   converted to `:varchar`, `:binary` to `:bytea` or `:blob`, and so on.
 
@@ -366,6 +366,7 @@ defmodule Ecto.Migration do
               concurrently: false,
               using: nil,
               include: [],
+              only: false,
               nulls_distinct: nil,
               where: nil,
               comment: nil,
@@ -379,6 +380,7 @@ defmodule Ecto.Migration do
       unique: boolean,
       concurrently: boolean,
       using: atom | String.t,
+      only: boolean,
       include: [atom | String.t],
       nulls_distinct: boolean | nil,
       where: atom | String.t,
@@ -660,6 +662,12 @@ defmodule Ecto.Migration do
         add :price, :decimal
       end
 
+      create table("daily_prices", primary_key: false, options: "PARTITION BY RANGE (date)") do
+        add :name, :string, primary_key: true
+        add :date, :date, primary_key: true
+        add :price, :decimal
+      end
+
   ## Options
 
     * `:primary_key` - when `false`, a primary key field is not generated on table
@@ -674,7 +682,8 @@ defmodule Ecto.Migration do
       overridden in said constraints/references.
     * `:comment` - adds a comment to the table.
     * `:options` - provide custom options that will be appended after the generated
-      statement. For example, "WITH", "INHERITS", or "ON COMMIT" clauses.
+      statement. For example, "WITH", "INHERITS", or "ON COMMIT" clauses. "PARTITION BY"
+      can be provided for databases that support table partitioning.
 
   """
   def table(name, opts \\ [])
@@ -713,6 +722,8 @@ defmodule Ecto.Migration do
       This option is currently only supported by PostgreSQL 15+.
       For MySQL, it is always false. For MSSQL, it is always true.
       See the dedicated section on this option for more information.
+    * `:only` - Indicates not to recurse creating indexes on partitions, if the table is partitioned.
+      This option is currently only supported by PostgreSQL 11+. Defaults to `false`.
     * `:comment` - adds a comment to the index.
 
   ## Adding/dropping indexes concurrently
@@ -919,6 +930,31 @@ defmodule Ecto.Migration do
   end
 
   @doc """
+  Executes a SQL command from a file.
+
+  The argument must be a path to a file containing a SQL command.
+
+  Reversible commands can be defined by calling `execute_file/2`.
+  """
+  def execute_file(path) when is_binary(path) do
+    command = File.read!(path)
+    Runner.execute command
+  end
+
+  @doc """
+  Executes reversible SQL commands from files.
+
+  Each argument must be a path to a file containing a SQL command.
+
+  See `execute/2` for more information on executing SQL commands.
+  """
+  def execute_file(up_path, down_path) when is_binary(up_path) and is_binary(down_path) do
+    up = File.read!(up_path)
+    down = File.read!(down_path)
+    Runner.execute %Command{up: up, down: down}
+  end
+
+  @doc """
   Gets the migrator direction.
   """
   @spec direction :: :up | :down
@@ -1008,7 +1044,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Adds a column if it not exists yet when altering a table.
+  Adds a column if it does not exist yet when altering a table.
 
   If the `type` value is a `%Reference{}`, it is used to add a constraint.
 
@@ -1030,15 +1066,24 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Renames a table.
+  Renames a table or index.
 
   ## Examples
 
+      # rename a table
       rename table("posts"), to: table("new_posts")
+
+      # rename an index
+      rename(index(:people, [:name], name: "persons_name_index"), to: "people_name_index")
   """
   def rename(%Table{} = table_current, to: %Table{} = table_new) do
     Runner.execute {:rename, __prefix__(table_current), __prefix__(table_new)}
     table_new
+  end
+
+  def rename(%Index{} = current_index, to: new_name) do
+    Runner.execute({:rename, current_index, new_name})
+    %{current_index | name: new_name}
   end
 
   @doc """
@@ -1244,14 +1289,16 @@ defmodule Ecto.Migration do
       the example above), or `nil`.
     * `:type` - The foreign key type, which defaults to `:bigserial`.
     * `:on_delete` - What to do if the referenced entry is deleted. May be
-      `:nothing` (default), `:delete_all`, `:nilify_all`, or `:restrict`.
+      `:nothing` (default), `:delete_all`, `:nilify_all`, `{:nilify, columns}`,
+      or `:restrict`. `{:nilify, columns}` expects a list of atoms for `columns`
+      and is not supported by all databases.
     * `:on_update` - What to do if the referenced entry is updated. May be
       `:nothing` (default), `:update_all`, `:nilify_all`, or `:restrict`.
     * `:validate` - Whether or not to validate the foreign key constraint on
        creation or not. Only available in PostgreSQL, and should be followed by
        a command to validate the foreign key in a following migration if false.
     * `:with` - defines additional keys to the foreign key in order to build
-      a composite primary key
+      a composite foreign key
     * `:match` - select if the match is `:simple`, `:partial`, or `:full`. This is
       [supported only by PostgreSQL](https://www.postgresql.org/docs/current/sql-createtable.html)
       at the moment.
@@ -1266,14 +1313,8 @@ defmodule Ecto.Migration do
   def references(table, opts) when is_binary(table) and is_list(opts) do
     opts = Keyword.merge(foreign_key_repo_opts(), opts)
     reference = struct(%Reference{table: table}, opts)
-
-    unless reference.on_delete in [:nothing, :delete_all, :nilify_all, :restrict] do
-      raise ArgumentError, "unknown :on_delete value: #{inspect reference.on_delete}"
-    end
-
-    unless reference.on_update in [:nothing, :update_all, :nilify_all, :restrict] do
-      raise ArgumentError, "unknown :on_update value: #{inspect reference.on_update}"
-    end
+    check_on_delete!(reference.on_delete)
+    check_on_update!(reference.on_update)
 
     reference
   end
@@ -1285,6 +1326,31 @@ defmodule Ecto.Migration do
     end
     |> Keyword.take([:type])
     |> Keyword.merge(Runner.repo_config(:migration_foreign_key, []))
+  end
+
+  defp check_on_delete!(on_delete)
+      when on_delete in [:nothing, :delete_all, :nilify_all, :restrict],
+      do: :ok
+
+  defp check_on_delete!({:nilify, columns}) when is_list(columns) do
+    unless Enum.all?(columns, &is_atom/1) do
+      raise ArgumentError,
+            "expected `columns` in `{:nilify, columns}` to be a list of atoms, got: #{inspect columns}"
+    end
+
+    :ok
+  end
+
+  defp check_on_delete!(on_delete) do
+    raise ArgumentError, "unknown :on_delete value: #{inspect(on_delete)}"
+  end
+
+  defp check_on_update!(on_update)
+      when on_update in [:nothing, :update_all, :nilify_all, :restrict],
+      do: :ok
+
+  defp check_on_update!(on_update) do
+    raise ArgumentError, "unknown :on_update value: #{inspect(on_update)}"
   end
 
   @doc ~S"""
@@ -1338,9 +1404,7 @@ defmodule Ecto.Migration do
   defp validate_type!(type) when is_atom(type) do
     case Atom.to_string(type) do
       "Elixir." <> _ ->
-        raise ArgumentError,
-          "#{inspect type} is not a valid database type, " <>
-          "please use an atom like :string, :text and so on"
+        raise_invalid_migration_type!(type)
       _ ->
         :ok
     end
@@ -1359,17 +1423,23 @@ defmodule Ecto.Migration do
   end
 
   defp validate_type!(type) do
+    raise_invalid_migration_type!(type)
+  end
+
+  defp raise_invalid_migration_type!(type) do
     raise ArgumentError, """
     invalid migration type: #{inspect(type)}. Expected one of:
 
       * an atom, such as :string
       * a quoted atom, such as :"integer unsigned"
-      * an Ecto.Type, such as Ecto.UUID
-      * a tuple of the above, such as {:array, :integer} or {:array, Ecto.UUID}
+      * a tuple representing a composite type, such as {:array, :integer} or {:map, :string}
       * a reference, such as references(:users)
 
-    All Ecto types are allowed and properly translated.
-    All other types are sent to the database as is.
+    Ecto types are automatically translated to database types. All other types
+    are sent to the database as is.
+
+    Types defined through Ecto.Type or Ecto.ParameterizedType aren't allowed,
+    use their underlying types instead.
     """
   end
 

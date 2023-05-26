@@ -1,5 +1,6 @@
 defmodule Credo.Check.Refactor.Apply do
   use Credo.Check,
+    id: "EX4003",
     base_priority: :low,
     explanations: [
       check: """
@@ -30,10 +31,26 @@ defmodule Credo.Check.Refactor.Apply do
 
   defp traverse(ast, issues, issue_meta) do
     case issue(ast, issue_meta) do
-      nil -> {ast, issues}
-      issue -> {ast, [issue | issues]}
+      :stop ->
+        {[], issues}
+
+      nil ->
+        {ast, issues}
+
+      issue ->
+        {ast, [issue | issues]}
     end
   end
+
+  defp issue(
+         {:|>, meta,
+          [
+            {_, _, _} = arg0,
+            {:apply, _, apply_args}
+          ]},
+         issue_meta
+       ),
+       do: issue({:apply, meta, [arg0 | apply_args]}, issue_meta) || :stop
 
   defp issue({:apply, _meta, [{:__MODULE__, _, _}, _fun, _args]}, _issue_meta), do: nil
 

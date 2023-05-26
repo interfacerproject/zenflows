@@ -1,19 +1,24 @@
 defmodule Credo.Mixfile do
   use Mix.Project
 
-  @version "1.6.7"
+  @version "1.7.0"
 
   def project do
     [
       app: :credo,
       version: @version,
-      elixir: ">= 1.7.0",
+      elixir: ">= 1.10.0",
       escript: [main_module: Credo.CLI],
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test, "coveralls.html": :test, "test.fast": :test],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.html": :test,
+        "test.fast": :test,
+        "test.slow": :test
+      ],
       name: "Credo",
       description: "A static code analysis tool with a focus on code consistency and teaching.",
       package: package(),

@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
+# Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Test trace
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    environment: test_trace
+    permissions:
+      contents: read
+    steps:
+      - name: check-out zenflows repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: set up zenflows container
+        run: |
+          admin_key=$(openssl rand -hex 64)
+          db_pass=$(openssl rand -hex 16)
+          room_salt=$(openssl rand -base64 16)
+          # TODO: this is an ***INSECURE*** way to install the yq software; find a better way.
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod a+x /usr/local/bin/yq
+          yq e '
+            .services.notebook = {
+               "image": "notebook",
+               "depends_on": ["srv"],
+               "stdin_open": true,
+               "tty": true,
+               "profiles": ["test"],
+               "environment": {
+                 "IF_KEY": "'"$admin_key"'"
+               }
+            }
+            | .services.srv.environment.ADMIN_KEY = "'"$admin_key"'"
+            | .services.srv.environment.ROOM_SALT = "'"$room_salt"'"
+            | .services.srv.environment.EMAIL_ADDR = ""
+            | .services.srv.environment.EMAIL_KEY = ""
+            | .services.srv.environment.DB_PASS = "'"$db_pass"'"
+            | .services.db.environment.POSTGRES_PASSWORD = "'"$db_pass"'"
+          ' devop/.docker-compose.templ >devop/docker-compose.yml
+
+      - name: check-out jupyter notebook repo
+        uses: actions/checkout@v3
+        with:
+          repository: interfacerproject/interfacer-notebook
+          path: notebook
+      - name: Create docker file for testing with notebook
+        run: |
+            cat <<- EOF > ./notebook/tmp.docker
+            FROM python:3
+            RUN pip install notebook zenroom requests plotly pytest papermill
+            RUN useradd -ms /bin/bash app
+            USER app
+            WORKDIR /app
+            ADD . .
+            EOF
+      - name: set up qemu
+        uses: docker/setup-qemu-action@v2
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v2
+      - name: build notebook image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./notebook
+          file: ./notebook/tmp.docker
+          push: false
+          load: true
+          tags: notebook:latest
+      - name: build and run tests on notebook container
+        run: |
+          ./mann devop.up -d
+          sleep 5
+          ./mann devop.run --rm notebook pytest --endpoint http://srv:8000/api

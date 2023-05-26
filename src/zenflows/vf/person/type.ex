@@ -45,6 +45,7 @@ who have no physical location.
 
 enum :email_template do
 	value :interfacer_deployment
+	value :interfacer_beta
 	value :interfacer_staging
 	value :interfacer_testing
 	value :interfacer_debugging

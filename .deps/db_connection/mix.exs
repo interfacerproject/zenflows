@@ -3,13 +3,13 @@ defmodule DBConnection.Mixfile do
 
   @source_url "https://github.com/elixir-ecto/db_connection"
   @pools [:connection_pool, :ownership]
-  @version "2.4.2"
+  @version "2.5.0"
 
   def project do
     [
       app: :db_connection,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.8",
       deps: deps(),
       docs: docs(),
       description: description(),
@@ -31,7 +31,6 @@ defmodule DBConnection.Mixfile do
 
   defp deps do
     [
-      {:connection, "~> 1.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:telemetry, "~> 0.4 or ~> 1.0"}
     ]

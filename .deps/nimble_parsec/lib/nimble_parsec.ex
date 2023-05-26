@@ -86,9 +86,8 @@ defmodule NimbleParsec do
   ## Options
 
     * `:inline` - when true, inlines clauses that work as redirection for
-      other clauses. It is disabled by default because of a bug in Elixir
-      v1.5 and v1.6 where unused functions that are inlined cause a
-      compilation error
+      other clauses. Settings this may improve runtime performance at the
+      cost of increased compilation time and bytecode size
 
     * `:debug` - when true, writes generated clauses to `:stderr` for debugging
 
@@ -100,9 +99,10 @@ defmodule NimbleParsec do
 
   """
   defmacro defparsec(name, combinator, opts \\ []) do
-    visibility = quote do
-      if opts[:export_combinator], do: :def, else: :defp
-    end
+    visibility =
+      quote do
+        if opts[:export_combinator], do: :def, else: :defp
+      end
 
     compile(:def, visibility, name, combinator, opts)
   end
@@ -149,7 +149,7 @@ defmodule NimbleParsec do
       quote bind_quoted: [
               parser_kind: parser_kind,
               name: name,
-              combinator: combinator,
+              combinator: combinator
             ] do
         {defs, inline} = NimbleParsec.Compiler.compile(name, combinator, opts)
 
@@ -281,7 +281,6 @@ defmodule NimbleParsec do
 
   ## Notes
 
-  This feature is currently experimental and may change in many ways.
   Overall, there is no guarantee over the generated output, except
   that it will generate a binary that is parseable by the parsec
   itself, but even this guarantee may be broken by parsers that have
@@ -799,13 +798,31 @@ defmodule NimbleParsec do
   @spec integer(pos_integer | [min_and_max]) :: t
   @spec integer(t, pos_integer | [min_and_max]) :: t
   def integer(combinator \\ empty(), count_or_opts)
-      when is_combinator(combinator) and (is_integer(count_or_opts) or is_list(count_or_opts)) do
-    validate_min_and_max!(count_or_opts, 1)
+
+  def integer(combinator, count)
+      when is_combinator(combinator) and is_integer(count) do
+    validate_min_and_max!(count, 1)
 
     min_max_compile_runtime_chars(
       combinator,
       ascii_char([?0..?9]),
-      count_or_opts,
+      count,
+      :__compile_integer__,
+      :__runtime_integer__,
+      []
+    )
+  end
+
+  def integer(combinator, opts)
+      when is_combinator(combinator) and is_list(opts) do
+    # Read the minimum and maximum value to ensure the presence of at least one character
+    {min_val, max_val} = validate_min_and_max!(opts, 1)
+    opts = opts |> Keyword.put(:min, min_val) |> Keyword.put(:max, max_val)
+
+    min_max_compile_runtime_chars(
+      combinator,
+      ascii_char([?0..?9]),
+      opts,
       :__compile_integer__,
       :__runtime_integer__,
       []
@@ -1777,7 +1794,7 @@ defmodule NimbleParsec do
         raise ArgumentError, "expected :min or :max to be given"
     end
 
-    {min || 0, max}
+    {min || required_min, max}
   end
 
   defp validate_min_or_max!(kind, value, min) do

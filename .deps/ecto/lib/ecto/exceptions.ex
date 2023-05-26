@@ -145,7 +145,7 @@ defmodule Ecto.CastError do
   def exception(opts) do
     type  = Keyword.fetch!(opts, :type)
     value = Keyword.fetch!(opts, :value)
-    msg   = opts[:message] || "cannot cast #{inspect value} to #{inspect type}"
+    msg   = opts[:message] || "cannot cast #{inspect value} to #{Ecto.Type.format(type)}"
     %__MODULE__{message: msg, type: type, value: value}
   end
 end
@@ -286,13 +286,13 @@ defmodule Ecto.ConstraintError do
           "The changeset has not defined any constraint."
         constraints ->
           "The changeset defined the following constraints:\n\n" <>
-            Enum.map_join(constraints, "\n", &"    * #{&1.constraint} (#{&1.type}_constraint)")
+            Enum.map_join(constraints, "\n", &"    * #{inspect(&1.constraint)} (#{&1.type}_constraint)")
       end
 
     msg = """
     constraint error when attempting to #{action} struct:
 
-        * #{constraint} (#{type}_constraint)
+        * #{inspect(constraint)} (#{type}_constraint)
 
     If you would like to stop this constraint violation from raising an
     exception and instead add it as an error to your changeset, please

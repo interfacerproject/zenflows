@@ -66,25 +66,6 @@ alias Zenflows.VF.{
 	resource_metadata: nil | map(),
 }
 
-@derive {Jason.Encoder, only: ~w[
-	id
-	action_id
-	resource_classified_as
-	resource_quantity_has_numerical_value
-	effort_quantity_has_numerical_value
-	has_beginning has_end has_point_in_time
-	note agreed_in
-	input_of_id output_of_id
-	provider_id receiver_id
-	resource_inventoried_as_id to_resource_inventoried_as_id
-	resource_conforms_to_id
-	resource_quantity_has_unit_id effort_quantity_has_unit_id
-	to_location_id at_location_id
-	realization_of_id
-	triggered_by_id
-	previous_event_id
-	resource_metadata
-]a}
 schema "vf_economic_event" do
 	field :action_id, Action.ID
 	field :action, :map, virtual: true
@@ -321,5 +302,42 @@ def changeset(schema, params) do
 	|> Validate.note(:note)
 	|> Changeset.assoc_constraint(:realization_of)
 	|> Changeset.assoc_constraint(:triggered_by)
+end
+
+# This is only used for `Zenflows.VF.EconomicResource.Domain.trace_dpp/1`.
+defimpl Jason.Encoder, for: __MODULE__ do
+	def encode(evt, opts) do
+		Jason.Encode.map(%{
+			"id" => evt.id,
+			"action" => %{"id" => evt.action_id},
+			"resourceClassifiedAs" => evt.resource_classified_as,
+			"resourceQuantity" => %{
+				"hasUnit" => %{"id" => evt.resource_quantity_has_unit_id},
+				"hasNumericalValue" => evt.resource_quantity_has_numerical_value,
+			},
+			"effortQuantity" => %{
+				"hasUnit" => %{"id" => evt.effort_quantity_has_unit_id},
+				"hasNumericalValue" => evt.effort_quantity_has_numerical_value,
+			},
+			"hasBeginning" => evt.has_beginning,
+			"hasEnd" => evt.has_end,
+			"hasPointInTime" => evt.has_point_in_time,
+			"note" => evt.note,
+			"agreedIn" => evt.agreed_in,
+			"inputOf" => %{"id" => evt.input_of_id},
+			"outputOf" => %{"id" => evt.output_of_id},
+			"provider" => %{"id" => evt.provider_id},
+			"receiver" => %{"id" => evt.receiver_id},
+			"resourceInventoriedAs" => %{"id" => evt.resource_inventoried_as_id},
+			"toResourceInventoriedAs" => %{"id" => evt.to_resource_inventoried_as_id},
+			"resourceConformsTo" => %{"id" => evt.resource_conforms_to_id},
+			"toLocation" => %{"id" => evt.to_location_id},
+			"atLocation" => %{"id" => evt.at_location_id},
+			"realizationOf" => %{"id" => evt.realization_of_id},
+			"triggeredBy" => %{"id" => evt.triggered_by_id},
+			"previousEvent" => %{"id" => evt.previous_event_id},
+			"resourceMetadata" => evt.resource_metadata,
+		}, opts)
+	end
 end
 end

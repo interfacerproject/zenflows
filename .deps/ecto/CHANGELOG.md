@@ -1,5 +1,85 @@
 # Changelog for v3.x
 
+## v3.10.1 (2023-04-12)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Consider `sort_param` even if the relation param was not given
+  * [Ecto.Query] Correct typespec to avoid Dialyzer warnings
+
+## v3.10.0 (2023-04-10) 
+
+This release contains many improvements to Ecto.Changeset, functions like `Ecto.Changeset.changed?/2` and `field_missing?/2` will help make your code more expressive. Improvements to association and embed handling will also make it easier to manage more complex forms, especially those embedded within Phoenix.LiveView applications.
+
+On the changeset front, note this release unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you were setting `:empty_values` in the past and you want to preserve this new behaviour throughout, you may want to update your code** from this:
+
+    Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: ["", []])
+
+to:
+
+    empty_values = [[]] ++ Ecto.Changeset.empty_values()
+    Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
+
+Queries have also been improved to support LIMIT WITH TIES as well as materialized CTEs.
+
+### Enhancements
+
+  * [Ecto.Changeset] Add `get_assoc`/`get_embed`
+  * [Ecto.Changeset] Add `field_missing?/2`
+  * [Ecto.Changeset] Add `changed?/2` and `changed?/3` with predicates support
+  * [Ecto.Changeset] Allow `Regex` to be used in constraint names for exact matches
+  * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
+  * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty
+  * [Ecto.Changeset] Add support for `:sort_param` and `:drop_param` on `cast_assoc` and `cast_embed`
+  * [Ecto.Query] Support materialized option in CTEs
+  * [Ecto.Query] Support dynamic field inside `json_extract_path`
+  * [Ecto.Query] Support interpolated values for from/join prefixes
+  * [Ecto.Query] Support ties in limit expressions through `with_ties/3`
+  * [Ecto.Schema] Add `:autogenerate_fields` to the schema reflection API
+  * [Ecto.ParameterizedType] Add optional callback `format/1`
+
+### Bug fixes
+
+  * [Ecto.Changeset] Make unsafe validate unique exclude primary key only for loaded schemas
+  * [Ecto.Changeset] Raise when change provided to `validate_format/4` is not a string
+  * [Ecto.Query] Fix bug in `json_extract_path` where maps were not allowed to be nested inside of embeds
+  * [Ecto.Schema] Allow inline embeds to overwrite conflicting aliases
+
+## v3.9.5 (2023-03-22)
+
+### Bug fixes
+
+  * [Ecto.Query] Rename `@opaque dynamic` type to `@opaque dynamic_expr` to avoid conflicts with Erlang/OTP 26
+
+## v3.9.4 (2022-12-21)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix regression with interpolated preloads introduced in v3.9.3
+
+## v3.9.3 (2022-12-20)
+
+### Enhancements
+
+  * [Ecto] Add `reset_fields/2`
+  * [Ecto.Multi] Add `exists?/4` function
+  * [Ecto.Repo] Keep url scheme in the repo configuration
+  * [Ecto.Query] Add support for cross lateral joins
+  * [Ecto.Query] Allow preloads to use `dynamic/2`
+  * [Ecto.Query.API] Allow the entire path to be interpolated in `json_extract_path/2`
+
+## v3.9.2 (2022-11-18)
+
+### Enhancements
+
+ * [Ecto.Query] Allow `selected_as` inside CTE
+ * [Ecto.Query] Allow `selected_as` to be used in subquery
+
+### Bug fixes
+
+  * [Ecto.Repo] Fix preloading through associations on `nil`
+  * [Ecto.Query] Fix select merging a `selected_as` field into a source
+
 ## v3.9.1 (2022-10-06)
 
 ### Enhancements
@@ -98,6 +178,7 @@ Ecto v3.8 requires Elixir v1.10+.
   * [Ecto.Query] Improve tracking of `select_merge` inside subqueries
   * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
   * [Ecto.Repo] Don't surface persisted data as changes on embed updates
+  * [Ecto.Repo] **Potentially breaking change**: Raise if an association doesn't have a primary key and is preloaded in a join query. Previously, this would silently produce the wrong the result in certain circumstances.
   * [Ecto.Schema] Preserve parent prefix on join tables
 
 ## v3.7.2 (2022-03-13)

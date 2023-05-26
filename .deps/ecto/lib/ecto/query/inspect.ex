@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -53,13 +53,13 @@ defimpl Inspect, for: Ecto.Query do
     case query.with_ctes do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
         with_ctes =
-          Enum.map(queries, fn {name, query} ->
+          Enum.map(queries, fn {name, cte_opts, query} ->
             cte = case query do
               %Ecto.Query{} -> __MODULE__.inspect(query, opts)
               %Ecto.Query.QueryExpr{} -> expr(query, {})
             end
 
-            concat(["|> with_cte(\"" <> name <> "\", as: ", cte, ")"])
+            concat(["|> with_cte(\"" <> name <> "\", materialized: ", inspect(cte_opts[:materialized]), ", as: ", cte, ")"])
           end)
 
         result = if recursive, do: glue(result, "\n", "|> recursive_ctes(true)"), else: result
@@ -95,6 +95,7 @@ defimpl Inspect, for: Ecto.Query do
     assocs = assocs(query.assocs, names)
     windows = windows(query.windows, names)
     combinations = combinations(query.combinations)
+    limit = limit(query.limit, names)
 
     wheres = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
     group_bys = kw_exprs(:group_by, query.group_bys, names)
@@ -103,7 +104,6 @@ defimpl Inspect, for: Ecto.Query do
     updates = kw_exprs(:update, query.updates, names)
 
     lock = kw_inspect(:lock, query.lock)
-    limit = kw_expr(:limit, query.limit, names)
     offset = kw_expr(:offset, query.offset, names)
     select = kw_expr(:select, query.select, names)
     distinct = kw_expr(:distinct, query.distinct, names)
@@ -189,6 +189,16 @@ defimpl Inspect, for: Ecto.Query do
 
   defp combinations(combinations) do
     Enum.map(combinations, fn {key, val} -> {key, "(" <> to_string(val) <> ")"} end)
+  end
+
+  defp limit(nil, _names), do: []
+
+  defp limit(%LimitExpr{with_ties: false} = limit, names) do
+    [{:limit, expr(limit, names)}]
+  end
+
+  defp limit(%LimitExpr{with_ties: with_ties} = limit, names) do
+    [{:limit, expr(limit, names)}] ++ kw_inspect(:with_ties, with_ties)
   end
 
   defp bool_exprs(keys, exprs, names) do
@@ -347,12 +357,13 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp join_qual(:inner), do: :join
-  defp join_qual(:inner_lateral), do: :join_lateral
+  defp join_qual(:inner_lateral), do: :inner_lateral_join
   defp join_qual(:left), do: :left_join
-  defp join_qual(:left_lateral), do: :left_join_lateral
+  defp join_qual(:left_lateral), do: :left_lateral_join
   defp join_qual(:right), do: :right_join
   defp join_qual(:full), do: :full_join
   defp join_qual(:cross), do: :cross_join
+  defp join_qual(:cross_lateral), do: :cross_lateral_join
 
   defp collect_sources(%{from: nil, joins: joins}) do
     ["query" | join_sources(joins)]

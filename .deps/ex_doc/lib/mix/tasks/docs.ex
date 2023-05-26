@@ -61,6 +61,9 @@ defmodule Mix.Tasks.Docs do
   be a keyword list or a function returning a keyword list that will
   be lazily executed.
 
+    * `:annotations_for_docs` - a function that receives metadata and returns a list
+      of annotations to be added to the signature.
+
     * `:api_reference` - Whether to generate `api-reference.html`; default: `true`.
       If this is set to false, `:main` must also be set.
 
@@ -98,9 +101,9 @@ defmodule Mix.Tasks.Docs do
       Markdown and plain text pages; default: "PAGES". Example: "GUIDES"
 
     * `:extras` - List of paths to additional Markdown (`.md` extension), Live Markdown
-      (`.livemd` extension), and plain text pages to add to the documentation. You can
-      also specify keyword pairs to customize the generated filename and title of each
-      extra page; default: `[]`. Example:
+      (`.livemd` extension), Cheatsheets (`.cheatmd` extension) and plain text pages to
+      add to the documentation. You can also specify keyword pairs to customize the
+      generated filename and title of each extra page; default: `[]`. Example:
       `["README.md", "LICENSE", "CONTRIBUTING.md": [filename: "contributing", title: "Contributing"]]`
 
     * `:filter_modules` - Include only modules that match the given value. The
@@ -112,7 +115,7 @@ defmodule Mix.Tasks.Docs do
 
     * `:formatters` - Formatter to use; default: ["html", "epub"], options: "html", "epub".
 
-    * `:groups_for_extras`, `:groups_for_modules`, `:groups_for_functions` - See the "Groups" section
+    * `:groups_for_extras`, `:groups_for_modules`, `:groups_for_docs` - See the "Groups" section
 
     * `:ignore_apps` - Apps to be ignored when generating documentation in an umbrella project.
       Receives a list of atoms. Example: `[:first_app, :second_app]`.
@@ -215,12 +218,12 @@ defmodule Mix.Tasks.Docs do
 
   A regex or the string name of the module is also supported.
 
-  ### Grouping functions
+  ### Grouping functions and callbacks
 
-  Functions inside a module can also be organized in groups. This is done via
-  the `:groups_for_functions` configuration which is a keyword list of group
-  titles and filtering functions that receive the documentation metadata of
-  functions as argument.
+  Functions and callbacks inside a module can also be organized in groups.
+  This is done via the `:groups_for_docs` configuration which is a
+  keyword list of group titles and filtering functions that receive the
+  documentation metadata of functions as argument.
 
   For example, imagine that you have an API client library with a large surface
   area for all the API endpoints you need to support. It would be helpful to
@@ -240,15 +243,16 @@ defmodule Mix.Tasks.Docs do
 
   And then in the configuration you can group these with:
 
-      groups_for_functions: [
+      groups_for_docs: [
         Authentication: & &1[:section] == :auth,
         Resource: & &1[:subject] == :object,
         Admin: & &1[:permission] in [:grant, :write]
       ]
 
   A function can belong to a single group only. If multiple group filters match,
-  the first will take precedence. Functions that don't have a custom group will
-  be listed under the default "Functions" group.
+  the first will take precedence. Functions and callbacks that don't have a
+  custom group will be listed under the default "Functions" and "Callbacks"
+  group respectively.
 
   ## Additional JavaScript config
 
@@ -368,11 +372,12 @@ defmodule Mix.Tasks.Docs do
       |> normalize_apps(config)
       |> normalize_main()
       |> normalize_deps()
+      |> normalize_formatters()
       |> put_package(config)
 
     Mix.shell().info("Generating docs...")
 
-    for formatter <- get_formatters(options) do
+    for formatter <- options[:formatters] do
       index = generator.(project, version, Keyword.put(options, :formatter, formatter))
       Mix.shell().info([:green, "View #{inspect(formatter)} docs at #{inspect(index)}"])
 
@@ -384,11 +389,14 @@ defmodule Mix.Tasks.Docs do
     end
   end
 
-  defp get_formatters(options) do
-    case Keyword.get_values(options, :formatter) do
-      [] -> options[:formatters] || ["html", "epub"]
-      values -> values
-    end
+  defp normalize_formatters(options) do
+    formatters =
+      case Keyword.get_values(options, :formatter) do
+        [] -> options[:formatters] || ["html", "epub"]
+        values -> values
+      end
+
+    Keyword.put(options, :formatters, formatters)
   end
 
   defp get_docs_opts(config) do

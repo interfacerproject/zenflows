@@ -1,6 +1,5 @@
 # Dialyxir
 
-[![Build Status](https://travis-ci.org/jeremyjh/dialyxir.svg?branch=master)](https://travis-ci.org/jeremyjh/dialyxir)
 [![Module Version](https://img.shields.io/hexpm/v/dialyxir.svg)](https://hex.pm/packages/dialyxir)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/dialyxir/)
 [![Total Download](https://img.shields.io/hexpm/dt/dialyxir.svg)](https://hex.pm/packages/dialyxir)
@@ -9,28 +8,16 @@
 
 Mix tasks to simplify use of Dialyzer in Elixir projects.
 
-## Changes in 1.0
-
-Elixir 1.6 is required, to support the new pretty printing feature. If your
-project is not yet on 1.6, continue to specify 0.5 in your mix deps.
-
-Warning messages have been greatly improved, but are filtered through the legacy formatter to support your existing ignore files. You can optionally use the new Elixir [term format](#elixir-term-format) for ignore files. You may want to use the `--format short` argument in your CI pipelines. There are several formats, also there is a new `explain` feature - for details see CLI [options](#command-line-options).
-
-## Quickstart
-If you are planning to use Dialyzer with an application built with the [Phoenix Framework](http://www.phoenixframework.org/), check out the [Quickstart wiki](https://github.com/jeremyjh/dialyxir/wiki/Phoenix-Dialyxir-Quickstart).
-
 ## Installation
 
 Dialyxir is available on [hex.pm](https://hex.pm/packages/dialyxir).
-
-You can either add it as a dependency in your mix.exs, or install it globally as an archive task.
 
 To add it to a mix project, just add a line like this in your deps function in mix.exs:
 
 ```elixir
 defp deps do
   [
-    {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+    {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
   ]
 end
 ```
@@ -82,26 +69,6 @@ To use Dialyzer in CI, you must be aware of several things:
 2) The PLT should be cached using the CI caching system
 3) The PLT will need to be rebuilt whenever adding a new Erlang or Elixir version to build matrix
 
-### Travis
-
-`.travis.yml`
-```markdown
-language: elixir
-
-elixir:
-  - 1.8
-
-otp_release:
-  - 21.0
-
-script:
-  - mix dialyzer
-
-cache:
-  directories:
-    - priv/plts
-```
-
 ### Github Actions
 
 `dialyzer.yml`
@@ -119,7 +86,7 @@ cache:
       # Don't cache PLTs based on mix.lock hash, as Dialyzer can incrementally update even old ones
       # Cache key based on Elixir & Erlang version (also useful when running in matrix)
       - name: Restore PLT cache
-        uses: actions/cache@v2
+        uses: actions/cache/restore@v3
         id: plt_cache
         with:
           key: |
@@ -133,6 +100,18 @@ cache:
       - name: Create PLTs
         if: steps.plt_cache.outputs.cache-hit != 'true'
         run: mix dialyzer --plt
+        
+      # By default, the GitHub Cache action will only save the cache if all steps in the job succeed,
+      # so we separate the cache restore and save steps in case running dialyzer fails.
+      - name: Save PLT cache
+        uses: actions/cache/save@v3
+        if: steps.plt_cache.outputs.cache-hit != 'true'
+        id: plt_cache_save
+        with:
+          key: |
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+          path: |
+            priv/plts
 
       - name: Run dialyzer
         run: mix dialyzer --format github
@@ -232,7 +211,7 @@ def project do
     app: :my_app,
     version: "0.0.1",
     deps: deps,
-    dialyzer: [flags: ["-Wunmatched_returns", :error_handling, :race_conditions, :underspecs]]
+    dialyzer: [flags: ["-Wunmatched_returns", :error_handling, :underspecs]]
   ]
 end
 ```
@@ -249,7 +228,7 @@ def project do
     deps: deps,
     dialyzer: [
       plt_add_apps: [:mnesia],
-      flags: [:unmatched_returns, :error_handling, :race_conditions, :no_opaque],
+      flags: [:unmatched_returns, :error_handling, :no_opaque],
       paths: ["_build/dev/lib/my_app/ebin", "_build/dev/lib/foo/ebin"]
     ]
   ]
@@ -353,7 +332,7 @@ applied to the *short-description* format of Dialyzer output (`mix dialyzer --fo
 ]
 ```
 
-Entries for existing warnings can be generated with `mix dialyzer --format short`. Just remember to put the output in quotes and braces to match the format above.
+Entries for existing warnings can be generated with `mix dialyzer --format ignore_file`.
 
 
 #### List unused Filters
@@ -371,3 +350,15 @@ dialyzer: [
 
 This option can also be set on the command line with `--list-unused-filters`. When used without
 `--ignore-exit-status`, this option will result in an error status code.
+
+#### `no_umbrella` flag
+
+Projects with lockfiles at a parent folder are treated as umbrella projects. In some cases however
+you may wish to have the lockfile on a parent folder without having an umbrella. By setting the
+`no_umbrella` flag to `true` your project will be treated as a non umbrella project:
+
+```elixir
+dialyzer: [
+  no_umbrella: true
+]
+```

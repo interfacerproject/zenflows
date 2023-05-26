@@ -575,6 +575,16 @@ defmodule Ecto.Query.API do
 
       from(post in Post, select: json_extract_path(post.meta, ["author", "name"]))
 
+  The path can be dynamic:
+
+      path = ["author", "name"]
+      from(post in Post, select: json_extract_path(post.meta, ^path))
+
+  And the field can also be dynamic in combination with it:
+
+      path = ["author", "name"]
+      from(post in Post, select: json_extract_path(field(post, :meta), ^path))
+
   The query can be also rewritten as:
 
       from(post in Post, select: post.meta["author"]["name"])
@@ -592,7 +602,7 @@ defmodule Ecto.Query.API do
 
   PostgreSQL supports indexing on jsonb columns via GIN indexes.
   Whenever comparing the value of a jsonb field against a string
-  or integer, Ecto will use the containement operator @> which
+  or integer, Ecto will use the containment operator @> which
   is optimized. You can even use the more efficient `jsonb_path_ops`
   GIN index variant. For more information, consult PostgreSQL's docs
   on [JSON indexing](https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING).
@@ -724,6 +734,31 @@ defmodule Ecto.Query.API do
 
   Using this in conjunction with `selected_as/1` is recommended to ensure only defined aliases
   are referenced.
+
+  ## Subqueries and CTEs
+
+  Subqueries and CTEs automatically alias the selected fields, for example, one can write:
+
+      # Subquery
+      s = from p in Post, select: %{visits: coalesce(p.visits, 0)}
+      from(s in subquery(s), select: s.visits)
+
+      # CTE
+      cte_query = from p in Post, select: %{visits: coalesce(p.visits, 0)}
+      Post |> with_cte("cte", as: ^cte_query) |> join(:inner, [p], c in "cte") |> select([p, c], c.visits)
+
+  However, one can also use `selected_as` to override the default naming:
+
+      # Subquery
+      s = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
+      from(s in subquery(s), select: s.num_visits)
+
+      # CTE
+      cte_query = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
+      Post |> with_cte("cte", as: ^cte_query) |> join(:inner, [p], c in "cte") |> select([p, c], c.num_visits)
+
+  The name given to `selected_as/2` can also be referenced in `selected_as/1`,
+  as in regular queries.
   """
   def selected_as(selected_value, name), do: doc! [selected_value, name]
 

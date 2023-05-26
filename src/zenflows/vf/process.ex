@@ -48,14 +48,6 @@ alias Zenflows.VF.{
 	grouped_in: nil | ProcessGroup.t(),
 }
 
-@derive {Jason.Encoder, only: ~w[
-	id
-	name note
-	has_beginning has_end
-	finished deletable
-	classified_as
-	based_on_id planned_within_id grouped_in_id
-]a}
 schema "vf_process" do
 	field :name, :string
 	field :note, :string
@@ -96,5 +88,24 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:planned_within)
 	|> Changeset.assoc_constraint(:nested_in)
 	|> Changeset.assoc_constraint(:grouped_in)
+end
+
+# This is only used for `Zenflows.VF.EconomicResource.Domain.trace_dpp/1`.
+defimpl Jason.Encoder, for: __MODULE__ do
+	def encode(proc, opts) do
+		Jason.Encode.map(%{
+			"id" => proc.id,
+			"name" => proc.name,
+			"note" => proc.note,
+			"hasBeginning" => proc.has_beginning,
+			"hasEnd" => proc.has_end,
+			"finished" => proc.finished,
+			"deletable" => proc.deletable,
+			"classifiedAs" => proc.classified_as,
+			"basedOn" => %{"id" => proc.based_on_id},
+			"plannedWithin" => %{"id" => proc.planned_within_id},
+			"groupedIn" => %{"id" => proc.grouped_in_id},
+		}, opts)
+	end
 end
 end

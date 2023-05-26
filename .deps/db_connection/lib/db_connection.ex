@@ -64,6 +64,20 @@ defmodule DBConnection do
 
   The `DBConnection.Query` protocol provide utility functions so that
   queries can be encoded and decoded without blocking the connection or pool.
+
+  ## Connection pools
+
+  DBConnection connections support using different pools via the `:pool` option
+  passed to `start_link/1`. The default pool is `DBConnection.ConnectionPool`.
+  Another supported pool that is commonly used for tests is `DBConnection.Ownership`.
+
+  For now, using *custom* pools is not supported since the API for pools is not
+  public.
+
+  ## Errors
+
+  Most functions in this module raise a `DBConnection.ConnectionError` exception
+  when failing to check out a connection from the pool.
   """
   require Logger
 
@@ -110,6 +124,7 @@ defmodule DBConnection do
           | {:backoff_type, :stop | :exp | :rand | :rand_exp}
           | {:configure, (keyword -> keyword) | {module, atom, [any]} | nil}
           | {:idle_interval, non_neg_integer}
+          | {:idle_limit, non_neg_integer}
           | {:max_restarts, non_neg_integer}
           | {:max_seconds, pos_integer}
           | {:name, GenServer.name()}
@@ -160,8 +175,9 @@ defmodule DBConnection do
 
   This callback is called if no callbacks have been called after the
   idle timeout and a client process is not using the state. The idle
-  timeout can be configured by the `:idle_interval` option. This function
-  can be called whether the connection is checked in or checked out.
+  timeout can be configured by the `:idle_interval` and `:idle_interval`
+  options. This function can be called whether the connection is checked
+  in or checked out.
 
   This callback is called in the connection process.
   """
@@ -173,8 +189,7 @@ defmodule DBConnection do
 
   Return `{:ok, result, state}` to continue, `{status, state}` to notify caller
   that the transaction can not begin due to the transaction status `status`,
-  `{:error, exception, state}` (deprecated) to error without beginning the
-  transaction, or `{:disconnect, exception, state}` to error and disconnect.
+  or `{:disconnect, exception, state}` to error and disconnect.
 
   A callback implementation should only return `status` if it
   can determine the database's transaction status without side effect.
@@ -190,8 +205,7 @@ defmodule DBConnection do
   Handle committing a transaction. Return `{:ok, result, state}` on successfully
   committing transaction, `{status, state}` to notify caller that the
   transaction can not commit due to the transaction status `status`,
-  `{:error, exception, state}` (deprecated) to error and no longer be inside
-  transaction, or `{:disconnect, exception, state}` to error and disconnect.
+  or `{:disconnect, exception, state}` to error and disconnect.
 
   A callback implementation should only return `status` if it
   can determine the database's transaction status without side effect.
@@ -206,9 +220,7 @@ defmodule DBConnection do
   @doc """
   Handle rolling back a transaction. Return `{:ok, result, state}` on successfully
   rolling back transaction, `{status, state}` to notify caller that the
-  transaction can not rollback due to the transaction status `status`,
-  `{:error, exception, state}` (deprecated) to
-  error and no longer be inside transaction, or
+  transaction can not rollback due to the transaction status `status` or
   `{:disconnect, exception, state}` to error and disconnect.
 
   A callback implementation should only return `status` if it
@@ -355,7 +367,8 @@ defmodule DBConnection do
     * `:configure` - A function to run before every connect attempt to
     dynamically configure the options, either a 1-arity fun,
     `{module, function, args}` with options prepended to `args` or `nil` where
-    only returned options are passed to connect callback (default: `nil`)
+    only returned options are passed to connect callback (default: `nil`). This
+    function is called *in the connection process*.
     * `:after_connect` - A function to run on connect using `run/3`, either
     a 1-arity fun, `{module, function, args}` with `t:DBConnection.t/0` prepended
     to `args` or `nil` (default: `nil`)
@@ -366,12 +379,15 @@ defmodule DBConnection do
       See "Connection listeners" below
     * `:name` - A name to register the started process (see the `:name` option
       in `GenServer.start_link/3`)
-    * `:pool` - Chooses the pool to be started (default: `DBConnection.ConnectionPool`)
-    * `:pool_size` - Chooses the size of the pool
+    * `:pool` - Chooses the pool to be started (default: `DBConnection.ConnectionPool`). See
+      ["Connection pools"](#module-connection-pools).
+    * `:pool_size` - Chooses the size of the pool (default: `1`)
     * `:idle_interval` - Controls the frequency we check for idle connections
       in the pool. We then notify each idle connection to ping the database.
       In practice, the ping happens within `idle_interval <= ping < 2 * idle_interval`.
       Defaults to 1000ms.
+    * `:idle_limit` - The number of connections to ping on each `:idle_interval`.
+      Defaults to the pool size (all connections).
     * `:queue_target` and `:queue_interval` - See "Queue config" below
     * `:max_restarts` and `:max_seconds` - Configures the `:max_restarts` and
       `:max_seconds` for the connection pool supervisor (see the `Supervisor` docs).
@@ -425,10 +441,55 @@ defmodule DBConnection do
     * `{:connected, pid}`
     * `{:disconnected, pid}`
 
+  Note the disconnected messages is not guaranteed to be delivered if the
+  `pid` for connection crashes. So it is recommended to monitor the connected
+  `pid` if you want to track all disconnections.
+
+  Here is an example of a `connection_listener` implementation:
+
+      defmodule DBConnectionListener do
+        use GenServer
+
+        def start_link(opts) do
+          GenServer.start_link(__MODULE__, [], opts)
+        end
+
+        def get_notifications(pid) do
+          GenServer.call(pid, :read_state)
+        end
+
+        @impl true
+        def init(stack) when is_list(stack) do
+          {:ok, stack}
+        end
+
+        @impl true
+        def handle_call(:read_state, _from, state) do
+          {:reply, state, state}
+        end
+
+        @impl true
+        def handle_info({:connected, _pid} = msg, state) do
+          {:noreply, [msg | state]}
+        end
+
+        @impl true
+        def handle_info({_other_states, _pid} = msg, state) do
+          {:noreply, [msg | state]}
+        end
+      end
+
+  You can then start it, pass it into a `DBConnection.start_link/1` and when needed
+  can query the notifications:
+
+      {:ok, pid} = DBConnectionListener.start_link([])
+      {:ok, _conn} = DBConnection.start_link(SomeModule, [connection_listeners: [connection_listener]])
+      notifications = DBConnectionListener.get_notifications(pid)
+
   ## Telemetry
 
-  A `[:db_connection, :connection_error]` event is published whenever a connection checkout
-  receives a `%DBConnection.ConnectionError{}`.
+  A `[:db_connection, :connection_error]` event is published whenever a
+  connection checkout receives a `%DBConnection.ConnectionError{}`.
 
   Measurements:
 
@@ -461,7 +522,8 @@ defmodule DBConnection do
   end
 
   @doc """
-  Forces all connections in the pool to disconnect within the given interval.
+  Forces all connections in the pool to disconnect within the given interval
+  in milliseconds.
 
   Once this function is called, the pool will disconnect all of its connections
   as they are checked in or as they are pinged. Checked in connections will be
@@ -479,7 +541,6 @@ defmodule DBConnection do
   @spec disconnect_all(conn, non_neg_integer, opts :: Keyword.t()) :: :ok
   def disconnect_all(conn, interval, opts \\ []) when interval >= 0 do
     pool = Keyword.get(opts, :pool, DBConnection.ConnectionPool)
-    interval = System.convert_time_unit(interval, :millisecond, :native)
     pool.disconnect_all(conn, interval, opts)
   end
 
@@ -738,7 +799,14 @@ defmodule DBConnection do
   `transaction/3` call inside another `transaction/3` will be treated
   the same as `run/3`.
 
-  ### Options
+  > #### Checkout failures {: .warning}
+  >
+  > If we cannot check out a connection from the pool, this function raises a
+  > `DBConnection.ConnectionError` exception.
+  > If you want to handle these cases, you should rescue
+  > `DBConnection.ConnectionError` exceptions when using `run/3`.
+
+  ## Options
 
     * `:queue` - Whether to block waiting in an internal queue for the
     connection's state (boolean, default: `true`). See "Queue config" in
@@ -752,7 +820,7 @@ defmodule DBConnection do
 
   The pool may support other options.
 
-  ### Example
+  ## Example
 
       {:ok, res} = DBConnection.run(conn, fn conn ->
         DBConnection.execute!(conn, query, [])

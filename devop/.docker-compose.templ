@@ -1,21 +1,3 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
-# Zenflows is designed to implement the Valueflows vocabulary,
-# written and maintained by srfsh <info@dyne.org>.
-# Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 version: "3.8"
 services:
   srv:
@@ -29,20 +11,17 @@ services:
     ports:
       - 8000:8000
     environment:
-      ADMIN_KEY: @ADMIN_KEY
+      ADMIN_KEY: #ADMIN_KEY#
+      EMAIL_ADDR: please fill in these
+      EMAIL_KEY: please fill in these
 
       DB_HOST: db
       DB_NAME: &db_name zenflows
       DB_USER: &db_user zenflows_dbuser
-      DB_PASS: &db_pass @DB_PASS
-      # DB_PORT: 5432
+      DB_PASS: &db_pass #DB_PASS#
 
       ROOM_URI: http://zvmlet:3000
-      ROOM_SALT: @ROOM_SALT
-
-      GQL_AUTH_CALLS: "true"
-      GQL_DEF_PAGE_SIZE: 50
-      GQL_MAX_PAGE_SIZE: 100
+      ROOM_SALT: #ROOM_SALT#
     depends_on:
       - zvmlet
       - db
@@ -59,8 +38,6 @@ services:
       - /var/lib/postgresql/data
   zvmlet:
     container_name: zvmlet
-    image: ghcr.io/interfacerproject/zenflows-crypto:master
+    image: ghcr.io/interfacerproject/zenflows-crypto:latest
     environment:
       HTTP_PORT: 3000
-    volumes:
-      - ../zencode/src:/app/contracts:ro

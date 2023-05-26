@@ -2,6 +2,10 @@ defmodule Ecto.SubQuery do
   @moduledoc """
   A struct representing subqueries.
 
+  Users of Ecto must consider this struct as opaque
+  and not access its field. Authors of adapters may
+  read its contents, but never modify them.
+
   See `Ecto.Query.subquery/2` for more information.
   """
   defstruct [:query, :params, :select, :cache]
@@ -32,7 +36,8 @@ defmodule Ecto.Query do
       Repo.all(query)
 
   In the example above, we are directly querying the "users" table
-  from the database.
+  from the database. Queries do not reach out to the data store until
+  they are passed as arguments to a function from `Ecto.Repo`.
 
   ## Query expressions
 
@@ -319,7 +324,9 @@ defmodule Ecto.Query do
   The keyword-based and pipe-based examples are equivalent. The downside
   of using macros is that the binding must be specified for every operation.
   However, since keyword-based and pipe-based examples are equivalent, the
-  bindingless syntax also works for macros:
+  bindingless syntax also works for macros. Please note that the following 
+  example is not completely equivalent to the previous example, 
+  as it does not return the name but rather the `User` struct:
 
       "users"
       |> where([u], u.age > 18)
@@ -373,11 +380,21 @@ defmodule Ecto.Query do
     1. The `:prefix` option given to `from`/`join` has the highest precedence
     2. Then it falls back to the `@schema_prefix` attribute declared in the schema
       given to `from`/`join`
-    3. Then it falls back to the query prefix
+    3. Then it falls back to the query prefix. The query prefix may be
+       set either on the query with `put_query_prefix/2` or by passing
+       the `:prefix` option when calling the `Repo` module (where the
+       former wins if both methods are used)
 
   The prefixes set in the query will be preserved when loading data.
   """
 
+  @doc """
+  The `Ecto.Query` struct.
+
+  Users of Ecto must consider this struct as opaque
+  and not access its field directly. Authors of adapters
+  may read its contents, but never modify them.
+  """
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: [],
@@ -418,6 +435,11 @@ defmodule Ecto.Query do
     defstruct [recursive: false, queries: []]
   end
 
+  defmodule LimitExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line, with_ties: false, params: []]
+  end
+
   defmodule Tagged do
     @moduledoc false
     # * value is the tagged value
@@ -427,7 +449,7 @@ defmodule Ecto.Query do
   end
 
   @type t :: %__MODULE__{}
-  @opaque dynamic :: %DynamicExpr{}
+  @opaque dynamic_expr :: %DynamicExpr{}
 
   alias Ecto.Query.Builder
 
@@ -569,7 +591,7 @@ defmodule Ecto.Query do
 
       from query, select: ^fields, order_by: ^order
 
-  ## Updates
+  ## `update`
 
   A `dynamic` is also supported inside updates, for example:
 
@@ -578,6 +600,57 @@ defmodule Ecto.Query do
       ]
 
       from query, update: ^updates
+
+  ## `preload`
+
+  Dynamics can be used with `preload` in order to dynamically
+  specify the binding for a joined association. For example, you can
+  write:
+
+      preloads = [
+        :non_joined_assoc,
+        joined_assoc: dynamic([joined: j], j)
+      ]
+
+      from x in query,
+        join: assoc(x, :joined_assoc),
+        as: :joined,
+        preload: ^preloads
+
+  While the example above uses a named binding (`:joined`),
+  positional bindings may also be used:
+
+      preloads = [
+        :non_joined_assoc,
+        joined_assoc: dynamic([_, j], j)
+      ]
+
+      from x in query,
+        join: assoc(x, :joined_assoc)
+        preload: ^preloads
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of an interpolated root. For example, this won't work:
+
+      from query, preload: [comments: ^dynamic(...)]
+
+  But this will:
+
+      from query, preload: ^[comments: dynamic(...)]
+
+  Dynamic expressions used in `preload` must evaluate to a single
+  binding. For instance, this won't work:
+
+      preloads = dynamic([comments: c, likes: l], [comments: {c, likes: l}])
+
+  But this will:
+
+      dynamic_comments = dynamic([comments: c], c)
+      dynamic_likes = dynamic([likes: l], l)
+
+      preloads = [
+        comments: {dynamic_comments, likes: dynamic_likes}
+      ]
   """
   defmacro dynamic(binding \\ [], expr) do
     Builder.Dynamic.build(binding, expr, __CALLER__)
@@ -708,7 +781,7 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
-  @joins [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
+  @joins [:join, :inner_join, :cross_join, :cross_lateral_join, :left_join, :right_join, :full_join,
           :inner_lateral_join, :left_lateral_join]
 
   @doc """
@@ -744,12 +817,14 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
       Ecto.Query.exclude(query, :preload)
+      Ecto.Query.exclude(query, :update)
 
   You can also remove specific joins as well such as `left_join` and
   `inner_join`:
 
       Ecto.Query.exclude(query, :inner_join)
       Ecto.Query.exclude(query, :cross_join)
+      Ecto.Query.exclude(query, :cross_lateral_join)
       Ecto.Query.exclude(query, :left_join)
       Ecto.Query.exclude(query, :right_join)
       Ecto.Query.exclude(query, :full_join)
@@ -769,7 +844,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
     qual = join_qual(join_keyword)
     {excluded, remaining} = Enum.split_with(query.joins, &(&1.qual == qual))
-    aliases =  Map.drop(query.aliases, Enum.map(excluded, & &1.as))
+    aliases = Map.drop(query.aliases, Enum.map(excluded, & &1.as))
     %{query | joins: remaining, aliases: aliases}
   end
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
@@ -784,6 +859,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
   defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
   defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
+  defp do_exclude(%Ecto.Query{} = query, :update), do: %{query | updates: []}
 
   @doc """
   Creates a query.
@@ -811,8 +887,11 @@ defmodule Ecto.Query do
       # Ecto.Queryable
       from(City, limit: 1)
 
-      # Fragment
-      from(f in fragment("generate_series(?, ?) as x", ^0, ^100000), select f.x)
+      # Fragment with user-defined function and predefined columns
+      from(f in fragment("my_table_valued_function(arg)"), select: f.x))
+
+      # Fragment with built-in function and undefined columns
+      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
 
   ## Expressions examples
 
@@ -863,7 +942,7 @@ defmodule Ecto.Query do
     end
 
     {kw, as, prefix, hints} = collect_as_and_prefix_and_hints(kw, nil, nil, nil)
-    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, hints)
+    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, List.wrap(hints))
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -887,6 +966,8 @@ defmodule Ecto.Query do
         end
       end
 
+    {t, quoted} = maybe_with_ties(type, t, quoted, binds)
+
     from(t, env, count_bind, quoted, binds)
   end
 
@@ -909,6 +990,10 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
+  defp from([{:with_ties, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "`with_ties` keyword must immediately follow a limit"
+  end
+
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
     Builder.error! "`on` keyword must immediately follow a join"
   end
@@ -925,6 +1010,23 @@ defmodule Ecto.Query do
     quoted
   end
 
+  defp maybe_with_ties(:limit, t, quoted, binds) do
+    {t, with_ties} = collect_with_ties(t, nil)
+
+    quoted =
+      if with_ties != nil do
+        quote do
+          Ecto.Query.with_ties(unquote(quoted), unquote(binds), unquote(with_ties))
+        end
+      else
+        quoted
+      end
+
+    {t, quoted}
+  end
+
+  defp maybe_with_ties(_type, t, quoted, _binds), do: {t, quoted}
+
   defp to_query_binds(binds) do
     for {k, v} <- binds, do: {{k, [], nil}, v}
   end
@@ -935,8 +1037,16 @@ defmodule Ecto.Query do
   defp join_qual(:right_join), do: :right
   defp join_qual(:inner_join), do: :inner
   defp join_qual(:cross_join), do: :cross
+  defp join_qual(:cross_lateral_join), do: :cross_lateral
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
+
+  defp collect_with_ties([{:with_ties, with_ties} | t], nil),
+    do: collect_with_ties(t, with_ties)
+  defp collect_with_ties([{:with_ties, _} | _], _),
+    do: Builder.error! "`with_ties` keyword was given more than once to the same limit"
+  defp collect_with_ties(t, with_ties),
+    do: {t, with_ties}
 
   defp collect_on([{key, _} | _] = t, on, as, prefix, hints) when key in @from_join_opts do
     {t, as, prefix, hints} = collect_as_and_prefix_and_hints(t, as, prefix, hints)
@@ -971,10 +1081,10 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:full`, `:inner_lateral` or `:left_lateral`.
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
-  `:left_join`, `:right_join`, `:cross_join`, `:full_join`, `:inner_lateral_join`
+  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`
   or `:left_lateral_join`. `:join` is equivalent to `:inner_join`.
 
   Currently it is possible to join on:
@@ -991,7 +1101,7 @@ defmodule Ecto.Query do
 
   Each join accepts the following options:
 
-    * `:on` - a query expression or keyword list to filter the join
+    * `:on` - a query expression or keyword list to filter the join, defaults to `true`
     * `:as` - a named binding for the join
     * `:prefix` - the prefix to be used for the join when issuing a database query
     * `:hints` - a string or a list of strings to be used as database hints
@@ -1159,6 +1269,9 @@ defmodule Ecto.Query do
   ## Options
 
     * `:as` - the CTE query itself or a fragment
+    * `:materialized` - a boolean indicating whether the CTE should
+    be materialized. If blank, the database's default behaviour
+    will be used (only supported by Postgrex, for the built-in adapters)
 
   ## Recursive CTEs
 
@@ -1231,8 +1344,14 @@ defmodule Ecto.Query do
   invalid queries. If you are running into such scenarios, your best
   option is to use a fragment as your CTE.
   '''
-  defmacro with_cte(query, name, as: with_query) do
-    Builder.CTE.build(query, name, with_query, __CALLER__)
+  defmacro with_cte(query, name, opts) do
+    with_query = opts[:as]
+
+    if !with_query do
+      Builder.error! "`as` option must be specified"
+    end
+
+    Builder.CTE.build(query, name, with_query, opts[:materialized], __CALLER__)
   end
 
   @doc """
@@ -1872,6 +1991,34 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Enables or disables ties for limit expressions.
+
+  If there are multiple records tied for the last position in an ordered
+  limit result, setting this value to `true` will return all of the tied
+  records, even if the final result exceeds the specified limit.
+
+  Must be a boolean or evaluate to a boolean at runtime. Can only be applied
+  to queries with a `limit` expression or an error is raised. If `limit`
+  is redefined then `with_ties` must be reapplied.
+
+  Not all databases support this option and the ones that do might list it
+  under the `FETCH` command. Databases may require a corresponding `order_by`
+  statement to evaluate ties.
+
+  ## Keywords example
+
+      from(p in Post, where: p.author_id == ^current_user, order_by: [desc: p.visits], limit: 10, with_ties: true)
+
+  ## Expressions example
+
+      Post |> where([p], p.author_id == ^current_user) |> order_by([p], desc: p.visits) |> limit(10) |> with_ties(true)
+
+  """
+  defmacro with_ties(query, binding \\ [], expr) do
+    Builder.LimitOffset.build(:with_ties, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
@@ -2109,6 +2256,19 @@ defmodule Ecto.Query do
                  ), on: top_five.id == c.id,
                  preload: [comments: c]
 
+  Preloaded joins can also be specified dynamically using `dynamic`:
+
+      preloads = [comments: dynamic([comments: c], c)]
+
+      Repo.all from p in Post,
+                 join: c in assoc(p, :comments),
+                 as: :comments,
+                 where: c.published_at > p.updated_at,
+                 preload: ^preloads
+
+  See "`preload`" in the documentation for `dynamic/2` for more
+  details.
+
   ## Preload queries
 
   Preload also allows queries to be given, allowing you to filter or
@@ -2187,6 +2347,8 @@ defmodule Ecto.Query do
       function, the function will receive a list of "post_ids" as the argument
       and it must return a tuple in the format of `{post_id, tag}`
 
+  If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
+
   ## Keywords example
 
       # Returns all posts, their associated comments, and the associated
@@ -2254,7 +2416,7 @@ defmodule Ecto.Query do
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
 
   defp limit do
-    %QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+    %LimitExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do
@@ -2305,13 +2467,13 @@ defmodule Ecto.Query do
       if has_named_binding?(query, :comments) do
         query
       else
-        join(query, :left, c in assoc(p, :comments), as: :comments)
+        join(query, :left, [p], c in assoc(p, :comments), as: :comments)
       end
 
   With this function it can be simplified to:
 
       with_named_binding(query, :comments, fn  query, binding ->
-        join(query, :left, a in assoc(p, ^binding), as: ^binding)
+        join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end) 
 
   For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`. 

@@ -230,16 +230,12 @@ defmodule Ecto.Query.Builder do
   end
 
   # json
-  def escape({:json_extract_path, _, [field, path]} = expr, type, params_acc, vars, env) do
-    case field do
-      {{:., _, _}, _, _} ->
-        path = escape_json_path(path)
-        {field, params_acc} = escape(field, type, params_acc, vars, env)
-        {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
+  def escape({:json_extract_path, _, [field, path]}, type, params_acc, vars, env) do
+    validate_json_field!(field)
 
-      _ ->
-        error!("`#{Macro.to_string(expr)}` is not a valid query expression")
-    end
+    path = escape_json_path(path)
+    {field, params_acc} = escape(field, type, params_acc, vars, env)
+    {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
   end
 
   def escape({{:., meta, [Access, :get]}, _, [left, _]} = expr, type, params_acc, vars, env) do
@@ -531,6 +527,10 @@ defmodule Ecto.Query.Builder do
 
   defp escape_type({:parameterized, _, _} = param), do: Macro.escape(param)
   defp escape_type(type), do: type
+
+  defp validate_json_field!({{:., _, _}, _, _}), do: :ok
+  defp validate_json_field!({:field, _, _}), do: :ok
+  defp validate_json_field!(unsupported_field), do: error!("`#{Macro.to_string(unsupported_field)}` is not a valid json field")
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, length(params) - ix - 1, [])
   defp wrap_nil(params, _other), do: params
@@ -993,8 +993,15 @@ defmodule Ecto.Query.Builder do
     Enum.map(path, &quoted_json_path_element!/1)
   end
 
+  defp escape_json_path({:^, _, [path]})  do
+    quote do
+      path = Ecto.Query.Builder.json_path!(unquote(path))
+      Enum.map(path, &Ecto.Query.Builder.json_path_element!/1)
+    end
+  end
+
   defp escape_json_path(other) do
-    error!("expected JSON path to be compile-time list, got: `#{Macro.to_string(other)}`")
+    error!("expected JSON path to be a literal list or interpolated value, got: `#{Macro.to_string(other)}`")
   end
 
   defp quoted_json_path_element!({:^, _, [expr]}),
@@ -1022,6 +1029,14 @@ defmodule Ecto.Query.Builder do
     do: integer
   def json_path_element!(other),
     do: error!("expected string or integer in json_extract_path/2, got: `#{inspect other}`")
+
+  @doc """
+  Called by escaper at runtime to verify that path is a list
+  """
+  def json_path!(path) when is_list(path),
+    do: path
+  def json_path!(path),
+    do: error!("expected `path` to be a list in json_extract_path/2, got: `#{inspect path}`")
 
   @doc """
   Called by escaper at runtime to verify that a value is not nil.

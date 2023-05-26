@@ -2,7 +2,7 @@ defmodule Dialyxir.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/jeremyjh/dialyxir"
-  @version "1.2.0"
+  @version "1.3.0"
 
   def project do
     [
@@ -33,7 +33,7 @@ defmodule Dialyxir.Mixfile do
   end
 
   def application do
-    [mod: {Dialyxir, []}, extra_applications: [:dialyzer, :crypto, :mix]]
+    [mod: {Dialyxir, []}, extra_applications: [:dialyzer, :crypto, :mix, :erts, :syntax_tools]]
   end
 
   defp description do

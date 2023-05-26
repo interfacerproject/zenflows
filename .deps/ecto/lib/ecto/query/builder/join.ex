@@ -3,6 +3,7 @@ import Kernel, except: [apply: 2]
 defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
+  require Logger
   alias Ecto.Query.Builder
   alias Ecto.Query.{JoinExpr, QueryExpr}
 
@@ -133,10 +134,13 @@ defmodule Ecto.Query.Builder.Join do
       )
     end
 
-    unless is_binary(prefix) or is_nil(prefix) do
-      Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
+    prefix = case prefix do
+      nil -> nil
+      prefix when is_binary(prefix) -> prefix
+      {:^, _, [prefix]} -> quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))
+      prefix -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
-    
+
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as
@@ -184,7 +188,8 @@ defmodule Ecto.Query.Builder.Join do
       hints: hints
     ]
 
-    query = build_on(on || true, join, as, query, binding, count_bind, env)
+    on = ensure_on(on, join_assoc, join_qual, join_source, env)
+    query = build_on(on, join, as, query, binding, count_bind, env)
     {query, binding, next_bind}
   end
 
@@ -228,6 +233,25 @@ defmodule Ecto.Query.Builder.Join do
         Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
     end
   end
+
+  defp ensure_on(on, _assoc, _qual, _source, _env) when on != nil, do: on
+
+  defp ensure_on(nil, _assoc = nil, qual, source, env) when qual not in [:cross, :cross_lateral] do
+    maybe_source =
+      with {source, alias} <- source,
+        source when source != nil <- source || alias do
+        " on #{inspect(source)}"
+      else
+        _ -> ""
+      end
+
+    stacktrace = Macro.Env.stacktrace(env)
+    IO.warn("missing `:on` in join#{maybe_source}, defaulting to `on: true`.", stacktrace)
+
+    true
+  end
+
+  defp ensure_on(nil, _assoc, _qual, _source, _env), do: true
 
   @doc """
   Applies the join expression to the query.
@@ -299,7 +323,7 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
-  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross]
+  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross, :cross_lateral]
 
   @doc """
   Called at runtime to check dynamic qualifier.

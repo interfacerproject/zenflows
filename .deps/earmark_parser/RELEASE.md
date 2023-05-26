@@ -1,7 +1,30 @@
 
-## 1.5.0 2022-??-??
+## 1.5.0 2023-??-??
 
 -  [Depreacting message to be passed in as an array in options, and fixing it](https://github.com/robertdober/earmark_parser/issues/86)
+
+## [EarmarkParser](https://hex.pm/packages/earmark_parser) 1.4.32 2023-04-29
+
+- PR [Fix of a crash on unquoted html attributes](https://github.com/RobertDober/earmark_parser/pull/127)
+    Kudos to [Sebastian Seilund](https://github.com/sebastianseilund)
+
+## [EarmarkParser](https://hex.pm/packages/earmark_parser) 1.4.31 2023-03-03
+
+- PR [Fix catastrophic backtracking in IAL regex](https://github.com/RobertDober/earmark_parser/pull/125)
+  Special Kudos for spotting **and** fixing this [Alex Martsinovich](https://github.com/martosaur)
+
+- Bugfix for [Strikethrough not working if option `breaks: true`](https://github.com/RobertDober/earmark_parser/issues/123)
+  Kudos to [Mayel de Borniol](https://github.com/mayel) for providing tests
+
+## 1.4.30 2023-01-27
+
+- [Fixed a problem with headers that close with # but have a # inside too ](https://github.com/RobertDober/earmark_parser/pull/122)
+
+  Kudos to [Alex Martsinovich](https://github.com/martosaur)
+
+- Adding a non regression test for `~` inside links (was broken earlier)
+
+  Kudos to [Faried Nawaz](https://github.com/faried)
 
 ## 1.4.29 2022-10-20
 

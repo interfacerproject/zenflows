@@ -1,6 +1,6 @@
 defmodule Mint.HTTP do
   @moduledoc """
-  Processless HTTP connection data structure and functions.
+  Process-less HTTP connection data structure and functions.
 
   Single interface for `Mint.HTTP1` and `Mint.HTTP2` with support for version
   negotiation and proxies.
@@ -91,11 +91,10 @@ defmodule Mint.HTTP do
   Starting [from OTP
   25](https://www.erlang.org/blog/my-otp-25-highlights/#ca-certificates-can-be-fetched-from-the-os-standard-place),
   you can also load certificates from a file
-  ([`:public_key.cacerts_load/1`](https://www.erlang.org/doc/man/public_key.html#cacerts_load-1))
-  or from the OS
-  ([`:public_key.cacerts_load/0`](https://www.erlang.org/doc/man/public_key.html#cacerts_load-0)).
-  You can then use the certificates with
-  [`:public_key.cacerts_get/0`](https://www.erlang.org/doc/man/public_key.html#cacerts_get-0):
+  ([`:public_key.cacerts_load/1`](https://www.erlang.org/doc/man/public_key.html#cacerts_load-1)).
+  You can also get certificate from the OS trust store using
+  [`:public_key.cacerts_get/0`](https://www.erlang.org/doc/man/public_key.html#cacerts_get-0).
+  If you are using OTP 25+ it is recommended to set this option.
 
       Mint.connect(:https, host, port, transport_opts: [cacerts: :public_key.cacerts_get()])
 
@@ -107,6 +106,19 @@ defmodule Mint.HTTP do
   The mode can be controlled at connection time through the `:mode` option in `connect/4`
   or changed dynamically through `set_mode/2`. Passive mode is generally only recommended
   for special use cases.
+
+  ## Logging
+
+  Mint uses the `Logger` module to log information about the connection. Most logs are
+  emitted *since version 1.5.0*. The logs are not emitted by default, since we consider
+  Mint to be too low level. However, you can enable logging by passing `log: true` to
+  `connect/4`.
+
+  > #### Changes to the Format of Logs {: .warning}
+  >
+  > The format of logs emitted by Mint might change without notice between any versions,
+  > without it being considered a breaking change. You are only meant to control what
+  > gets logged by using the `Logger` API and Erlang's `:logger` module.
   """
 
   import Mint.Core.Util
@@ -117,6 +129,32 @@ defmodule Mint.HTTP do
   @behaviour Mint.Core.Conn
 
   @opaque t() :: Mint.HTTP1.t() | Mint.HTTP2.t()
+
+  # TODO: Remove once we depend on Elixir 1.11+, which defines is_struct/2
+  if not macro_exported?(Kernel, :is_struct, 2) do
+    defguardp is_struct(struct, module)
+              when is_map(struct) and is_atom(module) and is_map_key(struct, :__struct__) and
+                     :erlang.map_get(:__struct__, struct) == module
+  end
+
+  defguardp is_data_message(message)
+            when elem(message, 0) in [:ssl, :tcp] and tuple_size(message) == 3
+
+  defguardp is_closed_message(message)
+            when elem(message, 0) in [:ssl_closed, :tcp_closed] and tuple_size(message) == 2
+
+  defguardp is_error_message(message)
+            when elem(message, 0) in [:ssl_error, :tcp_error] and tuple_size(message) == 3
+
+  defguardp is_non_proxy_connection_message(conn, message)
+            when is_struct(conn) and
+                   is_tuple(message) and
+                   is_map_key(conn, :socket) and
+                   elem(message, 1) == :erlang.map_get(:socket, conn) and
+                   (is_data_message(message) or is_closed_message(message) or
+                      is_error_message(message))
+
+  defguardp is_proxy_conn(conn) when is_struct(conn, Mint.UnsafeProxy)
 
   @doc """
   Macro to check that a given received `message` is intended for the given connection `conn`.
@@ -145,7 +183,13 @@ defmodule Mint.HTTP do
       end
 
   """
-  define_is_connection_message_guard()
+  @doc since: "1.1.0"
+  defguard is_connection_message(conn, message)
+           when (is_proxy_conn(conn) and
+                   is_non_proxy_connection_message(
+                     :erlang.map_get(:state, conn),
+                     message
+                   )) or is_non_proxy_connection_message(conn, message)
 
   @doc """
   Creates a new connection to a given server.
@@ -186,6 +230,10 @@ defmodule Mint.HTTP do
     * `:proxy_headers` - a list of headers (`t:Mint.Types.headers/0`) to pass when using
       a proxy. They will be used for the `CONNECT` request in tunnel proxies or merged
       with every request for forward proxies.
+
+    * `:log` - (boolean) whether this connection logs or not. See the ["Logging"
+      section](#module-logging) in the module documentation. Defaults to `false`.
+      *Available since v1.5.0*.
 
   The following options are HTTP/1-specific and will force the connection
   to be an HTTP/1 connection.
@@ -257,12 +305,16 @@ defmodule Mint.HTTP do
 
     * `:alpn_advertised_protocols` - managed by Mint. Cannot be overridden.
 
-    * `:cacertfile` - if `:verify` is set to `:verify_peer` (the default) and
+    * `:cacerts` - certificates of types `:ssl.client_cacerts()`.
+      If `:verify` is set to `:verify_peer` (the default) and
       no CA trust store is specified using the `:cacertfile` or `:cacerts`
       option, Mint will attempt to use the trust store from the
       [CAStore](https://github.com/elixir-mint/castore) package or raise an
-      exception if this package is not available. Due to caching the
-      `:cacertfile` option is more efficient than `:cacerts`.
+      exception if this package is not available. It is reommended to set this
+      option to `:public_key.cacerts_get()`.
+
+    * `:cacertfile` - path to a file containing PEM-encoded CA certificates.
+      See the `:cacerts` option for the defaults to this value.
 
     * `:ciphers` - defaults to the lists returned by
       `:ssl.filter_cipher_suites(:ssl.cipher_suites(:all, version), [])`
@@ -398,12 +450,12 @@ defmodule Mint.HTTP do
 
       iex> Mint.HTTP.protocol(%Mint.HTTP2{})
       :http2
-  """
-  if Version.compare(System.version(), "1.7.0") in [:eq, :gt] do
-    @doc since: "1.4.0"
-  end
 
+  """
+  @doc since: "1.4.0"
   @spec protocol(t()) :: :http1 | :http2
+  def protocol(conn)
+
   def protocol(%Mint.HTTP1{}), do: :http1
   def protocol(%Mint.HTTP2{}), do: :http2
   def protocol(%Mint.UnsafeProxy{state: internal_conn}), do: protocol(internal_conn)
@@ -629,7 +681,7 @@ defmodule Mint.HTTP do
     do: conn_module(conn).stream_request_body(conn, ref, body)
 
   @doc """
-  Streams the next batch of responses from the given message.
+  Streams the next batch of responses from the given `message`.
 
   This function processes a "message" which can be any term, but should be
   a message received by the process that owns the connection. **Processing**
@@ -648,6 +700,15 @@ defmodule Mint.HTTP do
 
   If the given `message` is not from the connection's socket,
   this function returns `:unknown`.
+
+  > #### Receiving Multiple Messages {: .warning}
+  >
+  > Your connection and the HTTP server can exchange multiple **protocol-specific messages**
+  > on the socket that don't necessarily *produce responses*. For example, the HTTP server
+  > might tell the connection to update some internal settings. For this reason, you
+  > should always receive as many messages coming to your process as possible, for example
+  > by using `receive` recursively. You can see an example of this approach in the
+  > ["Usage Examples" documentation](architecture.html#usage-examples).
 
   ## Socket mode
 
@@ -944,18 +1005,30 @@ defmodule Mint.HTTP do
   def get_socket(conn), do: conn_module(conn).get_socket(conn)
 
   @doc """
+  Sets whether the connection should log information or not.
+
+  See the ["Logging" section](#module-logging) in the module documentation for more information.
+  """
+  @doc since: "1.5.0"
+  @impl true
+  @spec put_log(t(), boolean()) :: t()
+  def put_log(conn, log?), do: conn_module(conn).put_log(conn, log?)
+
+  @doc """
   Gets the proxy headers associated with the connection in the `CONNECT` method.
 
   When using tunnel proxy and HTTPs, the only way to exchange data with
   the proxy is through headers in the `CONNECT` method.
   """
-  if Version.compare(System.version(), "1.7.0") in [:eq, :gt] do
-    @doc since: "1.4.0"
-  end
-
+  @doc since: "1.4.0"
   @impl true
   @spec get_proxy_headers(t()) :: Mint.Types.headers()
   def get_proxy_headers(conn), do: conn_module(conn).get_proxy_headers(conn)
+
+  # Made public since the struct is opaque.
+  @doc false
+  @impl true
+  def put_proxy_headers(conn, headers), do: conn_module(conn).put_proxy_headers(conn, headers)
 
   ## Helpers
 

@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.29.4 (2023-03-29)
+
+  * Bug fixes
+    * Fix sidebar element with no children taking additional padding
+    * Fix elements being rendered too thick on macOS
+    * Fix rendering of HTML elements inside tooltips
+
+## v0.29.3 (2023-03-17)
+
+  * Enhancements
+    * Propagate `:since` metadata from modules
+    * Add support for MFAs and maps in `before_closing_body_tag` and `before_closing_head_tag`
+
+  * Bug fixes
+    * Improve font consistency across different OSes
+    * Keep language class on livebook output code block
+    * Ensure switches have higher precedence than config
+
+## v0.29.2 (2023-03-02)
+
+  * Enhancements
+    * Improvements to cheatsheets spacing
+    * Improvements to cheatsheets print
+    * Include sections of modules and extras in search suggestions
+    * Make sidebar links full-width and add hover states
+    * Improve clickable area of sidebar tabs
+    * Improve contrast on sidebar
+
+  * Bug fix
+    * Add media type for .license files for epub
+    * Fix overscroll on the sidebar
+    * Focus search input immediately after keyboard shortcut
+    * Don't attempt parsing code blocks that don't look like modules
+    * Fix visited link color in admonition blocks
+
+## v0.29.1 (2022-11-21)
+
+  * Enhancements
+    * Add optional function annotations
+    * Support media print on stylesheets
+    * Add download ePub link to footer
+    * Support extras for Erlang
+    * Add tooltip to functions on sidebar
+    * Disable spellcheck and autocorrect on search input
+
+  * Bug fix
+    * Special handle functions called `record/*` in Erlang
+
+  * Deprecations
+    * Rename `:groups_for_functions` to `:groups_for_docs`
+
 ## v0.29.0 (2022-10-19)
 
   * Enhancements

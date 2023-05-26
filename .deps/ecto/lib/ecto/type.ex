@@ -104,7 +104,8 @@ defmodule Ecto.Type do
         def cast(_), do: :error
 
         def dump(id) when is_binary(id) do
-          Base.decode64(id)
+          {:ok, id_decoded} = Base.decode64(id)
+          {:ok, String.to_integer(id_decoded)}
         end
 
         def load(id) when is_integer(id) do
@@ -114,7 +115,7 @@ defmodule Ecto.Type do
         defp encode_id(id) do
           id
           |> Integer.to_string()
-          |> Base.encode64
+          |> Base.encode64()
         end
       end
 
@@ -248,6 +249,9 @@ defmodule Ecto.Type do
 
   @doc """
   Checks if two terms are semantically equal.
+
+  This callback is used for determining equality of types in
+  `Ecto.Changeset`.
   """
   @callback equal?(term, term) :: boolean
 
@@ -864,26 +868,8 @@ defmodule Ecto.Type do
   defp same_date(_), do: :error
 
   @doc false
-  @spec filter_empty_values(t, any, [any]) :: {:ok, any} | :empty
-  def filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
-    value =
-      for elem <- value,
-        {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
-        do: elem
-
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
-  end
-
-  def filter_empty_values(_type, value, empty_values) do
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
+  def empty_trimmed_string?(value) do
+    is_binary(value) and String.trim_leading(value) == ""
   end
 
   ## Adapter related
@@ -1223,6 +1209,23 @@ defmodule Ecto.Type do
   defp equal_map?(_fun, _, _) do
     false
   end
+
+  @doc """
+  Format type for error messaging and logs.
+  """
+  def format({composite, type}) when composite in [:array, :map] do
+    "{#{inspect(composite)}, #{format(type)}}"
+  end
+
+  def format({:parameterized, type, params}) do
+    if function_exported?(type, :format, 1) do
+      apply(type, :format, [params])
+    else
+      "##{inspect(type)}<#{inspect(params)}>"
+    end
+  end
+
+  def format(type), do: inspect(type)
 
   ## Helpers
 

@@ -1,14 +1,14 @@
 defmodule Decimal.Mixfile do
   use Mix.Project
 
-  @version "2.0.0"
+  @version "2.1.1"
   @source_url "https://github.com/ericmj/decimal"
 
   def project() do
     [
       app: :decimal,
       version: @version,
-      elixir: "~> 1.2",
+      elixir: "~> 1.8",
       deps: deps(),
       name: "Decimal",
       source_url: @source_url,
@@ -24,7 +24,8 @@ defmodule Decimal.Mixfile do
 
   defp deps() do
     [
-      {:ex_doc, ">= 0.0.0", only: :dev}
+      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:stream_data, "~> 0.5.0", only: :test}
     ]
   end
 

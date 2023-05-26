@@ -49,6 +49,7 @@ classification scheme for purposes of categorization or grouping.
 
 enum :email_template do
 	value :interfacer_deployment
+	value :interfacer_beta
 	value :interfacer_staging
 	value :interfacer_testing
 	value :interfacer_debugging

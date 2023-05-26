@@ -434,7 +434,11 @@ if Code.ensure_loaded?(Tds) do
 
     defp cte(%{with_ctes: _}, _), do: []
 
-    defp cte_expr({name, cte}, sources, query) do
+    defp cte_expr({_name, %{materialized: materialized}, _cte}, _sources, query) when is_boolean(materialized) do
+      error!(query, "Tds adapter does not support materialized CTEs")
+    end
+
+    defp cte_expr({name, _opts, cte}, sources, query) do
       [quote_name(name), cte_header(cte, query), " AS ", cte_query(cte, sources, query)]
     end
 
@@ -526,6 +530,7 @@ if Code.ensure_loaded?(Tds) do
     defp join_qual(:cross), do: "CROSS JOIN "
     defp join_qual(:inner_lateral), do: "CROSS APPLY "
     defp join_qual(:left_lateral), do: "OUTER APPLY "
+    defp join_qual(:cross_lateral), do: error!(nil, "cross lateral joins are not supported in the Tds Adapter")
 
     defp where(%Query{wheres: wheres} = query, sources) do
       boolean(" WHERE ", wheres, sources, query)
@@ -574,9 +579,13 @@ if Code.ensure_loaded?(Tds) do
 
     defp limit(%Query{limit: nil}, _sources), do: []
 
+    defp limit(%Query{limit: %{with_ties: true}} = query, _sources) do
+      error!(query, "Tds adapter does not support the `:with_ties` limit option")
+    end
+
     defp limit(
            %Query{
-             limit: %QueryExpr{
+             limit: %{
                expr: expr
              }
            } = query,
@@ -646,7 +655,7 @@ if Code.ensure_loaded?(Tds) do
     defp operator_to_boolean(:or), do: " OR "
 
     defp parens_for_select([first_expr | _] = expr) do
-      if is_binary(first_expr) and String.match?(first_expr, ~r/^\s*select/i) do
+      if is_binary(first_expr) and String.match?(first_expr, ~r/^\s*select\s/i) do
         [?(, expr, ?)]
       else
         expr
@@ -1146,6 +1155,15 @@ if Code.ensure_loaded?(Tds) do
       ]
     end
 
+    def execute_ddl({:rename, %Index{} = current_index, new_name}) do
+      [[
+        "sp_rename ",
+        "N'#{current_index.table}.#{current_index.name}', ",
+        "N'#{new_name}', ",
+        "N'INDEX'"
+      ]]
+    end
+
     def execute_ddl({command, %Index{}, :cascade}) when command in @drops,
       do: error!(nil, "MSSQL does not support `CASCADE` in DROP INDEX commands")
 
@@ -1497,6 +1515,9 @@ if Code.ensure_loaded?(Tds) do
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete({:nilify, _columns}) do
+      error!(nil, "Tds adapter does not support the `{:nilify, columns}` action for `:on_delete`")
+    end
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(:nothing), do: " ON DELETE NO ACTION"
     defp reference_on_delete(_), do: []

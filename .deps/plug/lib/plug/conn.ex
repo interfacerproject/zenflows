@@ -336,19 +336,14 @@ defmodule Plug.Conn do
   end
 
   @doc false
-  @spec async_assign(t, atom, (() -> term)) :: t
+  @deprecated "Call assign + Task.async instead"
   def async_assign(%Conn{} = conn, key, fun) when is_atom(key) and is_function(fun, 0) do
-    IO.warn("Plug.Conn.async_assign/3 is deprecated, please call assign + Task.async instead")
     assign(conn, key, Task.async(fun))
   end
 
   @doc false
-  @spec await_assign(t, atom, timeout) :: t
+  @deprecated "Fetch the assign and call Task.await instead"
   def await_assign(%Conn{} = conn, key, timeout \\ 5000) when is_atom(key) do
-    IO.warn(
-      "Plug.Conn.await_assign/3 is deprecated, please fetch the assign and call Task.await instead"
-    )
-
     task = Map.fetch!(conn.assigns, key)
     assign(conn, key, Task.await(task, timeout))
   end
@@ -890,8 +885,8 @@ defmodule Plug.Conn do
 
   def put_resp_header(%Conn{adapter: adapter, resp_headers: headers} = conn, key, value)
       when is_binary(key) and is_binary(value) do
-    validate_header_key_if_test!(adapter, key)
-    validate_header_value!(key, value)
+    validate_header_key_normalized_if_test!(adapter, key)
+    validate_header_key_value!(key, value)
     %{conn | resp_headers: List.keystore(headers, key, 0, {key, value})}
   end
 
@@ -930,8 +925,8 @@ defmodule Plug.Conn do
   def prepend_resp_headers(%Conn{adapter: adapter, resp_headers: resp_headers} = conn, headers)
       when is_list(headers) do
     for {key, value} <- headers do
-      validate_header_key_if_test!(adapter, key)
-      validate_header_value!(key, value)
+      validate_header_key_normalized_if_test!(adapter, key)
+      validate_header_key_value!(key, value)
     end
 
     %{conn | resp_headers: headers ++ resp_headers}
@@ -967,8 +962,8 @@ defmodule Plug.Conn do
     headers =
       Enum.reduce(headers, current, fn {key, value}, acc
                                        when is_binary(key) and is_binary(value) ->
-        validate_header_key_if_test!(adapter, key)
-        validate_header_value!(key, value)
+        validate_header_key_normalized_if_test!(adapter, key)
+        validate_header_key_value!(key, value)
         List.keystore(acc, key, 0, {key, value})
       end)
 
@@ -1374,7 +1369,7 @@ defmodule Plug.Conn do
   this function is solely to allow an application to issue an upgrade request, not to manage how
   a given protocol upgrade takes place or what APIs the application must support in order to serve
   this updated protocol. For details in this regard, consult the documentation of the underlying
-  adapter (such a Plug.Cowboy or Bandit).
+  adapter (such a [Plug.Cowboy](https://hexdocs.pm/plug_cowboy) or [Bandit](https://hexdocs.pm/bandit)).
 
   Takes an argument describing the requested upgrade (for example, `:websocket`), and an argument
   which contains arbitrary data which the underlying adapter is expected to interpret in the
@@ -1383,12 +1378,13 @@ defmodule Plug.Conn do
   If the upgrade is accepted by the adapter, the returned `Plug.Conn` will have a `state` of
   `:upgraded`. This state is considered equivalently to a 'sent' state, and is subject to the same
   limitation on subsequent mutating operations. Note that there is no guarantee or expectation
-  that the actual upgrade process is undertaken within this function; it is entirely possible that
-  the server will only do the actual upgrade later in the connection lifecycle.
+  that the actual upgrade process has succeeded, or event that it is undertaken within this
+  function; it is entirely possible (likely, even) that the server will only do the actual upgrade
+  later in the connection lifecycle.
 
-  If the adapter does not support the requested upgrade then this is a noop and the returned 
-  `Plug.Conn` will be unchanged. The application can detect this and operate on the conn as it
-  normally would in order to indicate an upgrade failure to the client.
+  If the adapter does not support the requested protocol this function will raise an
+  `ArgumentError`. The underlying adapter may also signal errors in the provided arguments by
+  raising; consult the corresponding adapter documentation for details.
   """
   @spec upgrade_adapter(t, atom, term) :: t
   def upgrade_adapter(%Conn{adapter: {adapter, payload}, state: state} = conn, protocol, args)
@@ -1589,7 +1585,8 @@ defmodule Plug.Conn do
 
     * `:domain` - the domain the cookie applies to
     * `:max_age` - the cookie max-age, in seconds. Providing a value for this
-      option will set both the _max-age_ and _expires_ cookie attributes.
+      option will set both the _max-age_ and _expires_ cookie attributes. Unset
+      by default, which means the browser will default to a [session cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#define_the_lifetime_of_a_cookie).
     * `:path` - the path the cookie applies to
     * `:http_only` - when `false`, the cookie is accessible beyond HTTP
     * `:secure` - if the cookie must be sent only over https. Defaults
@@ -1862,7 +1859,7 @@ defmodule Plug.Conn do
   end
 
   defp verify_cookie!(cookie, _key) do
-    validate_header_value!("set-cookie", cookie)
+    validate_header_key_value!("set-cookie", cookie)
   end
 
   defp update_cookies(%Conn{state: state}, _fun) when state not in @unsent do
@@ -1891,31 +1888,41 @@ defmodule Plug.Conn do
           "set the host header with %Plug.Conn{conn | host: \"example.com\"}"
   end
 
-  defp validate_req_header!(adapter, key), do: validate_header_key_if_test!(adapter, key)
+  defp validate_req_header!(adapter, key),
+    do: validate_header_key_normalized_if_test!(adapter, key)
 
-  defp validate_header_key_if_test!({Plug.Adapters.Test.Conn, _}, key) do
+  defp validate_header_key_normalized_if_test!({Plug.Adapters.Test.Conn, _}, key) do
     if Application.fetch_env!(:plug, :validate_header_keys_during_test) and
-         not valid_header_key?(key) do
+         not normalized_header_key?(key) do
       raise InvalidHeaderError, "header key is not lowercase: " <> inspect(key)
     end
   end
 
-  defp validate_header_key_if_test!(_adapter, _key) do
+  defp validate_header_key_normalized_if_test!(_adapter, _key) do
     :ok
   end
 
-  # Any string containing an UPPERCASE char is not valid.
-  defp valid_header_key?(<<h, _::binary>>) when h in ?A..?Z, do: false
-  defp valid_header_key?(<<_, t::binary>>), do: valid_header_key?(t)
-  defp valid_header_key?(<<>>), do: true
-  defp valid_header_key?(_), do: false
+  # Any string containing an UPPERCASE char is not normalized.
+  defp normalized_header_key?(<<h, _::binary>>) when h in ?A..?Z, do: false
+  defp normalized_header_key?(<<_, t::binary>>), do: normalized_header_key?(t)
+  defp normalized_header_key?(<<>>), do: true
+  defp normalized_header_key?(_), do: false
 
-  defp validate_header_value!(key, value) do
-    case :binary.match(value, ["\n", "\r"]) do
+  defp validate_header_key_value!(key, value) do
+    case :binary.match(key, [":", "\n", "\r", "\x00"]) do
       {_, _} ->
         raise InvalidHeaderError,
-              "value for header #{inspect(key)} contains control feed (\\r) or newline " <>
-                "(\\n): #{inspect(value)}"
+              "header #{inspect(key)} contains a control feed (\\r), colon (:), newline (\\n) or null (\\x00)"
+
+      :nomatch ->
+        key
+    end
+
+    case :binary.match(value, ["\n", "\r", "\x00"]) do
+      {_, _} ->
+        raise InvalidHeaderError,
+              "value for header #{inspect(key)} contains control feed (\\r), newline (\\n) or null (\\x00)" <>
+                ": #{inspect(value)}"
 
       :nomatch ->
         value

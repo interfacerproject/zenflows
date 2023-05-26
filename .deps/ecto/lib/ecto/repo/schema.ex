@@ -110,9 +110,17 @@ defmodule Ecto.Repo.Schema do
 
     {query, cast_params, dump_params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
+    ix = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} -> ix
+      _ -> nil
+    end
+
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, &elem(&1, 0))
+
+      %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
+        fields
 
       _ ->
         raise ArgumentError, """
@@ -130,7 +138,7 @@ defmodule Ecto.Repo.Schema do
               field_b: x.foo
             }
 
-        The keys must exist in the schema that is being inserted into
+        All keys must exist in the schema that is being inserted into
         """
     end
 
@@ -784,6 +792,7 @@ defmodule Ecto.Repo.Schema do
               {^type, ^constraint, :exact} -> true
               {^type, cc, :suffix} -> String.ends_with?(constraint, cc)
               {^type, cc, :prefix} -> String.starts_with?(constraint, cc)
+              {^type, %Regex{} = r, _match} -> Regex.match?(r, constraint)
               _ -> false
             end
           end)
@@ -836,7 +845,7 @@ defmodule Ecto.Repo.Schema do
       {:ok, value} ->
         load_each(%{struct | key => value}, kv, types, adapter)
       :error ->
-        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
+        raise ArgumentError, "cannot load `#{inspect value}` as type #{Ecto.Type.format(type)} " <>
                              "for field `#{key}` in schema #{inspect struct.__struct__}"
     end
   end
@@ -1009,7 +1018,7 @@ defmodule Ecto.Repo.Schema do
       :error ->
         raise Ecto.ChangeError,
               "value `#{inspect(value)}` for `#{inspect(schema)}.#{field}` " <>
-              "in `#{action}` does not match type #{inspect type}"
+              "in `#{action}` does not match type #{Ecto.Type.format(type)}"
     end
   end
 

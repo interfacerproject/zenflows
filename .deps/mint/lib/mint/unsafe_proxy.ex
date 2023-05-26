@@ -180,10 +180,23 @@ defmodule Mint.UnsafeProxy do
     module.get_socket(state)
   end
 
+  @impl true
+  @spec put_log(t(), boolean()) :: t()
+  def put_log(%UnsafeProxy{module: module, state: state} = conn, log) do
+    state = module.put_log(state, log)
+    %{conn | state: state}
+  end
+
   # The `%__MODULE__{proxy_headers: value}` here is the request headers,
   # not the proxy response ones. Unsafe proxy mixes its headers (if any)
   # with the regular response headers, so you can get them there.
   @impl true
   @spec get_proxy_headers(t()) :: Mint.Types.headers()
   def get_proxy_headers(%__MODULE__{}), do: []
+
+  @impl true
+  @spec put_proxy_headers(t(), Mint.Types.headers()) :: t()
+  def put_proxy_headers(%__MODULE__{}, _headers) do
+    raise "invalid function for proxy unsafe proxy connections"
+  end
 end

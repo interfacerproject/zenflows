@@ -186,7 +186,7 @@ object :economic_resource do
 	field :trace, list_of(non_null(:track_trace_item)),
 		resolve: &Resolv.trace/3
 
-	field :trace_dpp, non_null(:json), resolve: &Resolv.trace_dpp/3
+	field :trace_dpp, non_null(:json_array), resolve: &Resolv.trace_dpp/3
 end
 
 input_object :economic_resource_create_params do

@@ -183,7 +183,7 @@ cmd_env_setup() {
 	else
 		key=$(openssl rand -hex 64)
 		salt=$(openssl rand -hex 64)
-		sed 's,@ADMIN_KEY,'"$key"', ; s,@ROOM_SALT,'"$salt"',' conf/.env.templ >conf/env.sh
+		sed 's,#ADMIN_KEY#,'"$key"', ; s,#ROOM_SALT#,'"$salt"',' conf/.env.templ >conf/env.sh
 		warn "the 'conf/env.sh' file is generated; please edit it to suit your needs"
 	fi
 }
@@ -271,9 +271,9 @@ cmd_devop_setup() {
 		admin_key=$(openssl rand -hex 64)
 		db_pass=$(openssl rand -hex 16)
 		room_salt=$(openssl rand -base64 64 | tr -d \\n)
-		sed 's,@ADMIN_KEY,'"$admin_key"', ;
-		     s,@DB_PASS,'"$db_pass"', ;
-		     s,@ROOM_SALT,'"$room_salt"',' devop/.docker-compose.templ >devop/docker-compose.yml
+		sed 's,#ADMIN_KEY#,'"$admin_key"', ;
+		     s,#DB_PASS#,'"$db_pass"', ;
+		     s,#ROOM_SALT#,'"$room_salt"',' devop/.docker-compose.templ >devop/docker-compose.yml
 		warn "the 'devop/docker-compose.yml' file is generated; please edit it to suit your needs"
 	fi
 }
@@ -284,7 +284,12 @@ cmd_devop_serve() {
 
 cmd_devop_comp() {
 	cmd_devop_setup
-	docker-compose -p zenflows -f devop/docker-compose.yml "$@"
+	if which docker-compose >/dev/null
+	then
+		docker-compose -p zenflows -f devop/docker-compose.yml "$@"
+	else
+		docker compose -p zenflows -f devop/docker-compose.yml "$@"
+	fi
 }
 
 cmd_devop_build() {

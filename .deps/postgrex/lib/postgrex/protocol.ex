@@ -26,7 +26,8 @@ defmodule Postgrex.Protocol do
             postgres: :idle,
             transactions: :strict,
             buffer: nil,
-            disconnect_on_error_codes: []
+            disconnect_on_error_codes: [],
+            scram: nil
 
   @type state :: %__MODULE__{
           sock: {module, any},
@@ -42,7 +43,8 @@ defmodule Postgrex.Protocol do
           postgres: DBConnection.status() | {DBConnection.status(), reference},
           transactions: :strict | :naive,
           buffer: nil | binary | :active_once,
-          disconnect_on_error_codes: [atom()]
+          disconnect_on_error_codes: [atom()],
+          scram: %{atom => binary}
         }
 
   @type notify :: (binary, binary -> any)
@@ -210,6 +212,7 @@ defmodule Postgrex.Protocol do
     # every time the connection is explicitly disconnected
     # because the associated PID will no longer exist.
     cancel_request(s)
+    terminate(s)
     sock_close(s)
     _ = recv_buffer(s)
     delete_parameters(s)
@@ -783,8 +786,8 @@ defmodule Postgrex.Protocol do
       {:ok, msg_auth(type: :sasl_cont, data: data), buffer} ->
         auth_cont(s, status, data, buffer)
 
-      {:ok, msg_auth(type: :sasl_fin, data: _), buffer} ->
-        auth_recv(s, status, buffer)
+      {:ok, msg_auth(type: :sasl_fin, data: data), buffer} ->
+        auth_fin(s, status, data, buffer)
 
       {:ok, msg_error(fields: fields), buffer} ->
         disconnect(s, Postgrex.Error.exception(postgres: fields), buffer)
@@ -809,11 +812,20 @@ defmodule Postgrex.Protocol do
   end
 
   defp auth_sasl(s, status = _, buffer) do
-    auth_send(s, msg_password(pass: Postgrex.SCRAM.challenge()), status, buffer)
+    auth_send(s, msg_password(pass: Postgrex.SCRAM.client_first()), status, buffer)
   end
 
   defp auth_cont(s, %{opts: opts} = status, data, buffer) do
-    auth_send(s, msg_password(pass: Postgrex.SCRAM.verify(data, opts)), status, buffer)
+    {client_final_msg, scram_state} = Postgrex.SCRAM.client_final(data, opts)
+    s = %{s | scram: scram_state}
+    auth_send(s, msg_password(pass: client_final_msg), status, buffer)
+  end
+
+  defp auth_fin(s, %{opts: opts} = status, data, buffer) do
+    case Postgrex.SCRAM.verify_server(data, s.scram, opts) do
+      :ok -> auth_recv(s, status, buffer)
+      {:error, e} -> {:disconnect, e, s}
+    end
   end
 
   defp auth_send(s, msg, status, buffer) do
@@ -2863,7 +2875,12 @@ defmodule Postgrex.Protocol do
         {:disconnect, err, s}
 
       {:error, %Postgrex.Error{} = err, s, buffer} ->
-        error_ready(s, status, err, buffer)
+        # We convert {:error, err, state} to {:error, state}
+        # so that DBConnection will disconnect during handle_begin/handle_rollback
+        # and will attempt to rollback during handle_commit
+        with {:error, _err, s} <- error_ready(s, status, err, buffer) do
+          {:error, s}
+        end
     end
   end
 
@@ -3423,6 +3440,11 @@ defmodule Postgrex.Protocol do
 
   defp setopts(:gen_tcp, sock, opts), do: :inet.setopts(sock, opts)
   defp setopts(:ssl, sock, opts), do: :ssl.setopts(sock, opts)
+
+  defp terminate(%{sock: {mod, sock}}) do
+    msg = msg_terminate()
+    mod.send(sock, encode_msg(msg))
+  end
 
   defp cancel_request(%{connection_key: nil}), do: :ok
 

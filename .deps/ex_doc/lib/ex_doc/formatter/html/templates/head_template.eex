@@ -11,6 +11,9 @@
     <% end %>
     <title><%= page.title %> — <%= config.project %> v<%= config.version %></title>
     <link rel="stylesheet" href="<%= asset_rev config.output, "dist/html-#{config.proglang}*.css" %>" />
+    <%= if page.type == :cheatmd do %>
+      <style>@media print { @page { size: landscape; } }</style>
+    <% end %>
     <%= if config.canonical do %>
       <link rel="canonical" href="<%= config.canonical %>" />
     <% end %>
@@ -22,7 +25,7 @@
     <% end %>
     <script async src="<%= asset_rev config.output, "dist/html-*.js" %>"></script>
     <%# Extra content specified by the user (e.g. custom CSS) %>
-    <%= config.before_closing_head_tag.(:html) %>
+    <%= before_closing_head_tag(config, :html) %>
   </head>
   <body data-type="<%= sidebar_type(page.type) %>" class="page-<%= page.type %>">
     <script>

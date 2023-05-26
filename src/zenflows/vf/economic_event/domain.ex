@@ -21,6 +21,8 @@ defmodule Zenflows.VF.EconomicEvent.Domain do
 
 import Ecto.Query
 
+require Logger
+
 alias Ecto.{Changeset, Multi}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
@@ -69,6 +71,47 @@ def previous(id) do
 		nil -> nil
 		q -> Repo.one!(q)
 	end
+end
+
+@spec trace_dpp_before(EconomicEvent.t(), non_neg_integer(),
+		MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()])
+	:: {MapSet.t(), [EconomicResource.t() | EconomicEvent.t() | Process.t()]}
+def trace_dpp_before(%{id: id}, 0, visited, children) do
+	Logger.info(%{type: "EconomicEvent", id: id, visited: visited, children: children})
+	{visited, children}
+end
+def trace_dpp_before(evt, depth, visited, children) do
+	{:ok, result} = Repo.multi(fn ->
+		{visited, evt_children} =
+			case previous(evt) do
+				nil ->
+					{visited, []}
+				%EconomicEvent{} = evt ->
+					if MapSet.member?(visited, "evt#{evt.id}") do
+						{visited, []}
+					else
+						visited = MapSet.put(visited, "evt#{evt.id}")
+						trace_dpp_before(evt, depth - 1, visited, [])
+					end
+				%EconomicResource{} = res ->
+					if MapSet.member?(visited, "res#{res.id}") do
+						{visited, []}
+					else
+						EconomicResource.Domain.trace_dpp_before(res, depth - 1, visited, [])
+					end
+				%Process{} = proc ->
+					if MapSet.member?(visited, "proc#{proc.id}") do
+						{visited, []}
+					else
+						visited = MapSet.put(visited, "proc#{proc.id}")
+						Process.Domain.trace_dpp_before(proc, depth - 1, visited, [])
+					end
+			end
+		child = %{type: "EconomicEvent", node: evt, children: Enum.reverse(evt_children)}
+		children = [child | children]
+		{:ok, {visited, children}}
+	end)
+	result
 end
 
 @spec create(Schema.params(), nil | Schema.params())

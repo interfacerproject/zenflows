@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.17.1 (2023-04-13)
+
+* Bug fix
+  * Fix timeout handling on SimpleConnection
+
+## v0.17.0 (2023-04-10)
+
+* Enhancements
+  * Add SCRAM server signature verification
+  * Support Multirange extension
+  * Support lquery and ltree extensions
+
 ## v0.16.5 (2022-09-20)
 
 * Enhancements

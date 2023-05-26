@@ -22,7 +22,7 @@ use Mix.Project
 def project() do
 	[
 		app: :zenflows,
-		version: "0.2.1",
+		version: "0.4.0",
 		elixir: "~> 1.14", # erlang/otp 24-25
 		start_permanent: Mix.env() == :prod,
 		config_path: "conf/buildtime.exs",
@@ -56,17 +56,17 @@ end
 defp deps() do
 	[
 		# db
-		{:ecto_sql, "~> 3.9"},
+		{:ecto_sql, "~> 3.10"},
 		{:postgrex, ">= 0.0.0"},
-		{:decimal, "~> 2.0"},
+		{:decimal, "~> 2.1"},
 
 		# crypto
 		{:plug_crypto, "~> 1.2"},
 
 		# http
 		{:plug_cowboy, "~> 2.6"},
-		{:mint, "~> 1.4"},
-		{:castore, "~> 0.1"},
+		{:mint, "~> 1.5"},
+		{:castore, ">= 0.0.0"},
 
 		# graphql
 		{:absinthe, "~> 1.7"},
@@ -77,8 +77,8 @@ defp deps() do
 		{:exsync, "~> 0.2", only: :dev},
 
 		# static analysis
-		{:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-		{:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+		{:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+		{:dialyxir, "~> 1.3", only: [:dev], runtime: false},
 
 		# doc
 		{:ex_doc, "~> 0.29", only: :dev, runtime: false},

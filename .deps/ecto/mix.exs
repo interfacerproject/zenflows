@@ -2,7 +2,7 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-ecto/ecto"
-  @version "3.9.1"
+  @version "3.10.1"
 
   def project do
     [
@@ -41,7 +41,7 @@ defmodule Ecto.MixProject do
 
   defp package do
     [
-      maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała", "Felipe Stival"],
+      maintainers: ["Eric Meadows-Jönsson", "José Valim", "Felipe Stival", "Greg Rychlewski"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files:
@@ -125,6 +125,8 @@ defmodule Ecto.MixProject do
       "guides/howtos/Replicas and dynamic repositories.md",
       "guides/howtos/Schemaless queries.md",
       "guides/howtos/Test factories.md",
+      "cheatsheets/crud.cheatmd",
+      "cheatsheets/associations.cheatmd",
       "CHANGELOG.md"
     ]
   end
@@ -133,7 +135,8 @@ defmodule Ecto.MixProject do
 
   defp groups_for_extras do
     [
-      "Introduction": ~r/guides\/introduction\/.?/,
+      Introduction: ~r/guides\/introduction\/.?/,
+      Cheatsheets: ~r/cheatsheets\/.?/,
       "How-To's": ~r/guides\/howtos\/.?/
     ]
   end

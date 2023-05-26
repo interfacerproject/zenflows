@@ -1,9 +1,9 @@
 defmodule Plug.MixProject do
   use Mix.Project
 
-  @version "1.14.0"
+  @version "1.14.2"
   @description "Compose web applications with functions"
-  @xref_exclude [Plug.Cowboy, :telemetry, :ssl]
+  @xref_exclude [Plug.Cowboy, :ssl]
 
   def project do
     [
@@ -33,11 +33,14 @@ defmodule Plug.MixProject do
   # Configuration for the OTP application
   def application do
     [
-      extra_applications: [:logger, :eex],
+      extra_applications: extra_applications(Mix.env()),
       mod: {Plug.Application, []},
       env: [validate_header_keys_during_test: true]
     ]
   end
+
+  defp extra_applications(:test), do: [:logger, :eex, :ssl]
+  defp extra_applications(_), do: [:logger, :eex]
 
   def deps do
     [

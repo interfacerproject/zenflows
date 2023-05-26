@@ -1,6 +1,6 @@
 defmodule Mint.HTTP2 do
   @moduledoc """
-  Processless HTTP client with support for HTTP/2.
+  Process-less HTTP/2 client connection.
 
   This module provides a data structure that represents an HTTP/2 connection to
   a given server. The connection is represented as an opaque struct `%Mint.HTTP2{}`.
@@ -12,7 +12,7 @@ defmodule Mint.HTTP2 do
   `Mint.HTTP` deals seamlessly with HTTP/1.1 and HTTP/2. For more information on
   how to use the data structure and client architecture, see `Mint.HTTP`.
 
-  ## HTTP/2 streams and requests
+  ## HTTP/2 Streams and Requests
 
   HTTP/2 introduces the concept of **streams**. A stream is an isolated conversation
   between the client and the server. Each stream is unique and identified by a unique
@@ -25,7 +25,7 @@ defmodule Mint.HTTP2 do
   This is why we identify each request with a unique reference returned by `request/5`.
   See `request/5` for more information.
 
-  ## Closed connection
+  ## Closed Connection
 
   In HTTP/2, the connection can either be open, closed, or only closed for writing.
   When a connection is closed for writing, the client cannot send requests or stream
@@ -35,7 +35,7 @@ defmodule Mint.HTTP2 do
   processed by the server, with the reason of `error` being `:unprocessed`.
   These requests are safe to retry.
 
-  ## HTTP/2 settings
+  ## HTTP/2 Settings
 
   HTTP/2 supports settings negotiation between servers and clients. The server advertises
   its settings to the client and the client advertises its settings to the server. A peer
@@ -61,7 +61,7 @@ defmodule Mint.HTTP2 do
   the server acknowledges the new settings, the updated value will be returned by
   `get_client_setting/2`.
 
-  ## Server push
+  ## Server Push
 
   HTTP/2 supports [server push](https://en.wikipedia.org/wiki/HTTP/2_Server_Push), which
   is a way for a server to send a response to a client without the client needing to make
@@ -118,15 +118,15 @@ defmodule Mint.HTTP2 do
 
   The response to a promised request is like a response to any normal request.
 
-  ### Disabling server pushes
-
-  HTTP/2 exposes a boolean setting for enabling or disabling server pushes with `:enable_push`.
-  You can pass this option when connecting or in `put_settings/2`. By default server push
-  is enabled.
+  > #### Disabling Server Pushes {: .tip}
+  >
+  > HTTP/2 exposes a boolean setting for enabling or disabling server pushes with `:enable_push`.
+  > You can pass this option when connecting or in `put_settings/2`. By default server push
+  > is enabled.
   """
 
   import Mint.Core.Util
-  import Mint.HTTP2.Frame, except: [encode: 1, decode_next: 1]
+  import Mint.HTTP2.Frame, except: [encode: 1, decode_next: 1, inspect: 1]
 
   alias Mint.{HTTPError, TransportError}
   alias Mint.Types
@@ -148,6 +148,14 @@ defmodule Mint.HTTP2 do
 
   @default_max_frame_size 16_384
   @valid_max_frame_size_range @default_max_frame_size..16_777_215
+
+  @valid_client_settings [
+    :max_concurrent_streams,
+    :initial_window_size,
+    :max_frame_size,
+    :enable_push,
+    :max_header_list_size
+  ]
 
   @user_agent "mint/" <> Mix.Project.config()[:version]
 
@@ -199,6 +207,8 @@ defmodule Mint.HTTP2 do
     # Settings that the client communicates to the server.
     client_settings: %{
       max_concurrent_streams: 100,
+      initial_window_size: @default_window_size,
+      max_header_list_size: :infinity,
       max_frame_size: @default_max_frame_size,
       enable_push: true
     },
@@ -211,8 +221,23 @@ defmodule Mint.HTTP2 do
     proxy_headers: [],
 
     # Private store.
-    private: %{}
+    private: %{},
+
+    # Logging
+    log: false
   ]
+
+  defmacrop log(conn, level, message) do
+    quote do
+      conn = unquote(conn)
+
+      if conn.log do
+        Logger.log(unquote(level), unquote(message))
+      else
+        :ok
+      end
+    end
+  end
 
   ## Types
 
@@ -225,36 +250,36 @@ defmodule Mint.HTTP2 do
 
   The supported settings are the following:
 
-    * `:header_table_size` - (integer) corresponds to `SETTINGS_HEADER_TABLE_SIZE`.
+    * `:header_table_size` - corresponds to `SETTINGS_HEADER_TABLE_SIZE`.
 
-    * `:enable_push` - (boolean) corresponds to `SETTINGS_ENABLE_PUSH`. Sets whether
+    * `:enable_push` - corresponds to `SETTINGS_ENABLE_PUSH`. Sets whether
       push promises are supported. If you don't want to support push promises,
       use `put_settings/2` to tell the server that your client doesn't want push promises.
 
-    * `:max_concurrent_streams` - (integer) corresponds to `SETTINGS_MAX_CONCURRENT_STREAMS`.
+    * `:max_concurrent_streams` - corresponds to `SETTINGS_MAX_CONCURRENT_STREAMS`.
       Tells what is the maximum number of streams that the peer sending this (client or server)
       supports. As mentioned in the module documentation, HTTP/2 streams are equivalent to
       requests, so knowing the maximum number of streams that the server supports can be useful
       to know how many concurrent requests can be open at any time. Use `get_server_setting/2`
       to find out how many concurrent streams the server supports.
 
-    * `:initial_window_size` - (integer smaller than `#{inspect(@max_window_size)}`)
-      corresponds to `SETTINGS_INITIAL_WINDOW_SIZE`. Tells what is the value of
-      the initial HTTP/2 window size for the peer that sends this setting.
+    * `:initial_window_size` -  corresponds to `SETTINGS_INITIAL_WINDOW_SIZE`.
+      Tells what is the value of the initial HTTP/2 window size for the peer
+      that sends this setting.
 
-    * `:max_frame_size` - (integer in the range `#{inspect(@valid_max_frame_size_range)}`)
-      corresponds to `SETTINGS_MAX_FRAME_SIZE`. Tells what is the maximum size of an HTTP/2
-      frame for the peer that sends this setting.
+    * `:max_frame_size` - corresponds to `SETTINGS_MAX_FRAME_SIZE`. Tells what is the
+      maximum size of an HTTP/2 frame for the peer that sends this setting.
 
-    * `:max_header_list_size` - (integer) corresponds to `SETTINGS_MAX_HEADER_LIST_SIZE`.
+    * `:max_header_list_size` - corresponds to `SETTINGS_MAX_HEADER_LIST_SIZE`.
 
-    * `:enable_connect_protocol` - (boolean) corresponds to `SETTINGS_ENABLE_CONNECT_PROTOCOL`.
+    * `:enable_connect_protocol` - corresponds to `SETTINGS_ENABLE_CONNECT_PROTOCOL`.
       Sets whether the client may invoke the extended connect protocol which is used to
       bootstrap WebSocket connections.
 
   """
   @type setting() ::
           {:enable_push, boolean()}
+          | {:header_table_size, non_neg_integer()}
           | {:max_concurrent_streams, pos_integer()}
           | {:initial_window_size, 1..2_147_483_647}
           | {:max_frame_size, 16_384..16_777_215}
@@ -328,7 +353,12 @@ defmodule Mint.HTTP2 do
   """
   @type error_reason() :: term()
 
-  @opaque t() :: %Mint.HTTP2{}
+  @typedoc """
+  A Mint HTTP/2 connection struct.
+
+  The struct's fields are private.
+  """
+  @opaque t() :: %__MODULE__{}
 
   ## Public interface
 
@@ -389,15 +419,14 @@ defmodule Mint.HTTP2 do
   catch
     {:mint, conn, %HTTPError{reason: {:no_error, _}}} ->
       {:ok, conn}
-
-    # We could have an error sending the GOAWAY frame, but we want to ignore that since
-    # we're closing the connection anyways.
-    {:mint, conn, %TransportError{}} ->
-      conn = put_in(conn.state, :closed)
-      {:ok, conn}
   end
 
   def close(%__MODULE__{state: {:goaway, _error_code, _debug_data}} = conn) do
+    _ = conn.transport.close(conn.socket)
+    {:ok, put_in(conn.state, :closed)}
+  end
+
+  def close(%__MODULE__{state: :handshaking} = conn) do
     _ = conn.transport.close(conn.socket)
     {:ok, put_in(conn.state, :closed)}
   end
@@ -411,9 +440,10 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec open?(t(), :read | :write | :read_write) :: boolean()
-  def open?(%Mint.HTTP2{state: state} = _conn, type \\ :read_write)
+  def open?(%__MODULE__{state: state} = _conn, type \\ :read_write)
       when type in [:read, :write, :read_write] do
     case state do
+      :handshaking -> true
       :open -> true
       {:goaway, _error_code, _debug_data} -> type == :read
       :closed -> false
@@ -463,12 +493,12 @@ defmodule Mint.HTTP2 do
           | {:error, t(), Types.error()}
   def request(conn, method, path, headers, body)
 
-  def request(%Mint.HTTP2{state: :closed} = conn, _method, _path, _headers, _body) do
+  def request(%__MODULE__{state: :closed} = conn, _method, _path, _headers, _body) do
     {:error, conn, wrap_error(:closed)}
   end
 
   def request(
-        %Mint.HTTP2{state: {:goaway, _error_code, _debug_data}} = conn,
+        %__MODULE__{state: {:goaway, _error_code, _debug_data}} = conn,
         _method,
         _path,
         _headers,
@@ -477,7 +507,7 @@ defmodule Mint.HTTP2 do
     {:error, conn, wrap_error(:closed_for_writing)}
   end
 
-  def request(%Mint.HTTP2{} = conn, method, path, headers, body)
+  def request(%__MODULE__{} = conn, method, path, headers, body)
       when is_binary(method) and is_binary(path) and is_list(headers) do
     headers =
       headers
@@ -507,19 +537,19 @@ defmodule Mint.HTTP2 do
         ) :: {:ok, t()} | {:error, t(), Types.error()}
   def stream_request_body(conn, request_ref, chunk)
 
-  def stream_request_body(%Mint.HTTP2{state: :closed} = conn, _request_ref, _chunk) do
+  def stream_request_body(%__MODULE__{state: :closed} = conn, _request_ref, _chunk) do
     {:error, conn, wrap_error(:closed)}
   end
 
   def stream_request_body(
-        %Mint.HTTP2{state: {:goaway, _error_code, _debug_data}} = conn,
+        %__MODULE__{state: {:goaway, _error_code, _debug_data}} = conn,
         _request_ref,
         _chunk
       ) do
     {:error, conn, wrap_error(:closed_for_writing)}
   end
 
-  def stream_request_body(%Mint.HTTP2{} = conn, request_ref, chunk)
+  def stream_request_body(%__MODULE__{} = conn, request_ref, chunk)
       when is_reference(request_ref) do
     case Map.fetch(conn.ref_to_stream_id, request_ref) do
       {:ok, stream_id} ->
@@ -560,7 +590,7 @@ defmodule Mint.HTTP2 do
 
   """
   @spec ping(t(), <<_::8>>) :: {:ok, t(), Types.request_ref()} | {:error, t(), Types.error()}
-  def ping(%Mint.HTTP2{} = conn, payload \\ :binary.copy(<<0>>, 8))
+  def ping(%__MODULE__{} = conn, payload \\ :binary.copy(<<0>>, 8))
       when byte_size(payload) == 8 do
     {conn, ref} = send_ping(conn, payload)
     {:ok, conn, ref}
@@ -569,7 +599,7 @@ defmodule Mint.HTTP2 do
   end
 
   @doc """
-  Communicates the given client settings to the server.
+  Communicates the given **client settings** to the server.
 
   This function is HTTP/2-specific.
 
@@ -582,7 +612,7 @@ defmodule Mint.HTTP2 do
   function returns `{:error, conn, reason}` with `conn` being the updated connection
   and `reason` being the reason of the error.
 
-  ## Supported settings
+  ## Supported Settings
 
   See `t:setting/0` for the supported settings. You can see the meaning
   of these settings [in the corresponding section in the HTTP/2
@@ -596,7 +626,7 @@ defmodule Mint.HTTP2 do
 
   """
   @spec put_settings(t(), settings()) :: {:ok, t()} | {:error, t(), Types.error()}
-  def put_settings(%Mint.HTTP2{} = conn, settings) when is_list(settings) do
+  def put_settings(%__MODULE__{} = conn, settings) when is_list(settings) do
     conn = send_settings(conn, settings)
     {:ok, conn}
   catch
@@ -625,7 +655,7 @@ defmodule Mint.HTTP2 do
 
   """
   @spec get_server_setting(t(), atom()) :: term()
-  def get_server_setting(%Mint.HTTP2{} = conn, name) when is_atom(name) do
+  def get_server_setting(%__MODULE__{} = conn, name) when is_atom(name) do
     get_setting(conn.server_settings, name)
   end
 
@@ -655,7 +685,7 @@ defmodule Mint.HTTP2 do
 
   """
   @spec get_client_setting(t(), atom()) :: term()
-  def get_client_setting(%Mint.HTTP2{} = conn, name) when is_atom(name) do
+  def get_client_setting(%__MODULE__{} = conn, name) when is_atom(name) do
     get_setting(conn.client_settings, name)
   end
 
@@ -685,7 +715,7 @@ defmodule Mint.HTTP2 do
 
   """
   @spec cancel_request(t(), Types.request_ref()) :: {:ok, t()} | {:error, t(), Types.error()}
-  def cancel_request(%Mint.HTTP2{} = conn, request_ref) when is_reference(request_ref) do
+  def cancel_request(%__MODULE__{} = conn, request_ref) when is_reference(request_ref) do
     case Map.fetch(conn.ref_to_stream_id, request_ref) do
       {:ok, stream_id} ->
         conn = close_stream!(conn, stream_id, _error_code = :cancel)
@@ -712,7 +742,7 @@ defmodule Mint.HTTP2 do
   For more information on flow control and window sizes in HTTP/2, see the section
   below.
 
-  ## HTTP/2 flow control
+  ## HTTP/2 Flow Control
 
   In HTTP/2, flow control is implemented through a
   window size. When the client sends data to the server, the window size is decreased
@@ -752,11 +782,11 @@ defmodule Mint.HTTP2 do
   @spec get_window_size(t(), :connection | {:request, Types.request_ref()}) :: non_neg_integer()
   def get_window_size(conn, connection_or_request)
 
-  def get_window_size(%Mint.HTTP2{} = conn, :connection) do
+  def get_window_size(%__MODULE__{} = conn, :connection) do
     conn.window_size
   end
 
-  def get_window_size(%Mint.HTTP2{} = conn, {:request, request_ref}) do
+  def get_window_size(%__MODULE__{} = conn, {:request, request_ref}) do
     case Map.fetch(conn.ref_to_stream_id, request_ref) do
       {:ok, stream_id} ->
         conn.streams[stream_id].window_size
@@ -777,18 +807,18 @@ defmodule Mint.HTTP2 do
           | :unknown
   def stream(conn, message)
 
-  def stream(%Mint.HTTP2{socket: socket} = conn, {tag, socket, reason})
+  def stream(%__MODULE__{socket: socket} = conn, {tag, socket, reason})
       when tag in [:tcp_error, :ssl_error] do
     error = conn.transport.wrap_error(reason)
     {:error, %{conn | state: :closed}, error, _responses = []}
   end
 
-  def stream(%Mint.HTTP2{socket: socket} = conn, {tag, socket})
+  def stream(%__MODULE__{socket: socket} = conn, {tag, socket})
       when tag in [:tcp_closed, :ssl_closed] do
     handle_closed(conn)
   end
 
-  def stream(%Mint.HTTP2{transport: transport, socket: socket} = conn, {tag, socket, data})
+  def stream(%__MODULE__{transport: transport, socket: socket} = conn, {tag, socket, data})
       when tag in [:tcp, :ssl] do
     case maybe_concat_and_handle_new_data(conn, data) do
       {:ok, %{mode: mode, state: state} = conn, responses}
@@ -805,7 +835,7 @@ defmodule Mint.HTTP2 do
     :throw, {:mint, conn, error, responses} -> {:error, conn, error, responses}
   end
 
-  def stream(%Mint.HTTP2{}, _message) do
+  def stream(%__MODULE__{}, _message) do
     :unknown
   end
 
@@ -823,7 +853,7 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec open_request_count(t()) :: non_neg_integer()
-  def open_request_count(%Mint.HTTP2{} = conn) do
+  def open_request_count(%__MODULE__{} = conn) do
     conn.open_client_stream_count
   end
 
@@ -890,7 +920,7 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec put_private(t(), atom(), term()) :: t()
-  def put_private(%Mint.HTTP2{private: private} = conn, key, value) when is_atom(key) do
+  def put_private(%__MODULE__{private: private} = conn, key, value) when is_atom(key) do
     %{conn | private: Map.put(private, key, value)}
   end
 
@@ -899,7 +929,7 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec get_private(t(), atom(), term()) :: term()
-  def get_private(%Mint.HTTP2{private: private} = _conn, key, default \\ nil) when is_atom(key) do
+  def get_private(%__MODULE__{private: private} = _conn, key, default \\ nil) when is_atom(key) do
     Map.get(private, key, default)
   end
 
@@ -908,8 +938,18 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec delete_private(t(), atom()) :: t()
-  def delete_private(%Mint.HTTP2{private: private} = conn, key) when is_atom(key) do
+  def delete_private(%__MODULE__{private: private} = conn, key) when is_atom(key) do
     %{conn | private: Map.delete(private, key)}
+  end
+
+  @doc """
+  See `Mint.HTTP.put_log/2`.
+  """
+  @doc since: "1.5.0"
+  @impl true
+  @spec put_log(t(), boolean()) :: t()
+  def put_log(%__MODULE__{} = conn, log?) when is_boolean(log?) do
+    %{conn | log: log?}
   end
 
   # http://httpwg.org/specs/rfc7540.html#rfc.section.6.5
@@ -926,22 +966,29 @@ defmodule Mint.HTTP2 do
   def initiate(scheme, socket, hostname, port, opts) do
     transport = scheme_to_transport(scheme)
     mode = Keyword.get(opts, :mode, :active)
+    log? = Keyword.get(opts, :log, false)
     client_settings_params = Keyword.get(opts, :client_settings, [])
-    validate_settings!(client_settings_params)
+    validate_client_settings!(client_settings_params)
 
     unless mode in [:active, :passive] do
       raise ArgumentError,
             "the :mode option must be either :active or :passive, got: #{inspect(mode)}"
     end
 
-    conn = %Mint.HTTP2{
+    unless is_boolean(log?) do
+      raise ArgumentError,
+            "the :log option must be a boolean, got: #{inspect(log?)}"
+    end
+
+    conn = %__MODULE__{
       hostname: hostname,
       port: port,
       transport: scheme_to_transport(scheme),
       socket: socket,
       mode: mode,
       scheme: Atom.to_string(scheme),
-      state: :open
+      state: :handshaking,
+      log: log?
     }
 
     with :ok <- inet_opts(transport, socket),
@@ -949,13 +996,7 @@ defmodule Mint.HTTP2 do
          preface = [@connection_preface, Frame.encode(client_settings)],
          :ok <- transport.send(socket, preface),
          conn = update_in(conn.client_settings_queue, &:queue.in(client_settings_params, &1)),
-         {:ok, server_settings, buffer, socket} <- receive_server_settings(transport, socket),
-         server_settings_ack =
-           settings(stream_id: 0, params: [], flags: set_flags(:settings, [:ack])),
-         :ok <- transport.send(socket, Frame.encode(server_settings_ack)),
-         conn = put_in(conn.buffer, buffer),
          conn = put_in(conn.socket, socket),
-         conn = apply_server_settings(conn, settings(server_settings, :params)),
          :ok <- if(mode == :active, do: transport.setopts(socket, active: :once), else: :ok) do
       {:ok, conn}
     else
@@ -963,10 +1004,6 @@ defmodule Mint.HTTP2 do
         transport.close(socket)
         error
     end
-  catch
-    {:mint, conn, error} ->
-      {:ok, _conn} = close(conn)
-      {:error, error}
   end
 
   @doc """
@@ -974,20 +1011,24 @@ defmodule Mint.HTTP2 do
   """
   @impl true
   @spec get_socket(t()) :: Mint.Types.socket()
-  def get_socket(%Mint.HTTP2{socket: socket} = _conn) do
+  def get_socket(%__MODULE__{socket: socket} = _conn) do
     socket
   end
 
   @doc """
   See `Mint.HTTP.get_proxy_headers/1`.
   """
-  if Version.compare(System.version(), "1.7.0") in [:eq, :gt] do
-    @doc since: "1.4.0"
-  end
-
+  @doc since: "1.4.0"
   @impl true
   @spec get_proxy_headers(t()) :: Mint.Types.headers()
-  def get_proxy_headers(%__MODULE__{proxy_headers: proxy_headers}), do: proxy_headers
+  def get_proxy_headers(%__MODULE__{proxy_headers: proxy_headers} = _conn), do: proxy_headers
+
+  # Made public since the %Mint.HTTP2{} struct is opaque.
+  @doc false
+  @impl true
+  def put_proxy_headers(%__MODULE__{} = conn, headers) when is_list(headers) do
+    %__MODULE__{conn | proxy_headers: headers}
+  end
 
   ## Helpers
 
@@ -1019,40 +1060,6 @@ defmodule Mint.HTTP2 do
       else
         {:error, transport.wrap_error({:bad_alpn_protocol, protocol})}
       end
-    end
-  end
-
-  defp receive_server_settings(transport, socket) do
-    case recv_next_frame(transport, socket, _buffer = "") do
-      {:ok, settings(), _buffer, _socket} = result ->
-        result
-
-      {:ok, goaway(error_code: error_code, debug_data: debug_data), _buffer, _socket} ->
-        error = wrap_error({:server_closed_connection, error_code, debug_data})
-        {:error, error}
-
-      {:ok, frame, _buffer, _socket} ->
-        debug_data = "received invalid frame #{elem(frame, 0)} during handshake"
-        {:error, wrap_error({:protocol_error, debug_data})}
-
-      {:error, error} ->
-        {:error, error}
-    end
-  end
-
-  defp recv_next_frame(transport, socket, buffer) do
-    case Frame.decode_next(buffer, @default_max_frame_size) do
-      {:ok, frame, rest} ->
-        {:ok, frame, rest, socket}
-
-      :more ->
-        with {:ok, data} <- transport.recv(socket, 0, _timeout = 10_000) do
-          data = maybe_concat(buffer, data)
-          recv_next_frame(transport, socket, data)
-        end
-
-      {:error, {kind, _info} = reason} when kind in [:frame_size_error, :protocol_error] ->
-        {:error, wrap_error(reason)}
     end
   end
 
@@ -1262,14 +1269,14 @@ defmodule Mint.HTTP2 do
   end
 
   defp send_settings(conn, settings) do
-    validate_settings!(settings)
+    validate_client_settings!(settings)
     frame = settings(stream_id: 0, params: settings)
     conn = send!(conn, Frame.encode(frame))
     conn = update_in(conn.client_settings_queue, &:queue.in(settings, &1))
     conn
   end
 
-  defp validate_settings!(settings) do
+  defp validate_client_settings!(settings) do
     unless Keyword.keyword?(settings) do
       raise ArgumentError, "settings must be a keyword list"
     end
@@ -1310,11 +1317,8 @@ defmodule Mint.HTTP2 do
           raise ArgumentError, ":max_header_list_size must be an integer, got: #{inspect(value)}"
         end
 
-      {:enable_connect_protocol, value} ->
-        unless is_boolean(value) do
-          raise ArgumentError,
-                ":enable_connect_protocol must be a boolean, got: #{inspect(value)}"
-        end
+      {:enable_connect_protocol, _value} ->
+        raise ArgumentError, ":enable_connect_protocol is only valid for server settings"
 
       {name, _value} ->
         raise ArgumentError, "unknown setting parameter #{inspect(name)}"
@@ -1373,10 +1377,11 @@ defmodule Mint.HTTP2 do
     {:ok, conn, Enum.reverse(responses)}
   end
 
-  defp handle_new_data(%Mint.HTTP2{} = conn, data, responses) do
+  defp handle_new_data(%__MODULE__{} = conn, data, responses) do
     case Frame.decode_next(data, conn.client_settings.max_frame_size) do
       {:ok, frame, rest} ->
-        assert_valid_frame(conn, frame)
+        log(conn, :debug, "Received frame: #{Frame.inspect(frame)}")
+        conn = validate_frame(conn, frame)
         {conn, responses} = handle_frame(conn, frame, responses)
         handle_new_data(conn, rest, responses)
 
@@ -1385,9 +1390,6 @@ defmodule Mint.HTTP2 do
         handle_consumed_all_frames(conn, responses)
 
       {:error, :payload_too_big} ->
-        # TODO: sometimes, this could be handled with RST_STREAM instead of a GOAWAY frame (for
-        # example, if the payload of a DATA frame is too big).
-        # http://httpwg.org/specs/rfc7540.html#rfc.section.4.2
         debug_data = "frame payload exceeds connection's max frame size"
         send_connection_error!(conn, :frame_size_error, debug_data)
 
@@ -1406,8 +1408,9 @@ defmodule Mint.HTTP2 do
 
   defp handle_consumed_all_frames(%{state: state} = conn, responses) do
     case state do
-      # TODO: should we do something with the debug data here, like logging it?
-      {:goaway, :no_error, _debug_data} ->
+      {:goaway, :no_error, debug_data} ->
+        message = "Server closed connection normally (with debug data: #{inspect(debug_data)})"
+        log(conn, :debug, message)
         {conn, responses}
 
       {:goaway, error_code, debug_data} ->
@@ -1419,18 +1422,42 @@ defmodule Mint.HTTP2 do
     end
   end
 
-  defp assert_valid_frame(_conn, unknown()) do
+  defp validate_frame(conn, unknown()) do
     # Unknown frames MUST be ignored:
     # https://datatracker.ietf.org/doc/html/rfc7540#section-4.1
-    :ok
+    conn
   end
 
-  defp assert_valid_frame(conn, frame) do
+  defp validate_frame(conn, frame) do
+    type = elem(frame, 0)
     stream_id = elem(frame, 1)
+
+    # The SETTINGS frame MUST be the first frame that the server sends.
+    # https://www.rfc-editor.org/rfc/rfc7540#section-3.5
+    # > The server connection preface consists of a potentially empty SETTINGS frame
+    # > that MUST be the first frame the server sends in the HTTP/2 connection.
+    conn =
+      cond do
+        conn.state == :handshaking and type == :goaway ->
+          goaway(error_code: error_code, debug_data: debug_data) = frame
+          error = wrap_error({:server_closed_connection, error_code, debug_data})
+          throw({:mint, %{conn | state: :closed}, error, []})
+
+        conn.state == :handshaking and type != :settings ->
+          debug_data = "received invalid frame #{type} during handshake"
+          send_connection_error!(conn, :protocol_error, debug_data)
+
+        conn.state == :handshaking ->
+          %__MODULE__{conn | state: :open}
+
+        true ->
+          conn
+      end
 
     assert_frame_on_right_level(conn, elem(frame, 0), stream_id)
     assert_stream_id_is_allowed(conn, stream_id)
     assert_frame_doesnt_interrupt_header_streaming(conn, frame)
+    conn
   end
 
   # http://httpwg.org/specs/rfc7540.html#HttpSequence
@@ -1527,7 +1554,7 @@ defmodule Mint.HTTP2 do
         end
 
       :error ->
-        _ = Logger.debug(fn -> "Received DATA frame on closed stream ID #{stream_id}" end)
+        log(conn, :debug, "Received DATA frame on closed stream ID #{stream_id}")
         {conn, responses}
     end
   end
@@ -1573,7 +1600,7 @@ defmodule Mint.HTTP2 do
     if stream do
       handle_decoded_headers_for_stream(conn, responses, stream, headers, end_stream?)
     else
-      _ = Logger.debug(fn -> "Received HEADERS frame on closed stream ID" end)
+      log(conn, :debug, "Received HEADERS frame on closed stream ID")
       {conn, responses}
     end
   end
@@ -1713,7 +1740,7 @@ defmodule Mint.HTTP2 do
 
   # For now we ignore all PRIORITY frames. This shouldn't cause practical trouble.
   defp handle_priority(conn, frame, responses) do
-    _ = Logger.warn(fn -> "Ignoring PRIORITY frame: #{inspect(frame)}" end)
+    log(conn, :warn, "Ignoring PRIORITY frame: #{inspect(frame)}")
     {conn, responses}
   end
 
@@ -1748,8 +1775,7 @@ defmodule Mint.HTTP2 do
     settings(flags: flags, params: params) = frame
 
     if flag_set?(flags, :settings, :ack) do
-      {{:value, params}, conn} = get_and_update_in(conn.client_settings_queue, &:queue.out/1)
-      conn = apply_client_settings(conn, params)
+      conn = apply_client_settings(conn)
       {conn, responses}
     else
       conn = apply_server_settings(conn, params)
@@ -1794,16 +1820,24 @@ defmodule Mint.HTTP2 do
     end)
   end
 
+  defp apply_client_settings(conn) do
+    case get_and_update_in(conn.client_settings_queue, &:queue.out/1) do
+      {{:value, params}, conn} ->
+        apply_client_settings(conn, params)
+
+      {:empty, conn} ->
+        log(conn, :warn, "Received SETTINGS ACK but client is not waiting for ACKs; ignoring it")
+        conn
+    end
+  end
+
   defp apply_client_settings(conn, client_settings) do
     Enum.reduce(client_settings, conn, fn
-      {:max_frame_size, value}, conn ->
-        put_in(conn.client_settings.max_frame_size, value)
+      {setting, value}, conn when setting in @valid_client_settings ->
+        update_in(conn.client_settings, &%{&1 | setting => value})
 
-      {:max_concurrent_streams, value}, conn ->
-        put_in(conn.client_settings.max_concurrent_streams, value)
-
-      {:enable_push, value}, conn ->
-        put_in(conn.client_settings.enable_push, value)
+      {setting, _value}, _conn ->
+        raise "received ack from server for invalid client setting: #{inspect(setting)}}"
     end)
   end
 
@@ -1834,7 +1868,7 @@ defmodule Mint.HTTP2 do
   # PUSH_PROMISE
 
   defp handle_push_promise(
-         %Mint.HTTP2{client_settings: %{enable_push: false}} = conn,
+         %__MODULE__{client_settings: %{enable_push: false}} = conn,
          push_promise(),
          _responses
        ) do
@@ -1931,11 +1965,11 @@ defmodule Mint.HTTP2 do
         {conn, [{:pong, ref} | responses]}
 
       {:value, _} ->
-        _ = Logger.warn("Received PING ack that doesn't match next PING request in the queue")
+        log(conn, :warn, "Received PING ack that doesn't match next PING request in the queue")
         {conn, responses}
 
       :empty ->
-        _ = Logger.warn("Received PING ack but no PING requests are pending")
+        log(conn, :warn, "Received PING ack but no PING requests are pending")
         {conn, responses}
     end
   end
@@ -2028,10 +2062,13 @@ defmodule Mint.HTTP2 do
     frame =
       goaway(stream_id: 0, last_stream_id: 2, error_code: error_code, debug_data: debug_data)
 
-    conn = send!(conn, Frame.encode(frame))
+    # Try to send the GOAWAY frame and close connection.
+    # If the frame fails to send, we still want to set the close
+    # the socket, set the connection state to :closed, and return an error.
+    _ = conn.transport.send(conn.socket, Frame.encode(frame))
     _ = conn.transport.close(conn.socket)
-    conn = put_in(conn.state, :closed)
-    throw({:mint, conn, wrap_error({error_code, debug_data})})
+
+    throw({:mint, %{conn | state: :closed}, wrap_error({error_code, debug_data})})
   end
 
   defp close_stream!(conn, stream_id, error_code) do
@@ -2091,7 +2128,7 @@ defmodule Mint.HTTP2 do
     end
   end
 
-  defp send!(%Mint.HTTP2{transport: transport, socket: socket} = conn, bytes) do
+  defp send!(%__MODULE__{transport: transport, socket: socket} = conn, bytes) do
     case transport.send(socket, bytes) do
       :ok ->
         conn

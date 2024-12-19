@@ -49,6 +49,7 @@ enum :email_template do
 	value :interfacer_staging
 	value :interfacer_testing
 	value :interfacer_debugging
+	value :interfacer_alpha
 end
 
 @desc "A natural person."

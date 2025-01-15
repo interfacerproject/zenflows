@@ -128,4 +128,5 @@ if email_expiry < 1,
 config :zenflows, Zenflows.Email,
 	email_from: fetch_env!("EMAIL_ADDR"),
 	api_key: fetch_env!("EMAIL_KEY"),
-	expiry: email_expiry
+	expiry: email_expiry,
+	email_uri: get_env_url.("EMAIL_URI", "http://localhost:3000/email/verify/")

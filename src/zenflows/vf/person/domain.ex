@@ -80,7 +80,7 @@ def request_email_verification(person, template) do
 		:interfacer_staging -> "https://interfacer-gui-staging.dyne.org/email/verify/"
 		:interfacer_testing -> "http://localhost:3000/email/verify/"
 		:interfacer_debugging -> "http://localhost:3000/email/verify/"
-		:interfacer_self -> Application.fetch_env(:zenflows, Zenflows.Email)[:email_uri]
+		:interfacer_self -> Application.fetch_env!(:zenflows, Zenflows.Email)[:email_uri]
 	end
 	Email.Domain.request_email_verification(person, url)
 end

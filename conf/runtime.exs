@@ -37,6 +37,17 @@ get_env_url = fn varname, default ->
 	end
 end
 
+# Like get_env_url but it returns just a string instead of a map of components
+get_env_url_as_string = fn varname, default ->
+  url = get_env(varname, default)
+  case URI.new(url) do
+    {:ok, %URI{scheme: scheme, host: host}} when scheme in ["http", "https"] and not is_nil(host) ->
+      url
+    _ ->
+      raise "Invalid URL for #{varname}: #{url}"
+  end
+end
+
 #
 # database
 #
@@ -129,4 +140,4 @@ config :zenflows, Zenflows.Email,
 	email_from: fetch_env!("EMAIL_ADDR"),
 	api_key: fetch_env!("EMAIL_KEY"),
 	expiry: email_expiry,
-	email_uri: get_env_url.("EMAIL_URI", "http://localhost:3000/email/verify/")
+	email_uri: get_env_url_as_string.("EMAIL_URI", "http://localhost:3000/email/verify/")

@@ -31,6 +31,9 @@ alias Zenflows.VF.{ResourceSpecification, Unit}
 	spec_project_design: ResourceSpecification,
 	spec_project_service: ResourceSpecification,
 	spec_project_product: ResourceSpecification,
+	spec_dpp: ResourceSpecification,
+	spec_machine: ResourceSpecification,
+	spec_material: ResourceSpecification,
 }
 
 @primary_key false
@@ -41,5 +44,8 @@ schema "zf_inst_vars" do
 	belongs_to :spec_project_design, ResourceSpecification
 	belongs_to :spec_project_service, ResourceSpecification
 	belongs_to :spec_project_product, ResourceSpecification
+	belongs_to :spec_dpp, ResourceSpecification
+	belongs_to :spec_machine, ResourceSpecification
+	belongs_to :spec_material, ResourceSpecification
 end
 end

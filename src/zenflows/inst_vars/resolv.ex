@@ -45,4 +45,16 @@ end
 def spec_project_product(%{spec_project_product: %{id: id}}, _, _) do
 	ResourceSpecification.Domain.one(id)
 end
+
+def spec_dpp(%{spec_dpp: %{id: id}}, _, _) do
+	ResourceSpecification.Domain.one(id)
+end
+
+def spec_machine(%{spec_machine: %{id: id}}, _, _) do
+	ResourceSpecification.Domain.one(id)
+end
+
+def spec_material(%{spec_material: %{id: id}}, _, _) do
+	ResourceSpecification.Domain.one(id)
+end
 end

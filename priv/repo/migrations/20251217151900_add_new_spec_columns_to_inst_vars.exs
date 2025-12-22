@@ -19,6 +19,7 @@
 defmodule Zenflows.DB.Repo.Migrations.Add_new_spec_columns_to_inst_vars do
 use Ecto.Migration
 
+alias Zenflows.DB.ID
 alias Zenflows.VF.ResourceSpecification
 
 def up() do
@@ -43,9 +44,14 @@ def up() do
 		spec_machine = ResourceSpecification.Domain.create!(r, %{name: "Machine", default_unit_of_resource_id: unit_one_id})
 		spec_material = ResourceSpecification.Domain.create!(r, %{name: "Material", default_unit_of_resource_id: unit_one_id})
 
+		# Convert IDs to binary format for raw SQL
+		{:ok, dpp_id_bin} = ID.dump(spec_dpp.id)
+		{:ok, machine_id_bin} = ID.dump(spec_machine.id)
+		{:ok, material_id_bin} = ID.dump(spec_material.id)
+
 		# Update the inst_vars row with the new spec IDs
 		r.query!("UPDATE zf_inst_vars SET spec_dpp_id = $1, spec_machine_id = $2, spec_material_id = $3",
-			[spec_dpp.id, spec_machine.id, spec_material.id])
+			[dpp_id_bin, machine_id_bin, material_id_bin])
 	end)
 
 	flush()

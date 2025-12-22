@@ -39,6 +39,15 @@ object :instance_specs do
 
 	field :spec_project_product, non_null(:resource_specification),
 		resolve: &Resolv.spec_project_product/3
+
+	field :spec_dpp, non_null(:resource_specification),
+		resolve: &Resolv.spec_dpp/3
+
+	field :spec_machine, non_null(:resource_specification),
+		resolve: &Resolv.spec_machine/3
+
+	field :spec_material, non_null(:resource_specification),
+		resolve: &Resolv.spec_material/3
 end
 
 object :instance_variables do

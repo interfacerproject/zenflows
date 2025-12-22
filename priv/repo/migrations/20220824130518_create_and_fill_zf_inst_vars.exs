@@ -30,6 +30,9 @@ def up() do
 		add :spec_project_design_id, references("vf_resource_specification"), null: false
 		add :spec_project_service_id, references("vf_resource_specification"), null: false
 		add :spec_project_product_id, references("vf_resource_specification"), null: false
+		add :spec_dpp_id, references("vf_resource_specification"), null: false
+		add :spec_machine_id, references("vf_resource_specification"), null: false
+		add :spec_material_id, references("vf_resource_specification"), null: false
 	end
 
 	create constraint("zf_inst_vars", :one_row, check: "one_row")
@@ -43,6 +46,9 @@ def up() do
 		spec_design = ResourceSpecification.Domain.create!(r, %{name: "Design", default_unit_of_resource_id: unit_one.id})
 		spec_service = ResourceSpecification.Domain.create!(r, %{name: "Service", default_unit_of_resource_id: unit_one.id})
 		spec_product = ResourceSpecification.Domain.create!(r, %{name: "Product", default_unit_of_resource_id: unit_one.id})
+		spec_dpp = ResourceSpecification.Domain.create!(r, %{name: "DPP", default_unit_of_resource_id: unit_one.id})
+		spec_machine = ResourceSpecification.Domain.create!(r, %{name: "Machine", default_unit_of_resource_id: unit_one.id})
+		spec_material = ResourceSpecification.Domain.create!(r, %{name: "Material", default_unit_of_resource_id: unit_one.id})
 
 		r.insert!(%InstVars{
 			unit_one_id: unit_one.id,
@@ -50,6 +56,9 @@ def up() do
 			spec_project_design_id: spec_design.id,
 			spec_project_service_id: spec_service.id,
 			spec_project_product_id: spec_product.id,
+			spec_dpp_id: spec_dpp.id,
+			spec_machine_id: spec_machine.id,
+			spec_material_id: spec_material.id,
 		})
 	end)
 end

@@ -36,6 +36,9 @@ def start_link(_) do
 			spec_project_design: %{id: vars.spec_project_design_id},
 			spec_project_service: %{id: vars.spec_project_service_id},
 			spec_project_product: %{id: vars.spec_project_product_id},
+			spec_dpp: %{id: vars.spec_dpp_id},
+			spec_machine: %{id: vars.spec_machine_id},
+			spec_material: %{id: vars.spec_material_id},
 		},
 	} end, name: __MODULE__)
 end

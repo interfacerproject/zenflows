@@ -23,13 +23,19 @@ import Ecto.Query
 
 alias Ecto.{Changeset, Queryable}
 alias Zenflows.DB.{ID, Page, Schema, Validate}
-alias Zenflows.VF.{EconomicEvent, EconomicResource}
+alias Zenflows.VF.{EconomicEvent, EconomicResource, SpatialThing}
 
 @spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
 def all(%{filter: nil}), do: {:ok, EconomicResource}
 def all(%{filter: params}) do
 	with {:ok, filters} <- all_validate(params) do
-		{:ok, Enum.reduce(filters, EconomicResource, &all_f(&2, &1))}
+		{geo_filters, other_filters} = Enum.split_with(filters, fn
+			{k, _} -> k in [:near_lat, :near_long, :near_distance_km]
+			_ -> false
+		end)
+		q = Enum.reduce(other_filters, EconomicResource, &all_f(&2, &1))
+		q = apply_geo_filter(q, Map.new(geo_filters))
+		{:ok, q}
 	end
 end
 
@@ -75,6 +81,19 @@ defp all_f(q, {:repo, v}),
 defp all_f(q, {:or_repo, v}),
 	do: or_where(q, [x], x.repo == ^v)
 
+@spec apply_geo_filter(Queryable.t(), map()) :: Queryable.t()
+defp apply_geo_filter(q, %{near_lat: lat, near_long: long, near_distance_km: dist}) do
+	from x in q,
+		join: loc in SpatialThing,
+		on: loc.id == x.current_location_id,
+		where: not is_nil(loc.lat) and not is_nil(loc.long),
+		where: fragment(
+			"(6371 * acos(LEAST(1.0, cos(radians(?)) * cos(radians(?)) * cos(radians(?) - radians(?)) + sin(radians(?)) * sin(radians(?))))) <= ?",
+			^lat, loc.lat, loc.long, ^long, ^lat, loc.lat, ^dist
+		)
+end
+defp apply_geo_filter(q, _), do: q
+
 @spec all_validate(Schema.params())
 	:: {:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do
@@ -99,6 +118,9 @@ defp all_validate(params) do
 		or_note: :string,
 		repo: :string,
 		or_repo: :string,
+		near_lat: :decimal,
+		near_long: :decimal,
+		near_distance_km: :decimal,
 	}}
 	|> Changeset.cast(params, ~w[
 		id or_id
@@ -109,6 +131,7 @@ defp all_validate(params) do
 		gt_onhand_quantity_has_numerical_value
 		or_gt_onhand_quantity_has_numerical_value
 		name or_name note or_note repo or_repo
+		near_lat near_long near_distance_km
 	]a)
 	|> Validate.class(:id)
 	|> Validate.class(:or_id)
@@ -146,8 +169,41 @@ defp all_validate(params) do
 	|> Validate.escape_like(:or_name)
 	|> Validate.escape_like(:note)
 	|> Validate.escape_like(:or_note)
+	|> validate_geo_params()
 	|> Changeset.apply_action(nil)
 end
+
+@spec validate_geo_params(Changeset.t()) :: Changeset.t()
+defp validate_geo_params(cset) do
+	near_lat = Changeset.get_change(cset, :near_lat)
+	near_long = Changeset.get_change(cset, :near_long)
+	near_dist = Changeset.get_change(cset, :near_distance_km)
+
+	geo_fields = [near_lat, near_long, near_dist]
+	provided = Enum.count(geo_fields, & &1 != nil)
+
+	cond do
+		provided == 0 ->
+			cset
+		provided != 3 ->
+			cset
+			|> maybe_geo_error(:near_lat, near_lat, "near_lat, near_long, and near_distance_km must all be provided together")
+			|> maybe_geo_error(:near_long, near_long, "near_lat, near_long, and near_distance_km must all be provided together")
+			|> maybe_geo_error(:near_distance_km, near_dist, "near_lat, near_long, and near_distance_km must all be provided together")
+		true ->
+			cset
+			|> Changeset.validate_number(:near_lat,
+				greater_than_or_equal_to: -90, less_than_or_equal_to: 90)
+			|> Changeset.validate_number(:near_long,
+				greater_than_or_equal_to: -180, less_than_or_equal_to: 180)
+			|> Changeset.validate_number(:near_distance_km,
+				greater_than: 0)
+	end
+end
+
+defp maybe_geo_error(cset, field, nil, msg),
+	do: Changeset.add_error(cset, field, msg)
+defp maybe_geo_error(cset, _field, _val, _msg), do: cset
 
 @spec previous(Schema.id()) :: Queryable.t()
 def previous(id) do

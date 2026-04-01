@@ -97,13 +97,13 @@
 !/test/**/*.test.exs
 
 # versioned migrations
-!/priv/
-/priv/*
-!/priv/repo/
-/priv/repo/*
-!/priv/repo/migrations
-/priv/repo/migrations/*
-!/priv/repo/migrations/*.exs
+# !/priv/
+# /priv/*
+# !/priv/repo/
+# /priv/repo/*
+# !/priv/repo/migrations
+# /priv/repo/migrations/*
+# !/priv/repo/migrations/*.exs
 
 # deps
 !/.deps/

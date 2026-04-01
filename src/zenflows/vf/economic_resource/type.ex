@@ -275,6 +275,13 @@ input_object :economic_resource_filter_params do
 	field :or_note, :string
 	field :repo, :string
 	field :or_repo, :string
+
+	@desc "Latitude of the center point for geo search."
+	field :near_lat, :decimal
+	@desc "Longitude of the center point for geo search."
+	field :near_long, :decimal
+	@desc "Search radius in kilometers for geo search."
+	field :near_distance_km, :decimal
 end
 
 input_object :economic_resource_classifications_filter_params do

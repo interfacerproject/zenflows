@@ -83,12 +83,16 @@ defp all_f(q, {:or_repo, v}),
 
 @spec apply_geo_filter(Queryable.t(), map()) :: Queryable.t()
 defp apply_geo_filter(q, %{near_lat: lat, near_long: long, near_distance_km: dist}) do
+	lat = Decimal.to_float(lat)
+	long = Decimal.to_float(long)
+	dist = Decimal.to_float(dist)
+
 	from x in q,
 		join: loc in SpatialThing,
 		on: loc.id == x.current_location_id,
 		where: not is_nil(loc.lat) and not is_nil(loc.long),
 		where: fragment(
-			"(6371 * acos(LEAST(1.0, cos(radians(?)) * cos(radians(?)) * cos(radians(?) - radians(?)) + sin(radians(?)) * sin(radians(?))))) <= ?",
+			"(6371 * acos(LEAST(1.0, cos(radians(?)) * cos(radians(?::float8)) * cos(radians(?::float8) - radians(?)) + sin(radians(?)) * sin(radians(?::float8))))) <= ?",
 			^lat, loc.lat, loc.long, ^long, ^lat, loc.lat, ^dist
 		)
 end

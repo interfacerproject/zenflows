@@ -24,7 +24,7 @@ import Ecto.Query
 alias Zenflows.DB.{ID, Repo}
 
 @enforce_keys ~w[dir cur num filter]a
-defstruct [:cur, :num, :filter, dir: :forw]
+defstruct [:cur, :num, :filter, :order_by, dir: :forw]
 
 @typedoc """
 Represents a generic struct that has all required information to
@@ -42,6 +42,7 @@ The fields are:
 	cur: nil | ID.t(),
 	num: non_neg_integer(),
 	filter: nil | map(),
+	order_by: nil | map(),
 }
 
 @doc """

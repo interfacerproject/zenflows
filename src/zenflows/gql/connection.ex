@@ -107,6 +107,7 @@ def parse(params) do
 			cur: after_ || before,
 			num: if((n = first || last), do: normalize(n), else: def_page_size()),
 			filter: data[:filter],
+			order_by: data[:order_by],
 		}}
 	end
 end
@@ -114,8 +115,8 @@ end
 @doc false
 @spec changeset(Schema.params()) :: Changeset.t()
 def changeset(params) do
-	{%{}, %{after: ID, first: :integer, before: ID, last: :integer, filter: :map}}
-	|> Changeset.cast(params, [:after, :first, :before, :last, :filter])
+	{%{}, %{after: ID, first: :integer, before: ID, last: :integer, filter: :map, order_by: :map}}
+	|> Changeset.cast(params, [:after, :first, :before, :last, :filter, :order_by])
 	|> Changeset.validate_number(:first, greater_than_or_equal_to: 0)
 	|> Changeset.validate_number(:last, greater_than_or_equal_to: 0)
 	|> Validate.exist_nand([:first, :last])

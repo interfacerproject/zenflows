@@ -64,6 +64,12 @@ def all!(page \\ Page.new()) do
 	value
 end
 
+@spec count_distinct_primary_accountable(nil | map())
+	:: {:ok, non_neg_integer()} | {:error, Ecto.Changeset.t()}
+def count_distinct_primary_accountable(filter_params) do
+	Query.count_distinct_primary_accountable(filter_params)
+end
+
 @spec previous(EconomicResource.t() | Schema.id()) :: [EconomicEvent.t()]
 def previous(_, _ \\ Page.new())
 def previous(%EconomicResource{id: id}, page), do: previous(id, page)

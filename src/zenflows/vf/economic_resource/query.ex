@@ -106,9 +106,9 @@ defp apply_geo_filter(q, _), do: q
 @spec apply_order_by(Queryable.t(), map() | nil) :: Queryable.t()
 defp apply_order_by(q, nil), do: q
 defp apply_order_by(q, %{field: :created_at, direction: :asc}),
-	do: order_by(q, [x], asc: x.inserted_at)
+	do: order_by(q, [x], asc: x.id)
 defp apply_order_by(q, %{field: :created_at, direction: :desc}),
-	do: order_by(q, [x], desc: x.inserted_at)
+	do: order_by(q, [x], desc: x.id)
 defp apply_order_by(q, %{field: :name, direction: :asc}),
 	do: order_by(q, [x], asc: x.name)
 defp apply_order_by(q, %{field: :name, direction: :desc}),

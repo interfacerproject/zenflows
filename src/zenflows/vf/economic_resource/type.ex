@@ -249,8 +249,33 @@ object :economic_resource_edge do
 	field :node, non_null(:economic_resource)
 end
 
+enum :economic_resource_sort_field do
+	value :created_at
+	value :name
+end
+
+enum :sort_direction do
+	value :asc
+	value :desc
+end
+
+input_object :economic_resource_sort_input do
+	field :field, non_null(:economic_resource_sort_field)
+	field :direction, non_null(:sort_direction)
+end
+
+object :economic_resource_page_info do
+	field :start_cursor, :id
+	field :end_cursor, :id
+	field :has_previous_page, non_null(:boolean)
+	field :has_next_page, non_null(:boolean)
+	field :total_count, :integer
+	field :page_limit, :integer
+	field :distinct_primary_accountable_count, :integer
+end
+
 object :economic_resource_connection do
-	field :page_info, non_null(:page_info)
+	field :page_info, non_null(:economic_resource_page_info)
 	field :edges, non_null(list_of(non_null(:economic_resource_edge)))
 end
 
@@ -304,6 +329,7 @@ object :query_economic_resource do
 		arg :last, :integer
 		arg :before, :id
 		arg :filter, :economic_resource_filter_params
+		arg :order_by, :economic_resource_sort_input
 		resolve &Resolv.economic_resources/2
 	end
 

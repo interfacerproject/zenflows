@@ -30,8 +30,11 @@ end
 
 def economic_resources(params, _) do
 	with {:ok, page} <- Connection.parse(params),
-			{:ok, schemas} <- Domain.all(page) do
-		{:ok, Connection.from_list(schemas, page)}
+			{:ok, schemas} <- Domain.all(page),
+			{:ok, count} <- Domain.count_distinct_primary_accountable(page.filter) do
+		conn = Connection.from_list(schemas, page)
+		page_info = Map.put(conn.page_info, :distinct_primary_accountable_count, count)
+		{:ok, %{conn | page_info: page_info}}
 	end
 end
 

@@ -22,12 +22,16 @@ defmodule Zenflows.VF.EconomicResource.Query do
 import Ecto.Query
 
 alias Ecto.{Changeset, Queryable}
-alias Zenflows.DB.{ID, Page, Schema, Validate}
+alias Zenflows.DB.{ID, Page, Repo, Schema, Validate}
 alias Zenflows.VF.{EconomicEvent, EconomicResource, SpatialThing}
 
 @spec all(Page.t()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def all(%{filter: nil, order_by: nil}), do: {:ok, EconomicResource}
+def all(%{filter: nil, order_by: order_by}) do
+	{:ok, apply_order_by(EconomicResource, order_by)}
+end
 def all(%{filter: nil}), do: {:ok, EconomicResource}
-def all(%{filter: params}) do
+def all(%{filter: params} = page) do
 	with {:ok, filters} <- all_validate(params) do
 		{geo_filters, other_filters} = Enum.split_with(filters, fn
 			{k, _} -> k in [:near_lat, :near_long, :near_distance_km]
@@ -35,6 +39,7 @@ def all(%{filter: params}) do
 		end)
 		q = Enum.reduce(other_filters, EconomicResource, &all_f(&2, &1))
 		q = apply_geo_filter(q, Map.new(geo_filters))
+		q = apply_order_by(q, Map.get(page, :order_by))
 		{:ok, q}
 	end
 end
@@ -97,6 +102,44 @@ defp apply_geo_filter(q, %{near_lat: lat, near_long: long, near_distance_km: dis
 		)
 end
 defp apply_geo_filter(q, _), do: q
+
+@spec apply_order_by(Queryable.t(), map() | nil) :: Queryable.t()
+defp apply_order_by(q, nil), do: q
+defp apply_order_by(q, %{field: :created_at, direction: :asc}),
+	do: order_by(q, [x], asc: x.inserted_at)
+defp apply_order_by(q, %{field: :created_at, direction: :desc}),
+	do: order_by(q, [x], desc: x.inserted_at)
+defp apply_order_by(q, %{field: :name, direction: :asc}),
+	do: order_by(q, [x], asc: x.name)
+defp apply_order_by(q, %{field: :name, direction: :desc}),
+	do: order_by(q, [x], desc: x.name)
+
+@doc "Builds a filtered query from filter params (without pagination)."
+@spec filtered_query(nil | map()) :: {:ok, Queryable.t()} | {:error, Changeset.t()}
+def filtered_query(nil), do: {:ok, EconomicResource}
+def filtered_query(params) do
+	with {:ok, filters} <- all_validate(params) do
+		{geo_filters, other_filters} = Enum.split_with(filters, fn
+			{k, _} -> k in [:near_lat, :near_long, :near_distance_km]
+			_ -> false
+		end)
+		q = Enum.reduce(other_filters, EconomicResource, &all_f(&2, &1))
+		q = apply_geo_filter(q, Map.new(geo_filters))
+		{:ok, q}
+	end
+end
+
+@doc "Counts distinct primary_accountable_id values for the given filter params."
+@spec count_distinct_primary_accountable(nil | map())
+	:: {:ok, non_neg_integer()} | {:error, Changeset.t()}
+def count_distinct_primary_accountable(filter_params) do
+	with {:ok, q} <- filtered_query(filter_params) do
+		count =
+			from(x in q, select: count(x.primary_accountable_id, :distinct))
+			|> Repo.one()
+		{:ok, count}
+	end
+end
 
 @spec all_validate(Schema.params())
 	:: {:ok, Changeset.data()} | {:error, Changeset.t()}

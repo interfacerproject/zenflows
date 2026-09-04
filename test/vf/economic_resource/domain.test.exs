@@ -111,6 +111,33 @@ describe "classifications/1" do
 	end
 end
 
+describe "count/1" do
+	test "counts all matching resources, unbounded by pagination" do
+		alias Ecto.Changeset
+		alias Zenflows.DB.Repo
+
+		%{id: agent_id} = Factory.insert!(:agent)
+
+		resources =
+			Enum.map(1..5, fn _ ->
+				Factory.insert!(:economic_resource)
+				|> Changeset.change(primary_accountable_id: agent_id)
+				|> Repo.update!()
+			end)
+
+		# a couple of unrelated resources, to prove they're excluded by the filter
+		Factory.insert!(:economic_resource)
+		Factory.insert!(:economic_resource)
+
+		assert {:ok, 5} = Domain.count(%{primary_accountable: [agent_id]})
+		# all 5 share the same primary_accountable, so there's only 1 distinct value
+		assert {:ok, 1} = Domain.count_distinct_primary_accountable(%{primary_accountable: [agent_id]})
+
+		other_ids = Enum.map(resources, & &1.id) -- [hd(resources).id]
+		assert {:ok, 4} = Domain.count(%{id: other_ids})
+	end
+end
+
 describe "update/2" do
 	@tag skip: "TODO: fix economic resource factory"
 	test "doesn't update a EconomicResource", %{inserted: old} do

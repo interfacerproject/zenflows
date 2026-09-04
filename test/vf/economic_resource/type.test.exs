@@ -100,6 +100,38 @@ describe "Query" do
 		assert data["license"] == new.license
 		assert data["metadata"] == new.metadata
 	end
+
+	test "economicResources.pageInfo.totalCount reflects the whole filtered set, not just the page" do
+		alias Ecto.Changeset
+		alias Zenflows.DB.Repo
+
+		%{id: agent_id} = Factory.insert!(:agent)
+
+		Enum.each(1..5, fn _ ->
+			Factory.insert!(:economic_resource)
+			|> Changeset.change(primary_accountable_id: agent_id)
+			|> Repo.update!()
+		end)
+
+		assert %{data: %{"economicResources" => data}} =
+			run!("""
+				query ($filter: EconomicResourceFilterParams! $first: Int!) {
+					economicResources(filter: $filter first: $first) {
+						pageInfo { totalCount pageLimit hasNextPage distinctPrimaryAccountableCount }
+						edges { node { id } }
+					}
+				}
+			""", vars: %{"filter" => %{"primaryAccountable" => [agent_id]}, "first" => 2})
+
+		# only 2 edges come back for this page...
+		assert length(data["edges"]) == 2
+		assert data["pageInfo"]["pageLimit"] == 2
+		assert data["pageInfo"]["hasNextPage"] == true
+		# ...but totalCount and distinctPrimaryAccountableCount describe the
+		# full filtered set of 5, not the page of 2.
+		assert data["pageInfo"]["totalCount"] == 5
+		assert data["pageInfo"]["distinctPrimaryAccountableCount"] == 1
+	end
 end
 
 describe "Mutation" do

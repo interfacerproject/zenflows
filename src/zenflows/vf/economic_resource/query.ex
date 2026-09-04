@@ -141,6 +141,23 @@ def count_distinct_primary_accountable(filter_params) do
 	end
 end
 
+@doc """
+Counts all economic resources matching the given filter params,
+ignoring pagination.  This is the true total, as opposed to
+`Zenflows.GQL.Connection`'s `total_count`, which only reflects
+the number of records fetched for the current page.
+"""
+@spec count(nil | map())
+	:: {:ok, non_neg_integer()} | {:error, Changeset.t()}
+def count(filter_params) do
+	with {:ok, q} <- filtered_query(filter_params) do
+		count =
+			from(x in q, select: count(x.id))
+			|> Repo.one()
+		{:ok, count}
+	end
+end
+
 @spec all_validate(Schema.params())
 	:: {:ok, Changeset.data()} | {:error, Changeset.t()}
 defp all_validate(params) do

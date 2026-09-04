@@ -31,9 +31,16 @@ end
 def economic_resources(params, _) do
 	with {:ok, page} <- Connection.parse(params),
 			{:ok, schemas} <- Domain.all(page),
-			{:ok, count} <- Domain.count_distinct_primary_accountable(page.filter) do
+			{:ok, distinct_count} <- Domain.count_distinct_primary_accountable(page.filter),
+			{:ok, total_count} <- Domain.count(page.filter) do
 		conn = Connection.from_list(schemas, page)
-		page_info = Map.put(conn.page_info, :distinct_primary_accountable_count, count)
+		page_info =
+			conn.page_info
+			|> Map.put(:distinct_primary_accountable_count, distinct_count)
+			# `Connection.from_list/2` only counts the records fetched for
+			# this page (bounded by `first`/`last`), not the true total
+			# matching the filter; override it with an unbounded count.
+			|> Map.put(:total_count, total_count)
 		{:ok, %{conn | page_info: page_info}}
 	end
 end

@@ -29,9 +29,54 @@ alias Zenflows.VF.Proposal
 def all(%{filter: nil}), do: {:ok, Proposal}
 def all(%{filter: params}) do
 	with {:ok, filters} <- all_validate(params) do
-		{:ok, Enum.reduce(filters, Proposal, &all_f(&2, &1)) |> distinct([x], x.id)}
+		{or_ria_filters, other_filters} =
+			Enum.split_with(filters, fn {k, _} -> or_ria_key?(k) end)
+
+		q =
+			other_filters
+			|> Enum.reduce(Proposal, &all_f(&2, &1))
+			|> apply_or_ria_filters(or_ria_filters)
+			|> distinct([x], x.id)
+		{:ok, q}
 	end
 end
+
+# The `or_primary_intents_resource_inventoried_as_*` filters form one OR
+# group that is ANDed with the rest of the query.  They must NOT be added
+# with Ecto's `or_where/3`, which appends a top-level `OR` at lower
+# precedence than the `AND`-joined `where` clauses -- `(a AND b) OR c` --
+# letting a single `or_..._name` match every proposal regardless of the
+# other filters.  Instead they are folded into one `dynamic/2` and applied
+# with a single `where/3` against the shared join.
+@spec or_ria_key?(atom()) :: boolean()
+defp or_ria_key?(k),
+	do: match?("or_primary_intents_resource_inventoried_as_" <> _, Atom.to_string(k))
+
+@spec apply_or_ria_filters(Queryable.t(), keyword()) :: Queryable.t()
+defp apply_or_ria_filters(q, []), do: q
+defp apply_or_ria_filters(q, [first | rest]) do
+	combined =
+		Enum.reduce(rest, or_ria_f(first), fn f, acc ->
+			dynamic(^acc or ^or_ria_f(f))
+		end)
+
+	q
+	|> join(:primary_intents_resource_inventoried_as)
+	|> where(^combined)
+end
+
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_conforms_to, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], r.conforms_to_id in ^v)
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_primary_accountable, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], r.primary_accountable_id in ^v)
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_classified_as, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_name, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_note, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], ilike(r.note, ^"%#{v}%"))
+defp or_ria_f({:or_primary_intents_resource_inventoried_as_id, v}),
+	do: dynamic([primary_intents_resource_inventoried_as: r], r.id in ^v)
 
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
 defp all_f(q, {:primary_intents_resource_inventoried_as_conforms_to, v}) do
@@ -39,60 +84,30 @@ defp all_f(q, {:primary_intents_resource_inventoried_as_conforms_to, v}) do
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], r.conforms_to_id in ^v)
 end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_conforms_to, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], r.conforms_to_id in ^v)
-end
 defp all_f(q, {:primary_intents_resource_inventoried_as_primary_accountable, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], r.primary_accountable_id in ^v)
-end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_primary_accountable, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], r.primary_accountable_id in ^v)
 end
 defp all_f(q, {:primary_intents_resource_inventoried_as_classified_as, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
 end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_classified_as, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], fragment("? @> ?", r.classified_as, ^v))
-end
 defp all_f(q, {:primary_intents_resource_inventoried_as_name, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
-end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_name, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.name, ^"%#{v}%"))
 end
 defp all_f(q, {:primary_intents_resource_inventoried_as_note, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], ilike(r.note, ^"%#{v}%"))
 end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_note, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], ilike(r.note, ^"%#{v}%"))
-end
 defp all_f(q, {:primary_intents_resource_inventoried_as_id, v}) do
 	q
 	|> join(:primary_intents_resource_inventoried_as)
 	|> where([primary_intents_resource_inventoried_as: r], r.id in ^v)
-end
-defp all_f(q, {:or_primary_intents_resource_inventoried_as_id, v}) do
-	q
-	|> join(:primary_intents_resource_inventoried_as)
-	|> or_where([primary_intents_resource_inventoried_as: r], r.id in ^v)
 end
 defp all_f(q, {:status, v}) do
 	cond = case v do

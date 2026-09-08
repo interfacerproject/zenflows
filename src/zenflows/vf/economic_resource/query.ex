@@ -33,58 +33,94 @@ end
 def all(%{filter: nil}), do: {:ok, EconomicResource}
 def all(%{filter: params} = page) do
 	with {:ok, filters} <- all_validate(params) do
-		{geo_filters, other_filters} = Enum.split_with(filters, fn
-			{k, _} -> k in [:near_lat, :near_long, :near_distance_km]
-			_ -> false
-		end)
-		q = Enum.reduce(other_filters, EconomicResource, &all_f(&2, &1))
-		q = apply_geo_filter(q, Map.new(geo_filters))
-		q = apply_order_by(q, Map.get(page, :order_by))
+		q =
+			EconomicResource
+			|> apply_filters(filters)
+			|> apply_order_by(Map.get(page, :order_by))
 		{:ok, q}
 	end
+end
+
+# Applies a validated filter list to `base`.
+#
+# The `or_*` filters form a single OR group that is ANDed with everything
+# else -- e.g. `conforms_to: [...] AND (name ILIKE ... OR note ILIKE ...)`.
+# They must NOT be added with Ecto's `or_where/3`: that appends a
+# top-level `OR` with lower precedence than the `AND`-joined `where`
+# clauses, so `(a AND b) OR c` -- letting a single `or_name` return every
+# row in the table regardless of the other filters.  Instead the `or_*`
+# filters are folded into one `dynamic/2` expression and applied with a
+# single `where/3`.
+@spec apply_filters(Queryable.t(), keyword()) :: Queryable.t()
+defp apply_filters(base, filters) do
+	{geo_filters, rest} = Enum.split_with(filters, fn {k, _} ->
+		k in [:near_lat, :near_long, :near_distance_km]
+	end)
+	{or_filters, and_filters} = Enum.split_with(rest, fn {k, _} -> or_key?(k) end)
+
+	and_filters
+	|> Enum.reduce(base, &all_f(&2, &1))
+	|> apply_or_filters(or_filters)
+	|> apply_geo_filter(Map.new(geo_filters))
+end
+
+@spec or_key?(atom()) :: boolean()
+defp or_key?(k), do: match?("or_" <> _, Atom.to_string(k))
+
+@spec apply_or_filters(Queryable.t(), keyword()) :: Queryable.t()
+defp apply_or_filters(q, []), do: q
+defp apply_or_filters(q, [first | rest]) do
+	combined =
+		Enum.reduce(rest, or_f(first), fn f, acc ->
+			dynamic(^acc or ^or_f(f))
+		end)
+	where(q, ^combined)
 end
 
 @spec all_f(Queryable.t(), {atom(), term()}) :: Queryable.t()
 defp all_f(q, {:id, v}),
 	do: where(q, [x], x.id in ^v)
-defp all_f(q, {:or_id, v}),
-	do: or_where(q, [x], x.id in ^v)
 defp all_f(q, {:classified_as, v}),
 	do: where(q, [x], fragment("? @> ?", x.classified_as, ^v))
-defp all_f(q, {:or_classified_as, v}),
-	do: or_where(q, [x], fragment("? @> ?", x.classified_as, ^v))
 defp all_f(q, {:primary_accountable, v}),
 	do: where(q, [x], x.primary_accountable_id in ^v)
-defp all_f(q, {:or_primary_accountable, v}),
-	do: or_where(q, [x], x.primary_accountable_id in ^v)
 defp all_f(q, {:not_primary_accountable, v}),
 	do: where(q, [x], x.primary_accountable_id not in ^v)
 defp all_f(q, {:custodian, v}),
 	do: where(q, [x], x.custodian_id in ^v)
-defp all_f(q, {:or_custodian, v}),
-	do: or_where(q, [x], x.custodian_id in ^v)
 defp all_f(q, {:not_custodian, v}),
 	do: where(q, [x], x.custodian_id not in ^v)
 defp all_f(q, {:conforms_to, v}),
 	do: where(q, [x], x.conforms_to_id in ^v)
-defp all_f(q, {:or_conforms_to, v}),
-	do: or_where(q, [x], x.conforms_to_id in ^v)
 defp all_f(q, {:gt_onhand_quantity_has_numerical_value, v}),
 	do: where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
-defp all_f(q, {:or_gt_onhand_quantity_has_numerical_value, v}),
-	do: or_where(q, [x], x.onhand_quantity_has_numerical_value > ^v)
 defp all_f(q, {:name, v}),
 	do: where(q, [x], ilike(x.name, ^"%#{v}%"))
-defp all_f(q, {:or_name, v}),
-	do: or_where(q, [x], ilike(x.name, ^"%#{v}%"))
 defp all_f(q, {:note, v}),
 	do: where(q, [x], ilike(x.note, ^"%#{v}%"))
-defp all_f(q, {:or_note, v}),
-	do: or_where(q, [x], ilike(x.note, ^"%#{v}%"))
 defp all_f(q, {:repo, v}),
 	do: where(q, [x], x.repo == ^v)
-defp all_f(q, {:or_repo, v}),
-	do: or_where(q, [x], x.repo == ^v)
+
+# One `or_*` filter as a `dynamic/2` boolean expression; combined by
+# `apply_or_filters/2` into a single ORed `where`.
+defp or_f({:or_id, v}),
+	do: dynamic([x], x.id in ^v)
+defp or_f({:or_classified_as, v}),
+	do: dynamic([x], fragment("? @> ?", x.classified_as, ^v))
+defp or_f({:or_primary_accountable, v}),
+	do: dynamic([x], x.primary_accountable_id in ^v)
+defp or_f({:or_custodian, v}),
+	do: dynamic([x], x.custodian_id in ^v)
+defp or_f({:or_conforms_to, v}),
+	do: dynamic([x], x.conforms_to_id in ^v)
+defp or_f({:or_gt_onhand_quantity_has_numerical_value, v}),
+	do: dynamic([x], x.onhand_quantity_has_numerical_value > ^v)
+defp or_f({:or_name, v}),
+	do: dynamic([x], ilike(x.name, ^"%#{v}%"))
+defp or_f({:or_note, v}),
+	do: dynamic([x], ilike(x.note, ^"%#{v}%"))
+defp or_f({:or_repo, v}),
+	do: dynamic([x], x.repo == ^v)
 
 @spec apply_geo_filter(Queryable.t(), map()) :: Queryable.t()
 defp apply_geo_filter(q, %{near_lat: lat, near_long: long, near_distance_km: dist}) do
@@ -119,13 +155,7 @@ defp apply_order_by(q, %{field: :name, direction: :desc}),
 def filtered_query(nil), do: {:ok, EconomicResource}
 def filtered_query(params) do
 	with {:ok, filters} <- all_validate(params) do
-		{geo_filters, other_filters} = Enum.split_with(filters, fn
-			{k, _} -> k in [:near_lat, :near_long, :near_distance_km]
-			_ -> false
-		end)
-		q = Enum.reduce(other_filters, EconomicResource, &all_f(&2, &1))
-		q = apply_geo_filter(q, Map.new(geo_filters))
-		{:ok, q}
+		{:ok, apply_filters(EconomicResource, filters)}
 	end
 end
 

@@ -74,17 +74,25 @@ test "update waiting on a concurrent revoke of the updater is denied", c do
 	end)
 	assert_receive :revoked_not_committed, 5_000
 
-	updater = Task.async(fn ->
-		Sandbox.unboxed_run(Repo, fn ->
-			Organization.Domain.update(ctx(c.alice), c.org.id, %{note: "late"})
+	try do
+		updater = Task.async(fn ->
+			Sandbox.unboxed_run(Repo, fn ->
+				Organization.Domain.update(ctx(c.alice), c.org.id, %{note: "late"})
+			end)
 		end)
-	end)
 
-	# The updater must be blocked on the revoked relationship row.
-	assert Task.yield(updater, 300) == nil
+		# The updater must be blocked on the revoked relationship row.
+		assert Task.yield(updater, 300) == nil
 
-	send(revoker.pid, :commit)
-	assert {:ok, _} = Task.await(revoker)
-	assert {:error, :forbidden} = Task.await(updater)
+		send(revoker.pid, :commit)
+		assert {:ok, _} = Task.await(revoker)
+		assert {:error, :forbidden} = Task.await(updater)
+	after
+		# If an assertion above failed, the revoker would otherwise stay
+		# parked in its `receive`, holding its row locks forever and
+		# hanging the setup's `on_exit` cleanup. Always unblock it; this
+		# send is harmless if `:commit` was already delivered above.
+		send(revoker.pid, :commit)
+	end
 end
 end

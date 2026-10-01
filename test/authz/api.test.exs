@@ -19,7 +19,7 @@
 defmodule ZenflowsTest.Authz.API do
 use ZenflowsTest.Help.AbsinCase, async: true
 
-alias Zenflows.VF.{EconomicEvent, EconomicResource, Organization}
+alias Zenflows.VF.{EconomicEvent, EconomicResource, Organization, Person}
 
 @forbidden %{message: "forbidden", extensions: %{code: "FORBIDDEN"}}
 
@@ -91,6 +91,8 @@ end
 
 test "Bob cannot update Alice's organization or Alice", %{alice: alice, bob: bob} do
 	{:ok, org} = Organization.Domain.create(Factory.ctx(alice), %{name: Factory.str("org")})
+	org_name = org.name
+	alice_name = alice.name
 	assert %{errors: [err1]} =
 		run_as!(bob, """
 			mutation ($id: ID!) { updateOrganization(organization: {id: $id, name: "x"}) { agent { id } } }
@@ -101,6 +103,8 @@ test "Bob cannot update Alice's organization or Alice", %{alice: alice, bob: bob
 		""", vars: %{"id" => alice.id})
 	assert Map.take(err1, [:message, :extensions]) == @forbidden
 	assert Map.take(err2, [:message, :extensions]) == @forbidden
+	assert Organization.Domain.one!(org.id).name == org_name
+	assert Person.Domain.one!(alice.id).name == alice_name
 end
 
 test "createOrganization makes the signer admin (visible over GraphQL)", %{bob: bob} do

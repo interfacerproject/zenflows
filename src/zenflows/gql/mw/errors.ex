@@ -36,6 +36,12 @@ defp handle(%Chgset{} = cset) do
 	|> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
 end
 
+defp handle(:forbidden),
+	do: [%{message: "forbidden", extensions: %{code: "FORBIDDEN"}}]
+
+defp handle(:unauthenticated),
+	do: [%{message: "unauthenticated", extensions: %{code: "UNAUTHENTICATED"}}]
+
 defp handle(error) do
 	[error]
 end

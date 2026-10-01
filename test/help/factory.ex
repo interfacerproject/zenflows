@@ -21,6 +21,7 @@ defmodule ZenflowsTest.Help.Factory do
 Defines shortcuts for DB testing.
 """
 
+alias Zenflows.Authz.{ExecutionContext, Roles}
 alias Zenflows.DB.Repo
 alias Zenflows.VF
 
@@ -573,5 +574,24 @@ end
 def insert_economic_resource!() do
 	%{resource_inventoried_as_id: id} = insert_economic_event!()
 	Zenflows.VF.EconomicResource.Domain.one!(id)
+end
+
+@doc "Anonymous context; allowed everything in tests (allow_unchecked)."
+@spec ctx() :: ExecutionContext.t()
+def ctx(), do: ExecutionContext.from_resolution(%{context: %{}})
+
+@doc "Context acting as `per`; fully enforced."
+@spec ctx(VF.Person.t()) :: ExecutionContext.t()
+def ctx(%VF.Person{} = per), do: ExecutionContext.from_resolution(%{context: %{req_user: per}})
+
+@doc "Make `per` an active org.admin of `org` without logging (fixtures only)."
+@spec insert_admin!(VF.Person.t(), VF.Organization.t()) :: VF.AgentRelationship.t()
+def insert_admin!(per, org) do
+	Zenflows.DB.Repo.insert!(%VF.AgentRelationship{
+		subject_id: per.id,
+		object_id: org.id,
+		in_scope_of_id: org.id,
+		relationship_id: Roles.id!(Zenflows.DB.Repo, "org.admin"),
+	})
 end
 end

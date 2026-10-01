@@ -145,9 +145,17 @@ end
 defp resolve(fun, changes) when is_function(fun, 1), do: fun.(changes)
 defp resolve(grant, _changes), do: grant
 
-# Serializes grants/revokes of one organization (last-admin and
-# duplicate checks).
-defp lock_org(repo, org_id) do
+@doc """
+Serializes grants/revokes/system-relationship updates of one organization
+(last-admin and duplicate checks).  Take this lock before locking any
+relationship row of that organization, to keep lock ordering consistent
+across concurrent transactions and avoid deadlocks (see
+`Zenflows.VF.AgentRelationship.Domain.multi_load/3`).  Re-entrant within a
+transaction: calling it more than once for the same org in the same
+transaction is harmless.
+"""
+@spec lock_org(Ecto.Repo.t(), String.t()) :: :ok
+def lock_org(repo, org_id) do
 	repo.query!("SELECT pg_advisory_xact_lock(hashtext($1))", ["zf_org:" <> org_id])
 	:ok
 end

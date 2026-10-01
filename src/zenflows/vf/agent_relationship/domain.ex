@@ -190,6 +190,31 @@ end
 
 defp multi_load(m, key, id) do
 	m
+	# Peek at the row WITHOUT locking it, just to tell whether it is a
+	# system-role relationship.  If it is, take the organization's
+	# advisory lock (Membership.lock_org/2) BEFORE locking the row itself,
+	# so every transaction that may touch this org's system relationships
+	# acquires locks in the same order: advisory lock first, row lock
+	# second.  Taking them in the opposite order (row first, then the
+	# advisory lock, as Membership.multi_grant/multi_revoke's own
+	# authorize step used to do implicitly) lets two concurrent
+	# revokes/updates of two different rows in the same org each hold one
+	# row lock while waiting on the other's, deadlocking (Postgres
+	# 40P01). Non-system rows never contend on the org lock, so they skip
+	# straight to the row lock as before.
+	|> Multi.run("#{key}.peek", fn repo, _ ->
+		peek = repo.one(Ecto.Query.from(r in AgentRelationship,
+			where: r.id == ^id,
+			select: %{object_id: r.object_id, relationship_id: r.relationship_id}))
+		case peek do
+			nil ->
+				{:ok, nil}
+			%{object_id: object_id, relationship_id: relationship_id} ->
+				if Roles.key_of(repo, relationship_id) != nil,
+					do: Membership.lock_org(repo, object_id)
+				{:ok, nil}
+		end
+	end)
 	|> Multi.run("#{key}.one", fn repo, _ ->
 		{:ok, repo.one(Ecto.Query.from(r in AgentRelationship, where: r.id == ^id, lock: "FOR UPDATE"))}
 	end)

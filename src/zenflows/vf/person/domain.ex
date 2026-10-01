@@ -25,7 +25,7 @@ alias Ecto.{Changeset, Multi}
 alias Zenflows.Authz
 alias Zenflows.Authz.{ExecutionContext, Facts, Log, Membership}
 alias Zenflows.Email
-alias Zenflows.DB.{ID, Page, Repo, Schema}
+alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.File
 alias Zenflows.VF.{Person, Person.Query}
 
@@ -90,7 +90,7 @@ end
 @spec verify_email_verification(Person.t(), String.t()) :: :ok | {:error, String.t() | Changeset.t()}
 def verify_email_verification(person, token) do
 	with :ok <- Email.Domain.verify_email_verification(person, token),
-			ctx = %ExecutionContext{principal: person, via: :gql, request_id: ID.gen()},
+			ctx = ExecutionContext.from_resolution(%{context: %{req_user: person}}),
 			{:ok, _} <- __MODULE__.update(ctx, person.id, %{is_verified: true}) do
 		:ok
 	else

@@ -59,4 +59,10 @@ test "validate_claimable! refuses invalid ids" do
 		Config.validate_claimable!([Zenflows.DB.ID.gen(), "not-an-id"])
 	end
 end
+
+test "validate_claimable! refuses raw UUID (16-byte) format" do
+	assert_raise RuntimeError, ~r/AUTHZ_CLAIMABLE_AGENTS.*1234567890123456/, fn ->
+		Config.validate_claimable!(["1234567890123456"])
+	end
+end
 end

@@ -22,7 +22,7 @@ Deny-by-default authorization decisions.  Pure: it never touches the
 database; everything it needs is in `Zenflows.Authz.Facts`.
 """
 
-alias Zenflows.Authz.{Config, ExecutionContext, Facts}
+alias Zenflows.Authz.{Config, EventFacts, EventPolicy, ExecutionContext, Facts}
 alias Zenflows.VF.Person
 
 @actions ~w[
@@ -34,15 +34,20 @@ alias Zenflows.VF.Person
 	role.update role.delete
 	person.create person.update person.delete
 	sw_pass.import resource_control.set
+	event.create event.update
 ]
 
 @doc "Every action the policy knows about."
 @spec actions() :: [String.t()]
 def actions(), do: @actions
 
-@spec authorize(ExecutionContext.t(), String.t(), Facts.t(), Config.opts())
-	:: :ok | {:error, :forbidden | :unauthenticated}
-def authorize(%ExecutionContext{principal: principal}, action, %Facts{} = facts, opts) do
+@spec authorize(ExecutionContext.t(), String.t(), Facts.t() | EventFacts.t(), Config.opts())
+	:: :ok | {:error, :forbidden | :unauthenticated} | {:error, :forbidden, EventPolicy.rule()}
+def authorize(%ExecutionContext{principal: %Person{id: pid}}, action, %EventFacts{} = f, _opts)
+		when action in ~w[event.create event.update],
+	do: EventPolicy.decide(pid, action, f)
+def authorize(%ExecutionContext{principal: principal}, action, facts, opts)
+		when is_struct(facts, Facts) or is_struct(facts, EventFacts) do
 	if action in @actions,
 		do: decide(principal, action, facts, opts),
 		else: {:error, :forbidden}

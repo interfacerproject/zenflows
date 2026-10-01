@@ -108,6 +108,20 @@ test "Log.multi_insert skips nil entries" do
 		Multi.new() |> Log.multi_insert(:log, Factory.ctx(), fn _ -> nil end) |> Repo.transaction()
 end
 
+test "event decisions go through Authz.authorize with a rule in telemetry", %{alice: alice} do
+	ref = make_ref()
+	pid = self()
+	:telemetry.attach("authz-evt-#{inspect(ref)}", [:zenflows, :authz, :deny],
+		fn _, _, meta, _ -> send(pid, {:deny, meta}) end, nil)
+	on_exit(fn -> :telemetry.detach("authz-evt-#{inspect(ref)}") end)
+
+	other = Factory.id()
+	f = %Zenflows.Authz.EventFacts{action: "work", provider_id: other, receiver_id: other}
+	assert {:error, :forbidden} = Authz.authorize(Factory.ctx(alice), "event.create", f)
+	assert_received {:deny, %{action: "event.create", rule: :agent, reason: :forbidden}}
+	assert :ok = Authz.authorize(Factory.ctx(), "event.create", f)
+end
+
 test "MW.Errors maps authz errors to coded GraphQL errors" do
 	res = Zenflows.GQL.MW.Errors.call(%Absinthe.Resolution{errors: [:forbidden, :unauthenticated]}, [])
 	assert res.errors == [

@@ -22,7 +22,10 @@ Everything an event decision may look at.  `EconomicEvent.Domain`
 loads it with row locks before the event is written.
 """
 
-alias Zenflows.Authz.ResourceControl
+import Ecto.Query
+
+alias Zenflows.Authz.{Config, EventPolicy, ExecutionContext, Facts, ResourceControl}
+alias Zenflows.VF.{EconomicEvent, EconomicResource}
 
 @type t() :: %__MODULE__{
 	action: nil | String.t(),
@@ -49,4 +52,70 @@ defstruct action: nil,
 	contained: %{},
 	admin_of: MapSet.new(),
 	claimable: MapSet.new()
+
+@doc """
+Facts for `event.create`.  Locks, in this order: touched resources and
+the resources contained in changed ones (one query, ascending id,
+FOR UPDATE), their control rows (ascending, FOR UPDATE), then the
+admin rows the decision needs (FOR SHARE).
+"""
+@spec load(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
+def load(repo, ctx, changes) do
+	touched = EventPolicy.touched(changes)
+	contained = contained_of(repo, touched.changes)
+	inner = contained |> Map.values() |> List.flatten()
+
+	resources =
+		lock_resources(repo, Enum.uniq(touched.changes ++ touched.references ++ inner))
+	controls = lock_controls(repo, Enum.uniq(touched.changes ++ inner))
+
+	provider = Map.get(changes, :provider_id)
+	receiver = Map.get(changes, :receiver_id)
+	admin_ids = [provider, receiver | Enum.map(Map.values(controls), & &1.controller_id)]
+
+	%__MODULE__{
+		action: Map.get(changes, :action_id),
+		provider_id: provider,
+		receiver_id: receiver,
+		source_id: Map.get(changes, :resource_inventoried_as_id),
+		touched: touched,
+		resources: resources,
+		controls: controls,
+		contained: contained,
+		admin_of: Facts.admin_of(repo, ctx, admin_ids),
+		claimable: MapSet.new(Config.claimable_agents()),
+	}
+end
+
+@doc "Facts for `event.update`: the stored event (FOR UPDATE) and its agents."
+@spec for_event(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
+def for_event(repo, ctx, id) do
+	evt = repo.one(from e in EconomicEvent, where: e.id == ^id, lock: "FOR UPDATE")
+	ids = if evt, do: [evt.provider_id, evt.receiver_id], else: []
+	%__MODULE__{event: evt, admin_of: Facts.admin_of(repo, ctx, ids)}
+end
+
+defp contained_of(_repo, []), do: %{}
+defp contained_of(repo, ids) do
+	from(r in EconomicResource, where: r.contained_in_id in ^ids,
+		select: {r.contained_in_id, r.id})
+	|> repo.all()
+	|> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+	|> Map.new(fn {k, v} -> {k, Enum.sort(v)} end)
+end
+
+defp lock_resources(_repo, []), do: %{}
+defp lock_resources(repo, ids) do
+	from(r in EconomicResource, where: r.id in ^ids, order_by: r.id, lock: "FOR UPDATE")
+	|> repo.all()
+	|> Map.new(&{&1.id, &1})
+end
+
+defp lock_controls(_repo, []), do: %{}
+defp lock_controls(repo, ids) do
+	from(c in ResourceControl, where: c.resource_id in ^ids,
+		order_by: c.resource_id, lock: "FOR UPDATE")
+	|> repo.all()
+	|> Map.new(&{&1.resource_id, &1})
+end
 end

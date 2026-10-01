@@ -41,8 +41,8 @@ defstruct @enforce_keys
 
 @service_actions %{
 	admin_key: ~w[person.create person.delete sw_pass.import organization.assign_admin],
-	import: ~w[resource.create organization.create relationship.grant],
-	migration: ~w[resource.create organization.create resource_control.set],
+	import: ~w[resource.create organization.create relationship.grant event.create],
+	migration: ~w[resource.create organization.create resource_control.set event.create],
 }
 
 @doc "Context of a signed GraphQL field."

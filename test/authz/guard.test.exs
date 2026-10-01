@@ -87,8 +87,20 @@ defp offenders(pattern, allowed) do
 		do: "#{path}:#{n}"
 end
 
+defp context_literal?(source) do
+	Regex.match?(~r/ExecutionContext\{[\s\S]{0,400}?request_id:/, source)
+end
+
+test "context_literal?/1 detects multi-line and single-line literals but not pattern matches" do
+	assert context_literal?("%ExecutionContext{\n\tprincipal: p,\n\tvia: :gql,\n\trequest_id: r,\n}")
+	assert context_literal?("%ExecutionContext{principal: p, request_id: r}")
+	refute context_literal?("def f(%ExecutionContext{principal: %Person{id: id}}), do: id")
+end
+
 test "ExecutionContext is only built by its constructors" do
-	assert offenders(~r/ExecutionContext\{.*request_id:/, []) == []
+	offenders =
+		for path <- sources(), context_literal?(File.read!(path)), do: path
+	assert offenders == []
 end
 
 test "service contexts are only built by allowlisted callers" do

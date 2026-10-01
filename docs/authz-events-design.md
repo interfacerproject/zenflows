@@ -192,9 +192,9 @@ touching the same resources in opposite directions lock in the same
 
 `AUTHZ_CLAIMABLE_AGENTS` — comma-separated agent ULIDs, default empty, read
 in `conf/runtime.exs` into `config :zenflows, Zenflows.Authz,
-claimable_agents: [...]`. Each id must be a valid ULID or the application
-refuses to start (all environments). Ids that are not existing agents are
-allowed (logged as a warning at boot).
+claimable_agents: [...]`. Only the 26-character ULID form is checked at
+boot; ids that are not existing agents are accepted silently (see §12,
+deltas 1 and 5).
 
 ## 7. Telemetry
 

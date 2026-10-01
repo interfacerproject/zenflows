@@ -105,4 +105,28 @@ def controller_for(_repo, %ExecutionContext{principal: {:service, :import, _}}, 
 	do: {res.primary_accountable_id, :admin}
 def controller_for(_repo, _ctx, res),
 	do: {res.primary_accountable_id, :creation}
+
+@doc "Control for an imported resource; idempotent, logged on first insert."
+@spec ensure_for_import(Ecto.Repo.t(), ExecutionContext.t(), EconomicResource.t())
+	:: {:ok, ResourceControl.t()} | {:error, term()}
+def ensure_for_import(repo, ctx, %EconomicResource{} = res) do
+	case one(repo, res.id) do
+		{:ok, control} -> {:ok, control}
+		{:error, _} ->
+			{controller_id, source} = controller_for(repo, ctx, res)
+			with {:ok, control} <-
+					%{resource_id: res.id, controller_id: controller_id, source: source}
+					|> ResourceControl.changeset()
+					|> repo.insert(),
+				{:ok, _} <- Log.insert(repo, ctx, %{
+					action: "resource_control.set",
+					target_type: "economic_resource",
+					target_id: res.id,
+					subject_id: controller_id,
+					after: %{controller_id: controller_id, source: source},
+				}) do
+				{:ok, control}
+			end
+	end
+end
 end

@@ -39,7 +39,13 @@ protected.
 - `updatePerson`: self only.
 - System roles (`systemKey` not null) cannot be edited or deleted.
 - Organizations/persons that control resources or take part in
-  relationships cannot be hard-deleted.
+  relationships cannot be hard-deleted.  Because system-role relationships
+  are revoked, never deleted, this means **organizations created after this
+  upgrade, and persons who created organizations or resources, can no longer
+  be hard-deleted at all**.  An archive path is planned for a later slice.
+- Backfilled resources whose primaryAccountable is an organization are
+  controlled by that organization: nobody can edit or delete them until the
+  organization gets an admin (`assignOrganizationAdmin`).
 - Anonymous callers (signature checks off, `GQL_AUTH_CALLS=false`) must pass
   `resource.create` authorization before an event can create a resource.
   With `AUTHZ_ALLOW_UNCHECKED=false` such calls are rejected
@@ -75,15 +81,17 @@ protected.
   with `assignOrganizationAdmin` before users need to edit them.
 - `assignOrganizationAdmin` widens the admin-key surface: review admin key
   handling before deploying.
-- Rolling back the migrations drops the permission log.
+- Rolling back the migrations drops the permission log, and also deletes
+  every system-role relationship (all organization admin/member grants,
+  including revoked ones) together with the system roles.
+- The append-only trigger on `zf_permission_log` blocks `UPDATE` and
+  `DELETE`, but not `TRUNCATE`.  In production, restrict table privileges
+  (no `TRUNCATE` for the application role) to keep the log append-only.
 
 ## Known limitations
 
 - The last-admin protection is enforced by the policy only, so it does not
   apply when `AUTHZ_ENFORCE=false` (staging gate).
-- Mutual revokes across two different organizations by the same two admins
-  can still deadlock; PostgreSQL aborts one transaction, which surfaces as
-  an error.
 - Deleting an economic resource that has event history fails on a
   pre-existing foreign key (independent of authorization).
 - Admin-key GraphQL tests could not be exercised in the development

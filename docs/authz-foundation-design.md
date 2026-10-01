@@ -110,7 +110,9 @@ code path writes it in this slice.
   `(subject_id, object_id, relationship_id)`. Taking the org lock before any
   relationship row lock keeps lock ordering consistent across concurrent
   transactions, which avoids deadlocking on mutual revokes within the same
-  organization.
+  organization. Grants take the same lock before reading the granter's admin
+  row, and the granter's admin rows are locked only for the organizations the
+  decision looks at (delta 13 in §14).
 
 ### 3.4 `zf_permission_log` (append-only)
 
@@ -129,7 +131,9 @@ code path writes it in this slice.
 | `request_id` | string, nullable | from the GraphQL request |
 | `reason` | text, nullable | required for `admin_key` actions |
 
-- The module exposes only an insert function (`Zenflows.Authz.Log.multi_insert/3`).
+- The module exposes only insert functions (`Zenflows.Authz.Log.multi_insert/4`
+  inside a `Multi`, and `Zenflows.Authz.Log.insert/3` for callers already in a
+  transaction, e.g. imports).
 - A PostgreSQL trigger raises on `UPDATE` and `DELETE` of this table.
 - `actor_id`, `subject_id` and `target_id` are plain ULID columns **without**
   FK constraints: the log must outlive the agents and objects it mentions, and
@@ -324,7 +328,9 @@ config :zenflows, Zenflows.Authz,
 ## 10. Migrations and backfill
 
 1. Create `zf_resource_control`, `zf_permission_log` (+ trigger), add
-   `system_key`, `in_scope_of_id`, `revoked_at`, partial unique index.
+   `system_key`, `in_scope_of_id`, `revoked_at`. No partial unique index on
+   active relationships: duplicates are rejected under the per-organization
+   advisory lock (§3.3, delta 2 in §14).
 2. Seed `org.admin`, `org.member` roles.
 3. Backfill: for every `vf_economic_resource` without a control row, insert
    `controller_id = primary_accountable_id`, `source = backfill`, plus one log
@@ -358,8 +364,9 @@ All tests use the existing `EctoCase` / `AbsinCase` against PostgreSQL.
   fields; failed log insert rolls back the change; trigger rejects
   `UPDATE`/`DELETE`; no key/signature material in `before`/`after`.
 - **Coverage guard**: test walks the Absinthe schema and fails if a mutation
-  field lacks `meta authz`, declares an action unknown to `Policy`, or uses
-  `:signed_pending` without being in the allowlist.
+  field neither declares a `meta authz` action known to `Policy` nor appears
+  in the test's allowlist of pending mutations, or if an allowlisted mutation
+  is stale or already covered (delta 1 in §14).
 - **Unchecked-primitive guard**: test fails if `*_unchecked` functions are
   referenced outside the allowlist.
 - **Creation guard**: every resource-creating event path produces a control
@@ -425,3 +432,16 @@ All tests use the existing `EctoCase` / `AbsinCase` against PostgreSQL.
 12. In GraphQL, several failing non-null root fields in one document are
     reported as a single error (Absinthe null propagation); each field is
     still denied.
+13. `Facts.admin_of(repo, ctx, agent_ids)` returns the subset of `agent_ids`
+    where the actor is an active `org.admin` and locks FOR SHARE only those
+    relationship rows, instead of every admin row of the actor. Each decision
+    passes exactly the organizations it looks at: the resource's controller,
+    the organization itself, the grant's or revoked relationship's object, the
+    (current and new) subject of a non-system relationship, the object of a
+    system relationship update, the receiver on resource creation.
+    `Membership.multi_grant/4` takes the organization's advisory lock before
+    loading `admin_of`, the same order as a revoke. Together this removes a
+    same-organization grant-vs-revoke deadlock (the grant locked the
+    granter's admin row before the advisory lock, a revoke the other way
+    round) and the cross-organization mutual-revoke deadlock (each side
+    locked its actor's admin rows in both organizations).

@@ -142,4 +142,16 @@ test "system roles are immutable, even for unchecked anonymous", c do
 	assert {:ok, %{role_label: "y"}} =
 		AgentRelationshipRole.Domain.update(Factory.ctx(c.bob), role.id, %{role_label: "y"})
 end
+
+test "system_changeset: in_scope_of must be the object organization", c do
+	other = Factory.insert!(:organization)
+	params = %{subject_id: c.bob.id, object_id: c.org.id, relationship_id: c.admin_role}
+
+	assert %{valid?: true} =
+		AgentRelationship.system_changeset(%AgentRelationship{}, Map.put(params, :in_scope_of_id, c.org.id))
+
+	cset = AgentRelationship.system_changeset(%AgentRelationship{}, Map.put(params, :in_scope_of_id, other.id))
+	refute cset.valid?
+	assert {"must be the object organization", _} = cset.errors[:in_scope_of]
+end
 end

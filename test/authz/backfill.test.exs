@@ -31,8 +31,9 @@ test "trusts primaryAccountable, marks provenance, logs, is idempotent" do
 	assert %ResourceControl{source: :backfill, controller_id: cid} =
 		Repo.get_by!(ResourceControl, resource_id: res.id)
 	assert cid == res.primary_accountable_id
-	assert [%PermissionLog{service: :migration, actor_id: nil, after: %{"source" => "backfill"}}] =
+	assert [%PermissionLog{service: :migration, actor_id: nil, after: %{"source" => "backfill"} = log_after}] =
 		Repo.all(from l in PermissionLog, where: l.target_id == ^res.id and l.action == "resource_control.set" and l.service == :migration)
+	assert log_after["controller_id"] == res.primary_accountable_id
 
 	assert Backfill.run(Repo) == 0
 end

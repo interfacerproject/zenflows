@@ -51,7 +51,7 @@ schema "vf_agent_relationship" do
 end
 
 @reqr ~w[subject_id object_id relationship_id]a
-@cast @reqr ++ [:note] # in_scope_of
+@cast @reqr ++ [:note]
 
 @doc false
 @spec changeset(Schema.t(), Schema.params()) :: Changeset.t()
@@ -74,10 +74,19 @@ def system_changeset(schema, params) do
 	schema
 	|> Changeset.cast(params, @cast ++ [:in_scope_of_id])
 	|> Changeset.validate_required(@reqr ++ [:in_scope_of_id])
+	|> validate_scope_is_object()
 	|> Validate.note(:note)
 	|> Changeset.assoc_constraint(:subject)
 	|> Changeset.assoc_constraint(:object)
 	|> Changeset.assoc_constraint(:relationship)
 	|> Changeset.assoc_constraint(:in_scope_of)
+end
+
+# A system role is always scoped to the organization it is held in.
+defp validate_scope_is_object(cset) do
+	scope = Changeset.get_field(cset, :in_scope_of_id)
+	if scope != nil and scope != Changeset.get_field(cset, :object_id),
+		do: Changeset.add_error(cset, :in_scope_of, "must be the object organization"),
+		else: cset
 end
 end

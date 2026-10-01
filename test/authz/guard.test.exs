@@ -37,7 +37,6 @@ alias Zenflows.Authz.Policy
 	create_spatial_thing update_spatial_thing delete_spatial_thing
 	create_agreement update_agreement delete_agreement
 	create_process_group update_process_group delete_process_group
-	create_economic_event update_economic_event
 	create_satisfaction update_satisfaction delete_satisfaction
 	create_scenario update_scenario delete_scenario
 	create_proposal update_proposal delete_proposal

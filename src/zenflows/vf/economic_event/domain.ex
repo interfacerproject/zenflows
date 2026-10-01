@@ -135,12 +135,12 @@ def create!(ctx, evt_params, res_params \\ nil) do
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, EconomicEvent.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, EconomicEvent.t()} | {:error, atom() | String.t() | Changeset.t()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> multi_update(ctx, id, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -148,10 +148,10 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: EconomicEvent.t()
-def update!(id, params) do
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: EconomicEvent.t()
+def update!(ctx, id, params) do
 	# `__MODULE__` because it confilicts with `import Ecto.Query`
-	{:ok, value} = __MODULE__.update(id, params)
+	{:ok, value} = __MODULE__.update(ctx, id, params)
 	value
 end
 
@@ -1216,10 +1216,17 @@ defp handle_insert(ctx, key, %{action_id: "move"} = evt, res_params) do
 	end)
 end
 
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
+@spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Multi.run("#{key}.authz", fn repo, _ ->
+		facts = EventFacts.for_event(repo, ctx, id)
+		with :ok <- Authz.authorize(ctx, "event.update", facts), do: {:ok, facts}
+	end)
+	|> Multi.run("#{key}.one", fn _, changes ->
+		facts = Map.fetch!(changes, "#{key}.authz")
+		if facts.event, do: {:ok, facts.event}, else: {:error, "not found"}
+	end)
 	|> Multi.update(key,
 		&EconomicEvent.changeset(Map.fetch!(&1, "#{key}.one"), params))
 end

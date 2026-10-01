@@ -44,8 +44,8 @@ def create_economic_event(%{event: evt_params} = params, res) do
 	end
 end
 
-def update_economic_event(%{economic_event: %{id: id} = params}, _) do
-	with {:ok, eco_evt} <- Domain.update(id, params) do
+def update_economic_event(%{event: %{id: id} = params}, res) do
+	with {:ok, eco_evt} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{economic_event: eco_evt}}
 	end
 end

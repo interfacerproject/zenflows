@@ -28,6 +28,7 @@ config :zenflows, Repo,
 	migration_timestamps:  [type: :timestamptz, inserted_at: false],
 	queue_target: 60_000 # 1 min
 
+config :zenflows, :build_env, config_env()
 
 if config_env() == :test do
 	config :zenflows, Repo,

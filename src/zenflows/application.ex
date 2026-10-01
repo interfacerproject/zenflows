@@ -22,6 +22,8 @@ use Application
 
 @impl true
 def start(_type, _args) do
+	:ok = Zenflows.Authz.Config.validate!()
+
 	print_header()
 
 	migrate()

@@ -36,6 +36,7 @@ def call(conn, _opts) do
 		%{}
 		|> set_admin(conn)
 		|> set_user_and_sign_and_body(conn)
+		|> set_request_id(conn)
 
 	Absinthe.Plug.put_options(conn, context: ctx)
 end
@@ -61,6 +62,20 @@ defp set_user_and_sign_and_body(ctx, conn) do
 		|> Map.put(:gql_user, user)
 		|> Map.put(:gql_sign, sign)
 		|> Map.put(:gql_body, raw_body)
+	else _ ->
+		ctx
+	end
+end
+
+@request_id_re ~r/\A[A-Za-z0-9_-]{1,64}\z/
+
+# Set `request_id` from the headers, if it is well-formed.  It is only
+# used to correlate logs; it is never trusted for decisions.
+@spec set_request_id(map(), Conn.t()) :: map()
+defp set_request_id(ctx, conn) do
+	with [rid | _] <- Conn.get_req_header(conn, "zenflows-request-id"),
+			true <- Regex.match?(@request_id_re, rid) do
+		Map.put(ctx, :request_id, rid)
 	else _ ->
 		ctx
 	end

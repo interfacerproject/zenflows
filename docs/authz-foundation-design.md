@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # Authorization foundation (RBAC slice 1) — design
 
 - **Date:** 2026-10-01
-- **Status:** Draft, awaiting review
+- **Status:** Implemented on feat/authz-foundation
 - **Baseline commit:** `893489d` (same commit analysed by the Interfacer
   architecture review)
 - **Source:** Interfacer architecture review, findings F01, F09 and proposed
@@ -101,8 +101,16 @@ code path writes it in this slice.
   is turned into a revoke (sets `revoked_at`). `updateAgentRelationship` cannot
   change `subject`, `object`, `relationship` or `in_scope_of` of a system-role
   relationship.
-- Partial unique index: one active relationship per
-  `(subject_id, object_id, relationship_id)` where `revoked_at IS NULL`.
+- No active-relationship uniqueness is enforced by a partial unique index (see
+  delta 2 in §14): existing non-system duplicate relationships could make that
+  migration fail. Instead, grants/revokes/system-relationship updates take a
+  per-organization `pg_advisory_xact_lock` (`Zenflows.Authz.Membership.lock_org/2`)
+  before locking any relationship row of that organization, and an existence
+  check inside the grant rejects a duplicate active
+  `(subject_id, object_id, relationship_id)`. Taking the org lock before any
+  relationship row lock keeps lock ordering consistent across concurrent
+  transactions, which avoids deadlocking on mutual revokes within the same
+  organization.
 
 ### 3.4 `zf_permission_log` (append-only)
 
@@ -289,10 +297,12 @@ credential must be reviewed before deploying it.
   one of:
   - `meta authz: <action>` — enforced by this slice;
   - `meta authz: :guest` — already `only_guest?`;
-  - `meta authz: :signed_pending` — out of scope here (events, processes,
+  - no `meta authz` at all — out of scope here (events, processes,
     specifications, …): any valid signer, exactly as today. These fields are
-    listed in a test allowlist that later slices shrink; adding a new field
-    to it requires editing the test.
+    listed by name in a test allowlist (`test/authz/guard.test.exs`, see
+    delta 1 in §14) instead of carrying a `:signed_pending` meta value; later
+    slices shrink the list, and adding a new mutation fails the test until it
+    is either classified with `meta authz` or added to the allowlist.
 - Deleting an Organization or Person that is a resource controller fails on
   the `zf_resource_control.controller_id` FK; this is intended (no orphaned
   control) and surfaces as the existing changeset/constraint error.
@@ -376,3 +386,42 @@ All tests use the existing `EctoCase` / `AbsinCase` against PostgreSQL.
 - GUI: handle `FORBIDDEN`, use `resourceControl` to hide edit affordances (UX
   only).
 - Decision API for DPP/feedback built on `Policy`.
+
+## 14. Deltas from the original draft
+
+1. Mutations out of scope are listed in a **test allowlist**
+   (`test/authz/guard.test.exs`) instead of carrying
+   `meta authz: :signed_pending`. Same guarantee (a new mutation fails the
+   test until classified), ~55 fewer edits.
+2. The partial unique index on active relationships is replaced by a
+   per-organization `pg_advisory_xact_lock` plus an existence check inside
+   grants/revokes: existing non-system duplicate relationships could make the
+   index migration fail.
+3. `ExecutionContext.service(name, request_id)` takes no action list; the
+   action sets are fixed inside `ExecutionContext` so callers can't widen
+   them. `:migration` additionally gets `organization.create` (the 2025 seed
+   migration creates an organization).
+4. Resources created under a `:migration` context get no control row at
+   creation; the backfill migration (which runs later) covers them. A
+   resource without control is deny-all (fail closed).
+5. Deleting an Organization/Person that controls resources or takes part in
+   relationships returns an explicit error instead of a raw FK exception.
+6. Deleting a resource writes a `resource_control.remove` log entry.
+7. API tests inject `req_user` into the Absinthe context (auth checks off)
+   rather than producing real Zenroom signatures; `MW.Sign` is untouched and
+   keeps its existing tests.
+8. `zf_resource_control` has only `updated_at`, following this repo's
+   `timestamps()` convention (`inserted_at: false`).
+9. Anonymous contexts (signature checks off) must pass `resource.create`
+   authorization before an event can create a resource; with
+   `AUTHZ_ALLOW_UNCHECKED=false` such calls are rejected (`UNAUTHENTICATED`),
+   and only with unchecked mode (dev/test) does the primaryAccountable become
+   controller.
+10. Lock order: grants/revokes/system-relationship updates take the
+    per-organization advisory lock before locking any relationship row of
+    that organization (prevents deadlock on mutual revokes).
+11. `verify_email_verification` updates the person through a self context
+    built with `ExecutionContext.from_resolution/1`.
+12. In GraphQL, several failing non-null root fields in one document are
+    reported as a single error (Absinthe null propagation); each field is
+    still denied.

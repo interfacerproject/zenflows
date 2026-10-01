@@ -45,7 +45,14 @@ alias Zenflows.VF.{AgentRelationship, Organization, Person}
 def multi_grant(m, key, ctx, grant) do
 	m
 	|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.grant", fn repo, _ ->
-		%Facts{target: grant, role_key: grant.role_key, admin_of: Facts.admin_of(repo, ctx)}
+		# Same lock order as multi_revoke/5: the organization's advisory
+		# lock first, then the actor's admin row FOR SHARE.
+		if is_binary(grant.object_id), do: :ok = lock_org(repo, grant.object_id)
+		%Facts{
+			target: grant,
+			role_key: grant.role_key,
+			admin_of: Facts.admin_of(repo, ctx, [grant.object_id]),
+		}
 	end)
 	|> multi_record_grant(key, ctx, grant)
 end
@@ -102,7 +109,7 @@ def multi_revoke(m, key, ctx, %AgentRelationship{} = rel, role_key) do
 		%Facts{
 			target: rel,
 			role_key: role_key,
-			admin_of: Facts.admin_of(repo, ctx),
+			admin_of: Facts.admin_of(repo, ctx, [rel.object_id]),
 			active_admin_count: active_admin_count(repo, rel),
 		}
 	end)
@@ -180,7 +187,6 @@ defp not_already_granted(repo, grant, role_id) do
 		do: {:error, "already granted"},
 		else: :ok
 end
-
 
 # Counts active `org.admin` relationships for the organization, treating
 # `rel` itself as active regardless of its current `revoked_at` (it may

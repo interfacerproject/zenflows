@@ -44,30 +44,42 @@ defstruct target: nil,
 	active_admin_count: nil
 
 @doc """
-Organizations where the acting Person is an active `org.admin`.  Locks
-the relationship rows FOR SHARE so a concurrent revoke serializes with
-the decision.
+The subset of `agent_ids` (nil entries ignored) where the acting Person
+is an active `org.admin`.  Locks only those relationship rows FOR SHARE,
+so a concurrent revoke of one of them serializes with the decision,
+while admin rows of organizations the decision does not look at stay
+unlocked (locking all of them used to deadlock against concurrent
+grants/revokes in other organizations).  Callers pass exactly the
+organization ids the decision needs.
 """
-@spec admin_of(Ecto.Repo.t(), ExecutionContext.t()) :: MapSet.t(String.t())
-def admin_of(repo, %ExecutionContext{principal: %Person{id: pid}}) do
-	admin_role = Roles.id!(repo, "org.admin")
-	from(r in AgentRelationship,
-		where: r.subject_id == ^pid
-			and r.relationship_id == ^admin_role
-			and is_nil(r.revoked_at),
-		select: r.object_id,
-		lock: "FOR SHARE")
-	|> repo.all()
-	|> MapSet.new()
+@spec admin_of(Ecto.Repo.t(), ExecutionContext.t(), [String.t() | nil]) :: MapSet.t(String.t())
+def admin_of(repo, %ExecutionContext{principal: %Person{id: pid}}, agent_ids) when is_list(agent_ids) do
+	case agent_ids |> Enum.reject(&is_nil/1) |> Enum.uniq() do
+		[] ->
+			MapSet.new()
+		ids ->
+			admin_role = Roles.id!(repo, "org.admin")
+			from(r in AgentRelationship,
+				where: r.subject_id == ^pid
+					and r.object_id in ^ids
+					and r.relationship_id == ^admin_role
+					and is_nil(r.revoked_at),
+				select: r.object_id,
+				lock: "FOR SHARE")
+			|> repo.all()
+			|> MapSet.new()
+	end
 end
-def admin_of(_repo, _ctx), do: MapSet.new()
+def admin_of(_repo, _ctx, agent_ids) when is_list(agent_ids), do: MapSet.new()
 
 @spec for_resource(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
 def for_resource(repo, ctx, id) do
+	target = repo.one(from r in EconomicResource, where: r.id == ^id, lock: "FOR UPDATE")
+	control = repo.one(from c in ResourceControl, where: c.resource_id == ^id, lock: "FOR UPDATE")
 	%__MODULE__{
-		target: repo.one(from r in EconomicResource, where: r.id == ^id, lock: "FOR UPDATE"),
-		control: repo.one(from c in ResourceControl, where: c.resource_id == ^id, lock: "FOR UPDATE"),
-		admin_of: admin_of(repo, ctx),
+		target: target,
+		control: control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id]),
 	}
 end
 
@@ -76,7 +88,7 @@ def for_organization(repo, ctx, id) do
 	%__MODULE__{
 		target: repo.one(from o in Organization,
 			where: o.id == ^id and o.type == :org, lock: "FOR UPDATE"),
-		admin_of: admin_of(repo, ctx),
+		admin_of: admin_of(repo, ctx, [id]),
 	}
 end
 

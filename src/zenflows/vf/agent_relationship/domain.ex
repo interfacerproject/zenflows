@@ -133,7 +133,8 @@ def multi_insert(m, ctx, key \\ multi_key(), params) do
 			nil ->
 				Multi.new()
 				|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.create", fn repo, _ ->
-					%Facts{target: %{subject_id: param(params, :subject_id)}, admin_of: Facts.admin_of(repo, ctx)}
+					subject_id = param(params, :subject_id)
+					%Facts{target: %{subject_id: subject_id}, admin_of: Facts.admin_of(repo, ctx, [subject_id])}
 				end)
 				|> Multi.insert(key, AgentRelationship.changeset(params))
 			role_key ->
@@ -152,11 +153,22 @@ def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	m
 	|> multi_load(key, id)
 	|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.update", fn repo, changes ->
+		rel = Map.fetch!(changes, "#{key}.one")
+		role_key = Map.fetch!(changes, "#{key}.role_key")
+		new_subject_id = param(params, :subject_id)
+		# A system-role update is decided on the organization (object);
+		# any other on the current and the new subject.
+		admin_ids =
+			cond do
+				rel == nil -> []
+				role_key != nil -> [rel.object_id]
+				true -> [rel.subject_id, new_subject_id]
+			end
 		%Facts{
-			target: Map.fetch!(changes, "#{key}.one"),
-			role_key: Map.fetch!(changes, "#{key}.role_key"),
-			new_subject_id: param(params, :subject_id),
-			admin_of: Facts.admin_of(repo, ctx),
+			target: rel,
+			role_key: role_key,
+			new_subject_id: new_subject_id,
+			admin_of: Facts.admin_of(repo, ctx, admin_ids),
 		}
 	end)
 	|> Authz.multi_target("#{key}.target", "#{key}.authz")
@@ -180,7 +192,7 @@ def multi_delete(m, ctx, key \\ multi_key(), id) do
 			_ ->
 				Multi.new()
 				|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.delete", fn repo, _ ->
-					%Facts{target: rel, admin_of: Facts.admin_of(repo, ctx)}
+					%Facts{target: rel, admin_of: Facts.admin_of(repo, ctx, [rel && rel.subject_id])}
 				end)
 				|> Authz.multi_target("#{key}.target", "#{key}.authz")
 				|> Multi.delete(key, &Map.fetch!(&1, "#{key}.target"))

@@ -97,7 +97,7 @@ def controller_for(repo, %ExecutionContext{principal: %Person{id: pid}} = ctx, r
 	receiver = res.primary_accountable_id
 	cond do
 		receiver == pid -> {pid, :creation}
-		MapSet.member?(Facts.admin_of(repo, ctx), receiver) -> {receiver, :creation}
+		MapSet.member?(Facts.admin_of(repo, ctx, [receiver]), receiver) -> {receiver, :creation}
 		true -> {pid, :creation}
 	end
 end

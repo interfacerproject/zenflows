@@ -31,11 +31,18 @@ end
 
 test "admin_of: active admin relationships only", %{alice: alice, org: org} do
 	rel = Factory.insert_admin!(alice, org)
-	assert Facts.admin_of(Repo, Factory.ctx(alice)) == MapSet.new([org.id])
+	other = Factory.insert!(:organization)
+	Factory.insert_admin!(alice, other)
+	assert Facts.admin_of(Repo, Factory.ctx(alice), [org.id]) == MapSet.new([org.id])
+	assert Facts.admin_of(Repo, Factory.ctx(alice), [org.id, other.id, nil]) == MapSet.new([org.id, other.id])
+	# only the asked-for organizations, never the actor's others
+	assert Facts.admin_of(Repo, Factory.ctx(alice), [other.id]) == MapSet.new([other.id])
+	assert Facts.admin_of(Repo, Factory.ctx(alice), [Factory.id(), nil]) == MapSet.new()
+	assert Facts.admin_of(Repo, Factory.ctx(alice), []) == MapSet.new()
 
 	rel |> Changeset.change(revoked_at: DateTime.utc_now()) |> Repo.update!()
-	assert Facts.admin_of(Repo, Factory.ctx(alice)) == MapSet.new()
-	assert Facts.admin_of(Repo, Factory.ctx()) == MapSet.new()
+	assert Facts.admin_of(Repo, Factory.ctx(alice), [org.id]) == MapSet.new()
+	assert Facts.admin_of(Repo, Factory.ctx(), [org.id]) == MapSet.new()
 end
 
 test "multi_authorize aborts the transaction on deny", %{alice: alice, org: org} do

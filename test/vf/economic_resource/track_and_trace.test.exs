@@ -316,9 +316,9 @@ test "trace/2" do
 	unit_lt = Unit.Domain.create!(%{label: "liter", symbol: "l"})
 	unit_hour = Unit.Domain.create!(%{label: "hour", symbol: "h"})
 
-	agent_alice = Organization.Domain.create!(%{name: "alice"})
-	agent_bob = Organization.Domain.create!(%{name: "bob"})
-	agent_carol = Organization.Domain.create!(%{name: "carol"})
+	agent_alice = Organization.Domain.create!(Factory.ctx(), %{name: "alice"})
+	agent_bob = Organization.Domain.create!(Factory.ctx(), %{name: "bob"})
+	agent_carol = Organization.Domain.create!(Factory.ctx(), %{name: "carol"})
 
 	evt_raise = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",

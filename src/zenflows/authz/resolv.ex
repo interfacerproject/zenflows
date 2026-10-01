@@ -34,4 +34,9 @@ def controller(control, _, _) do
 end
 
 def source(control, _, _), do: {:ok, to_string(control.source)}
+
+def assign_organization_admin(%{organization_id: org, person_id: per, reason: reason}, res) do
+	Zenflows.VF.Organization.Domain.assign_admin(
+		Zenflows.Authz.ExecutionContext.admin_key(res), org, per, reason)
+end
 end

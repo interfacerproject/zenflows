@@ -131,6 +131,7 @@ mutation do
 
 	import_fields :mutation_sw_pass
 	import_fields :mutation_keypairoom
+	import_fields :mutation_authz
 
 	import_fields :mutation_unit
 	import_fields :mutation_spatial_thing

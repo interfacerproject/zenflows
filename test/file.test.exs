@@ -327,7 +327,7 @@ end
 
 test "works on Organization Agent" do
 	assert %Organization{} = org =
-		Organization.Domain.create!(%{
+		Organization.Domain.create!(Factory.ctx(), %{
 			name: Factory.str("name"),
 			user: Factory.str("user"),
 			email: "#{Factory.str("user")}@example.com",
@@ -375,7 +375,7 @@ test "works on Organization Agent" do
 	] = org.images
 
 	assert %Organization{} = org =
-		Organization.Domain.update!(org.id, %{
+		Organization.Domain.update!(Factory.ctx(), org.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",

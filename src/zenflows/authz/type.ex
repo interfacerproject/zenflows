@@ -46,4 +46,18 @@ object :query_authz do
 		resolve &Resolv.resource_control/2
 	end
 end
+
+object :mutation_authz do
+	@desc """
+	Make a person an admin of an existing organization.  Admin key only;
+	always logged with the given reason.
+	"""
+	field :assign_organization_admin, non_null(:agent_relationship) do
+		meta only_admin?: true, authz: "organization.assign_admin"
+		arg :organization_id, non_null(:id)
+		arg :person_id, non_null(:id)
+		arg :reason, non_null(:string)
+		resolve &Resolv.assign_organization_admin/2
+	end
+end
 end

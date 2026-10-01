@@ -63,7 +63,7 @@ def up() do
 		spec_material_id = inst_vars.spec_material_id
 
 		# Create a system organization to own the material resources
-		{:ok, system_org} = Organization.Domain.create(%{
+		{:ok, system_org} = Organization.Domain.create(Zenflows.Authz.ExecutionContext.service(:migration, nil), %{
 			name: "System Materials Repository",
 			note: "System organization that holds the seeded material resources",
 		})

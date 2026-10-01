@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.Organization.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Organization.Domain
 
@@ -33,20 +34,20 @@ def organizations(params, _) do
 	end
 end
 
-def create_organization(%{organization: params}, _) do
-	with {:ok, org} <- Domain.create(params) do
+def create_organization(%{organization: params}, res) do
+	with {:ok, org} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{agent: org}}
 	end
 end
 
-def update_organization(%{organization: %{id: id} = params}, _) do
-	with {:ok, org} <- Domain.update(id, params) do
+def update_organization(%{organization: %{id: id} = params}, res) do
+	with {:ok, org} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{agent: org}}
 	end
 end
 
-def delete_organization(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_organization(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

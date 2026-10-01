@@ -185,7 +185,7 @@ test "works on EconomicResource" do
 	] = res.images
 
 	assert %EconomicResource{} = res =
-		EconomicResource.Domain.update!(res.id, %{
+		EconomicResource.Domain.update!(Factory.ctx(), res.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",

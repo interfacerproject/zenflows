@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Authorization foundation — release notes
 
-**Status: CRUD enforced; events pending.**  `createEconomicEvent` can still
-change quantity, custody, accountability or containment of another agent's
-resource; that is the next slice.  Do not describe resources as generally
-protected.
+**Status: CRUD and events enforced; processes, intents and proposals
+pending.**  Do not describe resources as generally protected: processes,
+process groups, intents, proposals, proposed intents, satisfactions and
+agreements are still unauthorized.
 
 ## Behaviour changes
 
@@ -88,6 +88,25 @@ protected.
   `DELETE`, but not `TRUNCATE`.  In production, restrict table privileges
   (no `TRUNCATE` for the application role) to keep the log append-only.
 
+## Event authorization (slice 2)
+
+- `createEconomicEvent`: the signer must act for the provider or the
+  receiver (themselves, or an organization they administer), and must
+  control every resource the event changes (including a container's
+  contents).  `cite` and `use` may reference any resource.  `combine` and
+  `separate` are rejected.
+- Resources created by `transfer`, `transferAllRights`, `transferCustody`
+  and `move` are controlled by the receiver.
+- Claims: resources controlled by an agent in `AUTHZ_CLAIMABLE_AGENTS` may
+  be transferred by anyone into a new resource of their own; each claim is
+  logged as `resource.claim`.  **Set `AUTHZ_CLAIMABLE_AGENTS` to the LOSH
+  agent id before deploying, or the GUI claim page stops working.**
+- `updateEconomicEvent` works again (the resolver argument was broken) and
+  is limited to the event's provider or receiver.
+- Still unauthorized: processes, process groups, intents, proposals,
+  proposed intents, satisfactions, agreements; attaching an event to
+  another agent's process is still possible.
+
 ## Known limitations
 
 - The last-admin protection is enforced by the policy only, so it does not
@@ -97,3 +116,16 @@ protected.
 - Admin-key GraphQL tests could not be exercised in the development
   environment used here (Restroom `byte_equal?` service mismatch);
   domain-level tests cover the logic.
+- Containment discovery for the container rule runs before the resource
+  locks are taken: a content attached to a changed resource between
+  discovery and lock would be missed.  No API sets containment today, so
+  this is a documented limitation, to be revisited with `combine`/
+  `separate`.
+- The SWPass import writes events and resources directly, without an
+  `event.create` decision or deny telemetry.  It runs only behind the
+  admin key, as the `:import` service, which is otherwise allowed to
+  create events; this is a documented exception, not a gap reachable by
+  ordinary callers.
+- A missing event on `updateEconomicEvent` is reported to operators with
+  deny telemetry rule `:agent` (the stored event is required to tell
+  which agent rule failed, so the generic fallback rule is used).

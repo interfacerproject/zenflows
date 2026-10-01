@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # Event authorization (RBAC slice 2) — design
 
 - **Date:** 2026-10-01
-- **Status:** Draft, awaiting review
+- **Status:** Implemented on `feat/authz-events`
 - **Builds on:** `docs/authz-foundation-design.md` (slice 1, PR #71,
   branch `feat/authz-foundation`); this work is on `feat/authz-events`.
 - **Source:** Interfacer architecture review, finding F02 ("economic
@@ -67,9 +67,9 @@ If a changed resource is a container (`contained_in_id` of other resources
 points at it), each contained resource is also changed (custody and
 accountability cascade in `handle_insert`) and must satisfy the same rule.
 
-Referenced resources (`cite`, `use`) need no control: the event only links
-lineage (`previous_event_id`), it does not change quantities, custody or
-accountability.
+Referenced resources (`cite`, `use`) need no control: the event changes
+only its lineage pointer (`previous_event_id`); quantities, custody,
+accountability and containment are untouched.
 
 ### 2.4 Claim rule
 
@@ -100,6 +100,13 @@ This keeps `interfacer-gui/pages/resource/[id]/claim.tsx` working.
 - Service principals: `event.create` is added to the `:import` and
   `:migration` action sets; resource and agent rules do not apply to them
   (they are fixed-scope, server-side).
+- Exception: `Zenflows.SWPass.Domain.import_repos/2` still writes events
+  and resources directly (`repo.insert`, not
+  `EconomicEvent.Domain.multi_insert`), so no `event.create` decision is
+  made and no deny telemetry is emitted for it.  It runs only behind the
+  admin key, switching to the `:import` service principal for the import
+  itself, which this section already allows.  Documented exception, not a
+  gap reachable by ordinary callers.
 - Anonymous: unchanged from slice 1 — `UNAUTHENTICATED` unless
   `AUTHZ_ALLOW_UNCHECKED=true` (refused in production), in which case
   everything is allowed.
@@ -138,6 +145,12 @@ In `EconomicEvent.Domain.multi_insert(m, ctx, key, evt_params, res_params)`:
    - `Facts.admin_of(repo, ctx, ids)` `FOR SHARE` with
      ids = provider, receiver, and every changed resource's controller;
    - whether each source controller is claimable (from config).
+
+   Containment is discovered by a plain (unlocked) query before the
+   resource rows are locked.  A content row attached to a changed resource
+   between that discovery query and the lock would be missed by this
+   decision.  No API sets containment today (§8), so this is a documented
+   limitation, to be revisited together with `combine`/`separate`.
 3. **Decide** — `EventPolicy.authorize(ctx, changes, facts)` (pure),
    called through `Zenflows.Authz.authorize/4` so `enforce`,
    `allow_unchecked` and deny telemetry behave as in slice 1. Deny aborts
@@ -254,3 +267,38 @@ updated.
 - Release notes updated: event rules, claim setup (`AUTHZ_CLAIMABLE_AGENTS`
   must contain the LOSH agent id before deploy), receiver control for
   transfers, and the new "still pending" list.
+
+## 12. Deltas from the original draft
+
+1. No boot warning for `AUTHZ_CLAIMABLE_AGENTS` ids that are not existing
+   agents: validation runs in `Application.start/2` before the Repo starts.
+   Only ULID syntax is checked (invalid → refuse to start).
+2. `Policy.authorize/4` may return `{:error, reason, rule}`;
+   `Zenflows.Authz.authorize/4` strips the rule (callers still see
+   `{:error, reason}`) and puts it in deny telemetry.
+3. `updateEconomicEvent` is broken today (resolver matches
+   `%{economic_event: ...}`, the argument is `event`); this slice fixes the
+   resolver head while wiring authorization.
+4. Raising/producing in another agent's name is now denied, so the slice-1
+   tests "foreign receiver: verified creator controls" and "org receiver:
+   creator controls when not an admin" are replaced by FORBIDDEN tests.
+5. `AUTHZ_CLAIMABLE_AGENTS` entries must be the 26-character ULID form
+   (`Zenflows.Authz.Config.validate_claimable!/1` requires `byte_size(id)
+   == 26` as well as a successful cast); the generic id cast
+   (`Zenflows.DB.ID.cast/1`) also accepts 16-byte raw values, which are
+   refused here.
+6. `Policy.authorize/4` explicitly denies a Person presenting `EventFacts`
+   for a non-event action (closes a fall-through to slice-1 rules, which
+   are written against `%Facts{}` and would otherwise silently not match).
+7. `cite`/`use` do update the referenced resource's lineage pointer
+   (`previous_event_id`); §2.3's "does not change" above has been
+   corrected to read "changes only its lineage pointer; quantities,
+   custody, accountability and containment are untouched".
+8. Containment discovery for the container rule runs before the resource
+   locks (§4); a content row attached between discovery and lock would be
+   missed. No API sets containment today (§8), so this is a documented
+   limitation, to be revisited with `combine`/`separate`.
+9. The SWPass import (`Zenflows.SWPass.Domain.import_repos/2`) still
+   writes events and resources directly (no `event.create` decision or
+   deny telemetry); it runs only behind the admin key, as the `:import`
+   service, which §2.6 allows. Documented exception.

@@ -1225,6 +1225,9 @@ def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	end)
 	|> Multi.run("#{key}.one", fn _, changes ->
 		facts = Map.fetch!(changes, "#{key}.authz")
+		# `facts.event` is only ever `nil` here in theory: `EventPolicy.decide/3`
+		# requires an `%{event: %{...}}` match for "event.update", so a missing
+		# event already fails authorization above and never reaches this branch.
 		if facts.event, do: {:ok, facts.event}, else: {:error, "not found"}
 	end)
 	|> Multi.update(key,

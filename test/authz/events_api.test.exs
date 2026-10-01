@@ -93,11 +93,15 @@ end
 test "updateEconomicEvent: provider may edit the note, a stranger may not", c do
 	evt = raise!(c, c.alice)
 	doc = """
-		mutation ($id: ID!) { updateEconomicEvent(event: {id: $id, note: "edited"}) { economicEvent { id note } } }
+		mutation ($id: ID!, $note: String!) {
+			updateEconomicEvent(event: {id: $id, note: $note}) { economicEvent { id note } }
+		}
 	"""
-	assert %{data: nil, errors: [err]} = run_as!(c.bob, doc, vars: %{"id" => evt.id})
+	assert %{data: nil, errors: [err]} =
+		run_as!(c.bob, doc, vars: %{"id" => evt.id, "note" => "edited"})
 	assert Map.take(err, [:message, :extensions]) == @forbidden
-	assert %{data: %{"updateEconomicEvent" => %{"economicEvent" => %{"note" => "edited"}}}} =
-		run_as!(c.alice, doc, vars: %{"id" => evt.id})
+	assert EconomicEvent.Domain.one!(evt.id).note == evt.note
+	assert %{data: %{"updateEconomicEvent" => %{"economicEvent" => %{"note" => "by alice"}}}} =
+		run_as!(c.alice, doc, vars: %{"id" => evt.id, "note" => "by alice"})
 end
 end

@@ -1,3 +1,21 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
+# Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 defmodule ZenflowsTest.Authz.EventPolicy do
 use ExUnit.Case, async: true
 
@@ -57,6 +75,18 @@ describe "agent rule" do
 		assert {:error, :forbidden, :unsupported} =
 			EventPolicy.decide(c.alice, "event.create", facts(c, action: "combine", source_id: nil))
 	end
+
+	test "nil provider_id and receiver_id is denied", c do
+		f = facts(c, action: "work", provider_id: nil, receiver_id: nil, source_id: nil, controls: %{})
+		assert {:error, :forbidden, :agent} = EventPolicy.decide(c.alice, "event.create", f)
+	end
+
+	test "unknown or nil action is unsupported before the agent check", c do
+		assert {:error, :forbidden, :unsupported} =
+			EventPolicy.decide(c.alice, "event.create", facts(c, action: "teleport"))
+		assert {:error, :forbidden, :unsupported} =
+			EventPolicy.decide(c.alice, "event.create", facts(c, action: nil))
+	end
 end
 
 describe "resource rule" do
@@ -106,6 +136,12 @@ describe "resource rule" do
 		f = facts(c, action: "cite", provider_id: c.bob, receiver_id: c.bob)
 		assert :ok = EventPolicy.decide(c.bob, "event.create", f)
 	end
+
+	test "raise incrementing an existing resource controlled by someone else is denied", c do
+		f = facts(c, action: "raise",
+			controls: %{c.r1 => %ResourceControl{resource_id: c.r1, controller_id: c.bob}})
+		assert {:error, :forbidden, :resource} = EventPolicy.decide(c.alice, "event.create", f)
+	end
 end
 
 describe "claim rule" do
@@ -153,6 +189,13 @@ describe "claim rule" do
 			provider_id: c.alice}
 		refute EventPolicy.claim?(c.alice, f)
 	end
+
+	test "a claim must act for the receiver, not just pass the general agent check", c do
+		# Signer is the provider (so the general agent check passes), but the
+		# claimed resource goes to a different receiver: the claim is still denied.
+		f = %{c.claim | provider_id: c.bob, receiver_id: c.alice}
+		assert {:error, :forbidden, :claim} = EventPolicy.decide(c.bob, "event.create", f)
+	end
 end
 
 describe "event.update" do
@@ -163,6 +206,12 @@ describe "event.update" do
 		assert {:error, :forbidden, :agent} = EventPolicy.decide(c.bob, "event.update", f)
 		assert :ok = EventPolicy.decide(c.bob, "event.update", %{f | admin_of: MapSet.new([c.org])})
 		assert {:error, :forbidden, :agent} = EventPolicy.decide(c.alice, "event.update", %EventFacts{})
+	end
+
+	test "stored event with nil provider_id and receiver_id is denied", c do
+		evt = %Zenflows.VF.EconomicEvent{id: ID.gen(), provider_id: nil, receiver_id: nil}
+		f = %EventFacts{event: evt}
+		assert {:error, :forbidden, :agent} = EventPolicy.decide(c.alice, "event.update", f)
 	end
 end
 end

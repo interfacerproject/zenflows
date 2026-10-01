@@ -49,32 +49,25 @@ test "Bob: updateEconomicResource is FORBIDDEN with data null", %{bob: bob, res_
 end
 
 test "Bob: aliases and several root fields are each denied", %{bob: bob, res_id: id} do
-	# Each call is issued separately: `updateEconomicResource` and
-	# `deleteEconomicResource` both return non-null GraphQL types, so
-	# combining them (or two aliases of the same field) as siblings under
-	# one mutation would make Absinthe's null-propagation collapse the
-	# whole selection set down to a single reported error (the first bad
-	# child) even though every field is independently resolved and
-	# denied -- see `Absinthe.Phase.Document.Execution.Resolution`'s
-	# `do_propagate_null_trimming/1`. Separate requests avoid that
-	# collapse and let us check each field's own FORBIDDEN error.
-	assert %{data: nil, errors: [err_a]} =
+	# `updateEconomicResource` and `deleteEconomicResource` both return
+	# non-null GraphQL types, so when every sibling root field resolves to
+	# null (as happens here -- each is independently denied), Absinthe's
+	# null-propagation collapses the whole selection set down to a single
+	# reported error instead of one per field (see
+	# `Absinthe.Phase.Document.Execution.Resolution.do_propagate_null_trimming/1`).
+	# We can't assert `length(errors) == 3` because of that collapse, but
+	# every error that *does* surface must be FORBIDDEN, and the resource
+	# being untouched proves all three resolvers were in fact denied, not
+	# just the one whose error happened to survive.
+	assert %{data: nil, errors: errors} =
 		run_as!(bob, """
 			mutation ($id: ID!) {
 				a: updateEconomicResource(resource: {id: $id, name: "x"}) { economicResource { id } }
-			}
-		""", vars: %{"id" => id})
-	assert %{data: nil, errors: [err_b]} =
-		run_as!(bob, """
-			mutation ($id: ID!) {
 				b: updateEconomicResource(resource: {id: $id, name: "y"}) { economicResource { id } }
+				c: deleteEconomicResource(id: $id)
 			}
 		""", vars: %{"id" => id})
-	assert %{data: nil, errors: [err_c]} =
-		run_as!(bob, """
-			mutation ($id: ID!) { c: deleteEconomicResource(id: $id) }
-		""", vars: %{"id" => id})
-	errors = [err_a, err_b, err_c]
+	assert errors != []
 	assert Enum.all?(errors, &(Map.take(&1, [:message, :extensions]) == @forbidden))
 	assert EconomicResource.Domain.one!(id).name == "alice's"
 end

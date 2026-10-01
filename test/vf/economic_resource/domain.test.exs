@@ -141,7 +141,7 @@ end
 describe "update/2" do
 	@tag skip: "TODO: fix economic resource factory"
 	test "doesn't update a EconomicResource", %{inserted: old} do
-		assert {:ok, %EconomicResource{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %EconomicResource{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		assert new.name == old.name
 		assert new.primary_accountable_id == old.primary_accountable_id
 		assert new.custodian_id == old.custodian_id
@@ -164,7 +164,7 @@ describe "update/2" do
 
 	@tag skip: "TODO: fix economic resource factory"
 	test "updates a EconomicResource with valid params", %{params: params, inserted: old} do
-		assert {:ok, %EconomicResource{} = new} = Domain.update(old.id, params)
+		assert {:ok, %EconomicResource{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.name == params.name
 		assert new.primary_accountable_id == params.primary_accountable_id
 		assert new.custodian_id == params.custodian_id
@@ -188,7 +188,7 @@ end
 
 @tag skip: "TODO: needs to deal with previous_event_id"
 test "delete/1 deletes a EconomicResource", %{inserted: %{id: id}} do
-	assert {:ok, %EconomicResource{id: ^id}} = Domain.delete(id)
+	assert {:ok, %EconomicResource{id: ^id}} = Domain.delete(Factory.ctx(), id)
 	assert {:error, "not found"} = Domain.one(id)
 end
 

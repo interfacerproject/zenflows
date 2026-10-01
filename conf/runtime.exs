@@ -141,3 +141,11 @@ config :zenflows, Zenflows.Email,
 	api_key: fetch_env!("EMAIL_KEY"),
 	expiry: email_expiry,
 	email_uri: get_env_url_as_string.("EMAIL_URI", "http://localhost:3000/email/verify/")
+
+#
+# authz
+#
+authz_unchecked_default = if config_env() == :test, do: "true", else: "false"
+config :zenflows, Zenflows.Authz,
+	enforce: get_env("AUTHZ_ENFORCE", "true") != "false",
+	allow_unchecked: get_env("AUTHZ_ALLOW_UNCHECKED", authz_unchecked_default) == "true"

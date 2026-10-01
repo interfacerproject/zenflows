@@ -87,6 +87,14 @@ also see the [Required Options](#required-options).
   recovery/validation links in emails.  It is in seconds, and the
   default is 4 days worth of seconds.  It can't be less than a second.
 
+* `AUTHZ_ENFORCE`: Whether authorization denials are enforced.  The default
+  is `true`.  `false` only logs denials (staging release gate); the server
+  refuses to start in production with `false`.
+* `AUTHZ_ALLOW_UNCHECKED`: Whether calls without a verified person (when
+  `GQL_AUTH_CALLS=false`) may write.  The default is `true` in testing mode
+  and `false` otherwise; the server refuses to start in production with
+  `true`.
+
 
 ## Required Options
 

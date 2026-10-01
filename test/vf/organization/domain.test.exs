@@ -51,7 +51,7 @@ end
 
 describe "create/1" do
 	test "with good params: creates an Organization", %{params: params} do
-		assert {:ok, %Organization{} = new} = Domain.create(params)
+		assert {:ok, %Organization{} = new} = Domain.create(Factory.ctx(), params)
 		assert new.type == :org
 		assert new.name == params.name
 		assert new.classified_as == params.classified_as
@@ -59,13 +59,13 @@ describe "create/1" do
 		assert new.primary_location_id == params.primary_location_id	end
 
 	test "with bad params: doesn't create an Organization" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
+		assert {:error, %Changeset{}} = Domain.create(Factory.ctx(), %{})
 	end
 end
 
 describe "update/2" do
 	test "with good params: updates the Organization", %{params: params, inserted: old} do
-		assert {:ok, %Organization{} = new} = Domain.update(old.id, params)
+		assert {:ok, %Organization{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.name == params.name
 		assert new.classified_as == params.classified_as
 		assert new.note == params.note
@@ -73,7 +73,7 @@ describe "update/2" do
 	end
 
 	test "with bad params: doesn't update the Organization", %{inserted: old} do
-		assert {:ok, %Organization{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %Organization{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		assert new.name == old.name
 		assert new.classified_as == old.classified_as
 		assert new.note == old.note
@@ -83,12 +83,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the Organization", %{inserted: %{id: id}} do
-		assert {:ok, %Organization{id: ^id}} = Domain.delete(id)
+		assert {:ok, %Organization{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the Organization" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 end

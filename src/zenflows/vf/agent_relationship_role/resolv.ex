@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.AgentRelationshipRole.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.{AgentRelationshipRole, AgentRelationshipRole.Domain}
 
@@ -39,14 +40,14 @@ def create_agent_relationship_role(%{agent_relationship_role: params}, _) do
 	end
 end
 
-def update_agent_relationship_role(%{agent_relationship_role: %{id: id} = params}, _) do
-	with {:ok, rel_role} <- Domain.update(id, params) do
+def update_agent_relationship_role(%{agent_relationship_role: %{id: id} = params}, res) do
+	with {:ok, rel_role} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{agent_relationship_role: rel_role}}
 	end
 end
 
-def delete_agent_relationship_role(%{id: id}, _) do
-	with {:ok, _rel_role} <- Domain.delete(id) do
+def delete_agent_relationship_role(%{id: id}, res) do
+	with {:ok, _rel_role} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

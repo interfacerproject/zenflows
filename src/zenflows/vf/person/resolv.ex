@@ -20,6 +20,7 @@ defmodule Zenflows.VF.Person.Resolv do
 @moduledoc false
 
 alias Ecto.Changeset
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.DB.Validate
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Person.Domain
@@ -49,20 +50,20 @@ def person_pubkey(%{id: id}, _) do
 	Domain.pubkey(id)
 end
 
-def create_person(%{person: params}, _) do
-	with {:ok, per} <- Domain.create(params) do
+def create_person(%{person: params}, res) do
+	with {:ok, per} <- Domain.create(ExecutionContext.admin_key(res), params) do
 		{:ok, %{agent: per}}
 	end
 end
 
-def update_person(%{person: %{id: id} = params}, _) do
-	with {:ok, per} <- Domain.update(id, params) do
+def update_person(%{person: %{id: id} = params}, res) do
+	with {:ok, per} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{agent: per}}
 	end
 end
 
-def delete_person(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_person(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.admin_key(res), id) do
 		{:ok, true}
 	end
 end

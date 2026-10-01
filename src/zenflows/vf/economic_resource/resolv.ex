@@ -21,6 +21,7 @@ defmodule Zenflows.VF.EconomicResource.Resolv do
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.EconomicResource.Domain
 
@@ -51,14 +52,14 @@ def economic_resource_classifications(params, _) do
 	end
 end
 
-def update_economic_resource(%{resource: %{id: id} = params}, _) do
-	with {:ok, eco_res} <- Domain.update(id, params) do
+def update_economic_resource(%{resource: %{id: id} = params}, res) do
+	with {:ok, eco_res} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{economic_resource: eco_res}}
 	end
 end
 
-def delete_economic_resource(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_economic_resource(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

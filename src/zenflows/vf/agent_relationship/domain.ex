@@ -19,7 +19,11 @@
 defmodule Zenflows.VF.AgentRelationship.Domain do
 @moduledoc "Domain logic of AgentRelationships."
 
+require Ecto.Query
+
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, Membership, Roles}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.AgentRelationship
 
@@ -52,12 +56,12 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec create(Schema.params())
-	:: {:ok, AgentRelationship.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params())
+	:: {:ok, AgentRelationship.t()} | {:error, atom() | String.t() | Changeset.t()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_insert(params)
+	|> multi_insert(ctx, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -65,18 +69,18 @@ def create(params) do
 	end
 end
 
-@spec create!(Schema.params()) :: AgentRelationship.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: AgentRelationship.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, AgentRelationship.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, AgentRelationship.t()} | {:error, atom() | String.t() | Changeset.t()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> multi_update(ctx, id, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -84,18 +88,18 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: AgentRelationship.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: AgentRelationship.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id())
-	:: {:ok, AgentRelationship.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id())
+	:: {:ok, AgentRelationship.t()} | {:error, atom() | String.t() | Changeset.t()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> multi_delete(ctx, id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -103,43 +107,152 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id) :: AgentRelationship.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id) :: AgentRelationship.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
-@spec preload(AgentRelationship.t(), :subject | :object | :relationship)
+@spec preload(AgentRelationship.t(), :subject | :object | :relationship | :in_scope_of)
 	:: AgentRelationship.t()
-def preload(rel, x) when x in ~w[subject object relationship]a do
+def preload(rel, x) when x in ~w[subject object relationship in_scope_of]a do
 	Repo.preload(rel, x)
 end
 
 @spec multi_key() :: atom()
 def multi_key(), do: :agent_relationship
 
-@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_one(m, key \\ multi_key(), id) do
-	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
-end
-
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, AgentRelationship.changeset(params))
-end
-
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, ctx, key \\ multi_key(), params) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Multi.run("#{key}.role_key", fn repo, _ ->
+		{:ok, Roles.key_of(repo, param(params, :relationship_id))}
+	end)
+	|> Multi.merge(fn changes ->
+		case Map.fetch!(changes, "#{key}.role_key") do
+			nil ->
+				Multi.new()
+				|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.create", fn repo, _ ->
+					subject_id = param(params, :subject_id)
+					%Facts{target: %{subject_id: subject_id}, admin_of: Facts.admin_of(repo, ctx, [subject_id])}
+				end)
+				|> Multi.insert(key, AgentRelationship.changeset(params))
+			role_key ->
+				Membership.multi_grant(Multi.new(), key, ctx, %{
+					subject_id: param(params, :subject_id),
+					object_id: param(params, :object_id),
+					role_key: role_key,
+					note: param(params, :note),
+				})
+		end
+	end)
+end
+
+@spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, ctx, key \\ multi_key(), id, params) do
+	m
+	|> multi_load(key, id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.update", fn repo, changes ->
+		rel = Map.fetch!(changes, "#{key}.one")
+		role_key = Map.fetch!(changes, "#{key}.role_key")
+		new_subject_id = param(params, :subject_id)
+		# A system-role update is decided on the organization (object);
+		# any other on the current and the new subject.
+		admin_ids =
+			cond do
+				rel == nil -> []
+				role_key != nil -> [rel.object_id]
+				true -> [rel.subject_id, new_subject_id]
+			end
+		%Facts{
+			target: rel,
+			role_key: role_key,
+			new_subject_id: new_subject_id,
+			admin_of: Facts.admin_of(repo, ctx, admin_ids),
+		}
+	end)
+	|> Authz.multi_target("#{key}.target", "#{key}.authz")
+	|> Multi.run("#{key}.checks", fn repo, changes ->
+		validate_update(repo, Map.fetch!(changes, "#{key}.role_key"),
+			Map.fetch!(changes, "#{key}.target"), params)
+	end)
 	|> Multi.update(key,
-		&AgentRelationship.changeset(Map.fetch!(&1, "#{key}.one"), params))
+		&AgentRelationship.changeset(Map.fetch!(&1, "#{key}.target"), params))
 end
 
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
+@spec multi_delete(Multi.t(), ExecutionContext.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, ctx, key \\ multi_key(), id) do
 	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+	|> multi_load(key, id)
+	|> Multi.merge(fn changes ->
+		rel = Map.fetch!(changes, "#{key}.one")
+		case Map.fetch!(changes, "#{key}.role_key") do
+			role_key when rel != nil and role_key != nil ->
+				Membership.multi_revoke(Multi.new(), key, ctx, rel, role_key)
+			_ ->
+				Multi.new()
+				|> Authz.multi_authorize("#{key}.authz", ctx, "relationship.delete", fn repo, _ ->
+					%Facts{target: rel, admin_of: Facts.admin_of(repo, ctx, [rel && rel.subject_id])}
+				end)
+				|> Authz.multi_target("#{key}.target", "#{key}.authz")
+				|> Multi.delete(key, &Map.fetch!(&1, "#{key}.target"))
+		end
+	end)
 end
+
+defp multi_load(m, key, id) do
+	m
+	# Peek at the row WITHOUT locking it, just to tell whether it is a
+	# system-role relationship.  If it is, take the organization's
+	# advisory lock (Membership.lock_org/2) BEFORE locking the row itself,
+	# so every transaction that may touch this org's system relationships
+	# acquires locks in the same order: advisory lock first, row lock
+	# second.  Taking them in the opposite order (row first, then the
+	# advisory lock, as Membership.multi_grant/multi_revoke's own
+	# authorize step used to do implicitly) lets two concurrent
+	# revokes/updates of two different rows in the same org each hold one
+	# row lock while waiting on the other's, deadlocking (Postgres
+	# 40P01). Non-system rows never contend on the org lock, so they skip
+	# straight to the row lock as before.
+	|> Multi.run("#{key}.peek", fn repo, _ ->
+		peek = repo.one(Ecto.Query.from(r in AgentRelationship,
+			where: r.id == ^id,
+			select: %{object_id: r.object_id, relationship_id: r.relationship_id}))
+		case peek do
+			nil ->
+				{:ok, nil}
+			%{object_id: object_id, relationship_id: relationship_id} ->
+				if Roles.key_of(repo, relationship_id) != nil,
+					do: Membership.lock_org(repo, object_id)
+				{:ok, nil}
+		end
+	end)
+	|> Multi.run("#{key}.one", fn repo, _ ->
+		{:ok, repo.one(Ecto.Query.from(r in AgentRelationship, where: r.id == ^id, lock: "FOR UPDATE"))}
+	end)
+	|> Multi.run("#{key}.role_key", fn repo, changes ->
+		case Map.fetch!(changes, "#{key}.one") do
+			nil -> {:ok, nil}
+			rel -> {:ok, Roles.key_of(repo, rel.relationship_id)}
+		end
+	end)
+end
+
+@system_immutable ~w[subject_id object_id relationship_id]a
+
+defp validate_update(repo, role_key, rel, params) do
+	cond do
+		role_key != nil and Enum.any?(@system_immutable, fn f ->
+				v = param(params, f)
+				v != nil and v != Map.fetch!(rel, f)
+			end) ->
+			{:error, "system-role relationships can only change their note; revoke and grant instead"}
+		role_key == nil and Roles.key_of(repo, param(params, :relationship_id)) != nil ->
+			{:error, "use a grant to assign a system role"}
+		true ->
+			{:ok, nil}
+	end
+end
+
+defp param(params, key), do: Map.get(params, key, Map.get(params, Atom.to_string(key)))
 end

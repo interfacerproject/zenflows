@@ -30,6 +30,7 @@ import_types Zenflows.File.Type
 import_types Zenflows.SWPass.Type
 import_types Zenflows.Keypairoom.Type
 import_types Zenflows.InstVars.Type
+import_types Zenflows.Authz.Type
 
 import_types VF.TimeUnit.Type
 import_types VF.Action.Type
@@ -82,6 +83,7 @@ query do
 
 	import_fields :query_sw_pass
 	import_fields :query_inst_vars
+	import_fields :query_authz
 
 	import_fields :query_unit
 	import_fields :query_spatial_thing
@@ -129,6 +131,7 @@ mutation do
 
 	import_fields :mutation_sw_pass
 	import_fields :mutation_keypairoom
+	import_fields :mutation_authz
 
 	import_fields :mutation_unit
 	import_fields :mutation_spatial_thing

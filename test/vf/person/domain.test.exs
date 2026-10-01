@@ -57,7 +57,7 @@ end
 
 describe "create/1" do
 	test "with good params: creates a Person", %{params: params} do
-		assert {:ok, %Person{} = new} = Domain.create(params)
+		assert {:ok, %Person{} = new} = Domain.create(Factory.ctx(), params)
 		assert new.type == :per
 		assert new.name == params.name
 		assert new.note == params.note
@@ -72,13 +72,13 @@ describe "create/1" do
 	end
 
 	test "with bad params: doesn't create a Person" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
+		assert {:error, %Changeset{}} = Domain.create(Factory.ctx(), %{})
 	end
 end
 
 describe "update/2" do
 	test "with good params: updates the Person", %{params: params, inserted: old} do
-		assert {:ok, %Person{} = new} = Domain.update(old.id, params)
+		assert {:ok, %Person{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.primary_location_id == params.primary_location_id
@@ -92,7 +92,7 @@ describe "update/2" do
 	end
 
 	test "with bad params: doesn't update the Person", %{inserted: old} do
-		assert {:ok, %Person{} = new} = Domain.update(old.id, %{email: "can't change that yet"})
+		assert {:ok, %Person{} = new} = Domain.update(Factory.ctx(), old.id, %{email: "can't change that yet"})
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.primary_location_id == old.primary_location_id
@@ -108,12 +108,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the Person", %{inserted: %{id: id}} do
-		assert {:ok, %Person{id: ^id}} = Domain.delete(id)
+		assert {:ok, %Person{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the Person" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 end

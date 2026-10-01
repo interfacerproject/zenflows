@@ -232,7 +232,7 @@ end
 
 test "works on Person Agent" do
 	assert %Person{} = per =
-		Person.Domain.create!(%{
+		Person.Domain.create!(Factory.ctx(), %{
 			name: Factory.str("name"),
 			user: Factory.str("user"),
 			email: "#{Factory.str("user")}@example.com",
@@ -280,7 +280,7 @@ test "works on Person Agent" do
 	] = per.images
 
 	assert %Person{} = per =
-		Person.Domain.update!(per.id, %{
+		Person.Domain.update!(Factory.ctx(), per.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",

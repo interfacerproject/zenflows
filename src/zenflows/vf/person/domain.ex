@@ -22,8 +22,10 @@ defmodule Zenflows.VF.Person.Domain do
 import Ecto.Query
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, Log, Membership}
 alias Zenflows.Email
-alias Zenflows.DB.{Page, Repo, Schema}
+alias Zenflows.DB.{ID, Page, Repo, Schema}
 alias Zenflows.File
 alias Zenflows.VF.{Person, Person.Query}
 
@@ -88,7 +90,8 @@ end
 @spec verify_email_verification(Person.t(), String.t()) :: :ok | {:error, String.t() | Changeset.t()}
 def verify_email_verification(person, token) do
 	with :ok <- Email.Domain.verify_email_verification(person, token),
-			{:ok, _} <- __MODULE__.update(person.id, %{is_verified: true}) do
+			ctx = %ExecutionContext{principal: person, via: :gql, request_id: ID.gen()},
+			{:ok, _} <- __MODULE__.update(ctx, person.id, %{is_verified: true}) do
 		:ok
 	else
 		:error -> {:error, "verification failed"}
@@ -96,11 +99,12 @@ def verify_email_verification(person, token) do
 	end
 end
 
-@spec create(Schema.params()) :: {:ok, Person.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params())
+	:: {:ok, Person.t()} | {:error, atom() | String.t() | Changeset.t()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_insert(params)
+	|> multi_insert(ctx, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -108,18 +112,18 @@ def create(params) do
 	end
 end
 
-@spec create!(Schema.params()) :: Person.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: Person.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, Person.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, Person.t()} | {:error, atom() | String.t() | Changeset.t()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> multi_update(ctx, id, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -127,18 +131,18 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Person.t()
-def update!(id, params) do
-	{:ok, value} = __MODULE__.update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: Person.t()
+def update!(ctx, id, params) do
+	{:ok, value} = __MODULE__.update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id()) ::
-	{:ok, Person.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id()) ::
+	{:ok, Person.t()} | {:error, atom() | String.t() | Changeset.t()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> multi_delete(ctx, id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -159,9 +163,9 @@ def claim(id) do
 	end
 end
 
-@spec delete!(Schema.id()) :: Person.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id()) :: Person.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -179,26 +183,38 @@ def multi_one(m, key \\ multi_key(), id) do
 	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, ctx, key \\ multi_key(), params) do
 	m
+	|> Authz.multi_authorize("#{key}.authz", ctx, "person.create", fn _, _ -> %Facts{} end)
 	|> Multi.insert(key, Person.changeset(params))
 	|> File.Domain.multi_insert(key, :images, :agent_id)
+	|> Log.multi_insert("#{key}.log", ctx, fn changes ->
+		%{action: "person.create", target_type: "person", target_id: Map.fetch!(changes, key).id}
+	end)
 end
 
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
+@spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "person.update",
+		fn repo, _ -> Facts.for_person(repo, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
 	|> Multi.update(key,
 		&Person.changeset(Map.fetch!(&1, "#{key}.one"), params))
 	|> File.Domain.multi_update(key, :images, :agent_id)
 end
 
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
+@spec multi_delete(Multi.t(), ExecutionContext.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, ctx, key \\ multi_key(), id) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "person.delete",
+		fn repo, _ -> Facts.for_person(repo, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.run("#{key}.deletable", fn repo, _ -> Membership.check_deletable(repo, id) end)
 	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+	|> Log.multi_insert("#{key}.log", ctx, fn _ ->
+		%{action: "person.delete", target_type: "person", target_id: id}
+	end)
 end
 end

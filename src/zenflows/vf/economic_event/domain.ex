@@ -24,7 +24,8 @@ import Ecto.Query
 require Logger
 
 alias Ecto.{Changeset, Multi}
-alias Zenflows.Authz.ExecutionContext
+alias Zenflows.Authz
+alias Zenflows.Authz.{EventFacts, EventPolicy, ExecutionContext, Log}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	Action,
@@ -185,9 +186,42 @@ end
 @spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params(), nil | Schema.params())
 	:: Multi.t()
 def multi_insert(m, ctx, key \\ multi_key(), evt_params, res_params) do
+	cset = EconomicEvent.changeset(evt_params)
 	m
-	|> Multi.insert("#{key}.created", EconomicEvent.changeset(evt_params))
+	|> Multi.run("#{key}.authz", fn repo, _ -> authorize_create(repo, ctx, cset) end)
+	|> Multi.insert("#{key}.created", cset)
 	|> Multi.merge(&handle_insert(ctx, key, Map.fetch!(&1, "#{key}.created"), res_params))
+	|> multi_log_claim(ctx, key)
+end
+
+# An invalid changeset is left to `Multi.insert` so callers keep getting
+# the changeset error; nothing is locked for it.
+defp authorize_create(_repo, _ctx, %Changeset{valid?: false}), do: {:ok, nil}
+defp authorize_create(repo, ctx, cset) do
+	facts = EventFacts.load(repo, ctx, cset.changes)
+	with :ok <- Authz.authorize(ctx, "event.create", facts), do: {:ok, facts}
+end
+
+defp multi_log_claim(m, ctx, key) do
+	Log.multi_insert(m, "#{key}.claim.log", ctx, fn changes ->
+		facts = Map.fetch!(changes, "#{key}.authz")
+		pid = ExecutionContext.actor_id(ctx)
+		if facts && pid && EventPolicy.claim?(pid, facts) do
+			evt = Map.fetch!(changes, key)
+			%{
+				action: "resource.claim",
+				target_type: "economic_resource",
+				target_id: facts.source_id,
+				subject_id: evt.receiver_id,
+				before: %{controller_id: Map.fetch!(facts.controls, facts.source_id).controller_id},
+				after: %{
+					controller_id: evt.receiver_id,
+					event_id: evt.id,
+					resource_id: evt.to_resource_inventoried_as_id,
+				},
+			}
+		end
+	end)
 end
 
 # Handle the part after the event is created.  These clauses deal with
@@ -215,7 +249,7 @@ defp handle_insert(ctx, key, %{action_id: action_id} = evt, res_params)
 				|> Map.put(:metadata, evt.resource_metadata)
 
 			Multi.new()
-			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.eco_res", res_params)
+			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.eco_res", res_params, event_id: evt.id)
 			|> Multi.update(key, &Changeset.change(evt,
 				resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.eco_res") |> Map.fetch!(:id)))
 		evt.resource_inventoried_as_id != nil ->
@@ -756,7 +790,7 @@ defp handle_insert(ctx, key, %{action_id: "transferCustody"} = evt, res_params) 
 				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
-			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params)
+			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params, controller: evt.receiver_id, event_id: evt.id)
 			|> Multi.update(key, &Changeset.change(evt,
 				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
 				previous_event_id: res.previous_event_id))
@@ -880,7 +914,7 @@ defp handle_insert(ctx, key, %{action_id: "transferAllRights"} = evt, res_params
 				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
-			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params)
+			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params, controller: evt.receiver_id, event_id: evt.id)
 			|> Multi.update(key, &Changeset.change(evt,
 				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
 				previous_event_id: res.previous_event_id))
@@ -1017,7 +1051,7 @@ defp handle_insert(ctx, key, %{action_id: "transfer"} = evt, res_params) do
 				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
-			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params)
+			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params, controller: evt.receiver_id, event_id: evt.id)
 			|> Multi.update(key, &Changeset.change(evt,
 				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
 				previous_event_id: res.previous_event_id))
@@ -1156,7 +1190,7 @@ defp handle_insert(ctx, key, %{action_id: "move"} = evt, res_params) do
 				|> Map.put_new(:metadata, evt.resource_metadata || res.metadata)
 
 			Multi.new()
-			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params)
+			|> EconomicResource.Domain.multi_insert(ctx, "#{key}.to_eco_res", res_params, controller: evt.receiver_id, event_id: evt.id)
 			|> Multi.update(key, &Changeset.change(evt,
 				to_resource_inventoried_as_id: &1 |> Map.fetch!("#{key}.to_eco_res") |> Map.fetch!(:id),
 				previous_event_id: res.previous_event_id))

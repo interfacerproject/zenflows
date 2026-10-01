@@ -21,6 +21,7 @@ defmodule Zenflows.VF.EconomicEvent.Resolv do
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.EconomicEvent.Domain
 
@@ -35,9 +36,10 @@ def economic_events(params, _) do
 	end
 end
 
-def create_economic_event(%{event: evt_params} = params, _) do
+def create_economic_event(%{event: evt_params} = params, res) do
 	res_params = params[:new_inventoried_resource]
-	with {:ok, evt} <- Domain.create(evt_params, res_params) do
+	ctx = ExecutionContext.from_resolution(res)
+	with {:ok, evt} <- Domain.create(ctx, evt_params, res_params) do
 		{:ok, %{economic_event: evt}}
 	end
 end

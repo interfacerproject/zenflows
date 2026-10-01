@@ -35,7 +35,7 @@ test "previous/2 works" do
 	unit = Factory.insert!(:unit)
 	amount = Factory.decimal()
 
-	evt0 = EconomicEvent.Domain.create!(%{
+	evt0 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: agent.id,
 			receiver_id: agent.id,
@@ -50,7 +50,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt0.id
 	assert evt0.previous_event_id == nil
 
-	evt1 = EconomicEvent.Domain.create!(%{
+	evt1 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -65,7 +65,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt1.id
 	assert evt1.previous_event_id == evt0.id
 
-	evt2 = EconomicEvent.Domain.create!(%{
+	evt2 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "lower",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -80,7 +80,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt2.id
 	assert evt2.previous_event_id == evt1.id
 
-	evt3 = EconomicEvent.Domain.create!(%{
+	evt3 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -96,7 +96,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt3.id
 	assert evt3.previous_event_id == evt2.id
 
-	evt4 = EconomicEvent.Domain.create!(%{
+	evt4 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -112,7 +112,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt4.id
 	assert evt4.previous_event_id == evt3.id
 
-	evt5 = EconomicEvent.Domain.create!(%{
+	evt5 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "use",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -132,7 +132,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt5.id
 	assert evt5.previous_event_id == evt4.id
 
-	evt6 = EconomicEvent.Domain.create!(%{
+	evt6 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "cite",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -149,7 +149,7 @@ test "previous/2 works" do
 	assert evt6.previous_event_id == evt5.id
 
 	proc = Factory.insert!(:process)
-	evt7 = EconomicEvent.Domain.create!(%{
+	evt7 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "pickup",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -165,7 +165,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt7.id
 	assert evt7.previous_event_id == evt6.id
 
-	evt8 = EconomicEvent.Domain.create!(%{
+	evt8 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "dropoff",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -182,7 +182,7 @@ test "previous/2 works" do
 	assert evt8.previous_event_id == evt7.id
 
 	proc = Factory.insert!(:process)
-	evt9 = EconomicEvent.Domain.create!(%{
+	evt9 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -198,7 +198,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt9.id
 	assert evt9.previous_event_id == evt8.id
 
-	evt10 = EconomicEvent.Domain.create!(%{
+	evt10 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -214,7 +214,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt10.id
 	assert evt10.previous_event_id == evt9.id
 
-	evt11 = EconomicEvent.Domain.create!(%{
+	evt11 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferCustody",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -229,7 +229,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt11.id
 	assert evt11.previous_event_id == evt10.id
 
-	evt12 = EconomicEvent.Domain.create!(%{
+	evt12 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferAllRights",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -244,7 +244,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt12.id
 	assert evt12.previous_event_id == evt11.id
 
-	evt13 = EconomicEvent.Domain.create!(%{
+	evt13 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transfer",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -259,7 +259,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt13.id
 	assert evt13.previous_event_id == evt12.id
 
-	evt14 = EconomicEvent.Domain.create!(%{
+	evt14 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "move",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -320,7 +320,7 @@ test "trace/2" do
 	agent_bob = Organization.Domain.create!(%{name: "bob"})
 	agent_carol = Organization.Domain.create!(%{name: "carol"})
 
-	evt_raise = EconomicEvent.Domain.create!(%{
+	evt_raise = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent_alice.id,
 		receiver_id: agent_alice.id,
@@ -333,7 +333,7 @@ test "trace/2" do
 	}, %{name: "water"})
 	res_water = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
-	evt_raise = EconomicEvent.Domain.create!(%{
+	evt_raise = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent_alice.id,
 		receiver_id: agent_alice.id,
@@ -347,7 +347,7 @@ test "trace/2" do
 	res_cotton = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create gowns"})
-	_evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -359,7 +359,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_produce = EconomicEvent.Domain.create!(%{
+	evt_produce = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -377,7 +377,7 @@ test "trace/2" do
 		name: "cleaning the gowns",
 		based_on_id: proc_spec_clean.id,
 	})
-	_evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -389,7 +389,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -401,7 +401,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -414,7 +414,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	_evt_transfer = EconomicEvent.Domain.create!(%{
+	_evt_transfer = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferCustody",
 		provider_id: agent_alice.id,
 		receiver_id: agent_bob.id,
@@ -431,7 +431,7 @@ test "trace/2" do
 		name: "doing the surgery",
 		based_on_id: proc_spec_surgery.id,
 	})
-	_evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -443,7 +443,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -455,7 +455,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_work = EconomicEvent.Domain.create!(%{
+	_evt_work = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "work",
 		input_of_id: proc.id,
 		provider_id: agent_bob.id,
@@ -468,7 +468,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	_evt_transfer = EconomicEvent.Domain.create!(%{
+	_evt_transfer = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferCustody",
 		provider_id: agent_bob.id,
 		receiver_id: agent_alice.id,
@@ -485,7 +485,7 @@ test "trace/2" do
 		name: "cleaning the gowns again",
 		based_on_id: proc_spec_clean.id,
 	})
-	_evt_accept = EconomicEvent.Domain.create!(%{
+	_evt_accept = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -497,7 +497,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_modify = EconomicEvent.Domain.create!(%{
+	_evt_modify = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -509,7 +509,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -522,7 +522,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	evt_raise = EconomicEvent.Domain.create!(%{
+	evt_raise = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent_carol.id,
 		receiver_id: agent_carol.id,
@@ -535,7 +535,7 @@ test "trace/2" do
 	}, %{name: "sewing machine"})
 	res_sewing_machine = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
-	evt_transfer = EconomicEvent.Domain.create!(%{
+	evt_transfer = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transfer",
 		provider_id: agent_alice.id,
 		receiver_id: agent_carol.id,
@@ -549,7 +549,7 @@ test "trace/2" do
 	res_transferred_cotton = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create shirt design"})
-	_evt_work = EconomicEvent.Domain.create!(%{
+	_evt_work = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "work",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -561,7 +561,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_produce = EconomicEvent.Domain.create!(%{
+	evt_produce = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -576,7 +576,7 @@ test "trace/2" do
 	res_shirt_design = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "create shirt"})
-	_evt_consume = EconomicEvent.Domain.create!(%{
+	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -588,7 +588,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_cite = EconomicEvent.Domain.create!(%{
+	_evt_cite = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "cite",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -600,7 +600,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_use = EconomicEvent.Domain.create!(%{
+	_evt_use = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "use",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -616,7 +616,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_produce = EconomicEvent.Domain.create!(%{
+	evt_produce = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -630,7 +630,7 @@ test "trace/2" do
 	}, %{name: "shirt"})
 	res_shirt = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
-	_evt_lower = EconomicEvent.Domain.create!(%{
+	_evt_lower = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "lower",
 		provider_id: agent_carol.id,
 		receiver_id: agent_carol.id,
@@ -642,7 +642,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	evt_move = EconomicEvent.Domain.create!(%{
+	evt_move = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "move",
 		provider_id: agent_carol.id,
 		receiver_id: agent_carol.id,
@@ -656,7 +656,7 @@ test "trace/2" do
 	res_moved_shirt = EconomicResource.Domain.one!(evt_move.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "transport shirt"})
-	_evt_pickup = EconomicEvent.Domain.create!(%{
+	_evt_pickup = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "pickup",
 		input_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -668,7 +668,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_dropoff = EconomicEvent.Domain.create!(%{
+	evt_dropoff = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "dropoff",
 		output_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -680,7 +680,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_deliver_service = EconomicEvent.Domain.create!(%{
+	_evt_deliver_service = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "deliverService",
 		output_of_id: proc.id,
 		provider_id: agent_carol.id,
@@ -692,7 +692,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	evt_transfer = EconomicEvent.Domain.create!(%{
+	evt_transfer = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transfer",
 		provider_id: agent_carol.id,
 		receiver_id: agent_alice.id,
@@ -707,7 +707,7 @@ test "trace/2" do
 	res_transferred_shirt = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
 	proc = Process.Domain.create!(%{name: "clean gown and shirt", based_on_id: proc_spec_clean.id})
-	_evt_accept_gown = EconomicEvent.Domain.create!(%{
+	_evt_accept_gown = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -719,7 +719,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_accept_shirt = EconomicEvent.Domain.create!(%{
+	_evt_accept_shirt = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -731,7 +731,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_modify_gown = EconomicEvent.Domain.create!(%{
+	_evt_modify_gown = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,
@@ -743,7 +743,7 @@ test "trace/2" do
 		},
 		has_point_in_time: DateTime.utc_now(),
 	})
-	_evt_modify_shirt = EconomicEvent.Domain.create!(%{
+	_evt_modify_shirt = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent_alice.id,

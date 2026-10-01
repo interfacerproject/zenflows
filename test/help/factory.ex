@@ -557,7 +557,7 @@ end
 
 def insert_economic_event!() do
 	agent = insert!(:agent)
-	Zenflows.VF.EconomicEvent.Domain.create!(%{
+	Zenflows.VF.EconomicEvent.Domain.create!(ctx(), %{
 		action_id: "raise",
 		provider_id: agent.id,
 		receiver_id: agent.id,

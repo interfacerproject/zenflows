@@ -70,7 +70,7 @@ def up() do
 
 		# Seed each material as an economic resource via a "raise" event
 		Enum.each(@materials, fn material_name ->
-			{:ok, _event} = EconomicEvent.Domain.create(%{
+			{:ok, _event} = EconomicEvent.Domain.create(Zenflows.Authz.ExecutionContext.service(:migration, nil), %{
 				action_id: "raise",
 				provider_id: system_org.id,
 				receiver_id: system_org.id,

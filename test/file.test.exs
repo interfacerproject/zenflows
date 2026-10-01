@@ -125,7 +125,7 @@ end
 test "works on EconomicResource" do
 	agent = Factory.insert!(:agent)
 	%EconomicResource{} = res =
-		EconomicEvent.Domain.create!(
+		EconomicEvent.Domain.create!(Factory.ctx(),
 			%{
 				action_id: "raise",
 				provider_id: agent.id,

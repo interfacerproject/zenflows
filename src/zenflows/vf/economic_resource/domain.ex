@@ -22,6 +22,7 @@ defmodule Zenflows.VF.EconomicResource.Domain do
 require Logger
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz.{ExecutionContext, ResourceControl}
 alias Zenflows.File
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
@@ -307,11 +308,12 @@ def multi_one(m, key \\ multi_key(), id) do
 	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, ctx, key \\ multi_key(), params) do
 	m
 	|> Multi.insert(key, EconomicResource.changeset(params))
 	|> File.Domain.multi_insert(key, :images, :economic_resource_id)
+	|> ResourceControl.Domain.multi_on_create(ctx, key)
 end
 
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()

@@ -35,7 +35,8 @@ alias Zenflows.VF.{
 	subject: Agent.t(),
 	object: Agent.t(),
 	relationship: AgentRelationshipRole.t(),
-	# in_scope_of
+	in_scope_of: Agent.t() | nil,
+	revoked_at: DateTime.t() | nil,
 	note: String.t() | nil,
 }
 
@@ -43,7 +44,8 @@ schema "vf_agent_relationship" do
 	belongs_to :subject, Agent
 	belongs_to :object, Agent
 	belongs_to :relationship, AgentRelationshipRole
-	# in_scope_of
+	belongs_to :in_scope_of, Agent
+	field :revoked_at, :utc_datetime_usec
 	field :note, :string
 	timestamps()
 end
@@ -61,5 +63,21 @@ def changeset(schema \\ %__MODULE__{}, params) do
 	|> Changeset.assoc_constraint(:subject)
 	|> Changeset.assoc_constraint(:object)
 	|> Changeset.assoc_constraint(:relationship)
+end
+
+@doc """
+Changeset for system-role relationships (grants).  Only
+`Zenflows.Authz.Membership` uses it; `in_scope_of` is the organization.
+"""
+@spec system_changeset(Schema.t(), Schema.params()) :: Changeset.t()
+def system_changeset(schema, params) do
+	schema
+	|> Changeset.cast(params, @cast ++ [:in_scope_of_id])
+	|> Changeset.validate_required(@reqr ++ [:in_scope_of_id])
+	|> Validate.note(:note)
+	|> Changeset.assoc_constraint(:subject)
+	|> Changeset.assoc_constraint(:object)
+	|> Changeset.assoc_constraint(:relationship)
+	|> Changeset.assoc_constraint(:in_scope_of)
 end
 end

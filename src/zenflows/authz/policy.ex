@@ -19,7 +19,9 @@
 defmodule Zenflows.Authz.Policy do
 @moduledoc """
 Deny-by-default authorization decisions.  Pure: it never touches the
-database; everything it needs is in `Zenflows.Authz.Facts`.
+database; everything it needs is in `Zenflows.Authz.Facts` (most
+actions) or `Zenflows.Authz.EventFacts` (`event.create`/`event.update`,
+decided by `Zenflows.Authz.EventPolicy`).
 """
 
 alias Zenflows.Authz.{Config, EventFacts, EventPolicy, ExecutionContext, Facts}
@@ -46,6 +48,8 @@ def actions(), do: @actions
 def authorize(%ExecutionContext{principal: %Person{id: pid}}, action, %EventFacts{} = f, _opts)
 		when action in ~w[event.create event.update],
 	do: EventPolicy.decide(pid, action, f)
+def authorize(%ExecutionContext{principal: %Person{}}, _action, %EventFacts{}, _opts),
+	do: {:error, :forbidden}
 def authorize(%ExecutionContext{principal: principal}, action, facts, opts)
 		when is_struct(facts, Facts) or is_struct(facts, EventFacts) do
 	if action in @actions,

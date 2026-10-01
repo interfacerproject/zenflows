@@ -64,4 +64,27 @@ test "for_event/3 loads the event and its agents' admin rows", c do
 	assert id == evt.id
 	assert %EventFacts{event: nil} = EventFacts.for_event(Repo, Factory.ctx(c.alice), Factory.id())
 end
+
+test "load/3 for a cite-shaped event locks the referenced resource but no controls", c do
+	f = EventFacts.load(Repo, Factory.ctx(c.alice), %{
+		action_id: "cite", provider_id: c.alice.id, receiver_id: c.alice.id,
+		resource_inventoried_as_id: c.r1,
+	})
+
+	assert f.touched.changes == [] and f.touched.references == [c.r1]
+	assert Map.has_key?(f.resources, c.r1)
+	assert f.controls == %{}
+end
+
+test "load/3 admin_of excludes organizations unrelated to the event's agents", c do
+	org = Factory.insert!(:organization)
+	Factory.insert_admin!(c.alice, org)
+
+	f = EventFacts.load(Repo, Factory.ctx(c.alice), %{
+		action_id: "cite", provider_id: c.alice.id, receiver_id: c.alice.id,
+		resource_inventoried_as_id: c.r1,
+	})
+
+	refute MapSet.member?(f.admin_of, org.id)
+end
 end

@@ -110,6 +110,14 @@ test "service contexts are only built by allowlisted callers" do
 	]) == []
 end
 
+test "admin-key contexts are only built by allowlisted resolvers" do
+	assert offenders(~r/ExecutionContext\.admin_key\(/, [
+		"src/zenflows/vf/person/resolv.ex",
+		"src/zenflows/sw_pass/resolv.ex",
+		"src/zenflows/authz/resolv.ex",
+	]) == []
+end
+
 test "unauthorized grants are only recorded by allowlisted callers" do
 	assert offenders(~r/multi_record_grant\(/, [
 		"src/zenflows/authz/membership.ex",

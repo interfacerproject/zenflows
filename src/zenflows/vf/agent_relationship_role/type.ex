@@ -50,6 +50,9 @@ object :agent_relationship_role do
 
 	@desc @note
 	field :note, :string
+
+	@desc "Stable key of a system role (e.g. org.admin); null for user-defined roles."
+	field :system_key, :string
 end
 
 input_object :agent_relationship_role_create_params do
@@ -123,11 +126,13 @@ object :mutation_agent_relationship_role do
 	end
 
 	field :update_agent_relationship_role, non_null(:agent_relationship_role_response) do
+		meta authz: "role.update"
 		arg :agent_relationship_role, non_null(:agent_relationship_role_update_params)
 		resolve &Resolv.update_agent_relationship_role/2
 	end
 
 	field :delete_agent_relationship_role, non_null(:boolean) do
+		meta authz: "role.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_agent_relationship_role/2
 	end

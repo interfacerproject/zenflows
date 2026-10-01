@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.AgentRelationship.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.{AgentRelationship, AgentRelationship.Domain}
 
@@ -33,20 +34,20 @@ def agent_relationships(params, _) do
 	end
 end
 
-def create_agent_relationship(%{relationship: params}, _) do
-	with {:ok, rel} <- Domain.create(params) do
+def create_agent_relationship(%{relationship: params}, res) do
+	with {:ok, rel} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{agent_relationship: rel}}
 	end
 end
 
-def update_agent_relationship(%{relationship: %{id: id} = params}, _) do
-	with {:ok, rel} <- Domain.update(id, params) do
+def update_agent_relationship(%{relationship: %{id: id} = params}, res) do
+	with {:ok, rel} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{agent_relationship: rel}}
 	end
 end
 
-def delete_agent_relationship(%{id: id}, _) do
-	with {:ok, _rel} <- Domain.delete(id) do
+def delete_agent_relationship(%{id: id}, res) do
+	with {:ok, _rel} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end
@@ -64,6 +65,11 @@ end
 def relationship(%AgentRelationship{} = rel, _, _) do
 	rel = Domain.preload(rel, :relationship)
 	{:ok, rel.relationship}
+end
+
+def in_scope_of(%AgentRelationship{} = rel, _, _) do
+	rel = Domain.preload(rel, :in_scope_of)
+	{:ok, rel.in_scope_of}
 end
 
 end

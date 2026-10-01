@@ -96,13 +96,19 @@ defp check_anonymous(%ExecutionContext{principal: :anonymous} = ctx),
 defp check_anonymous(_ctx), do: :ok
 
 @doc """
-Who controls a new resource: the verified creator, or the receiving
-organization when the creator is its admin.  Never the declared
-receiver alone (events are not authorized yet).
+Who controls a new resource.  For `raise`/`produce` (and any other
+non-transfer creation): the verified creator, or the receiving
+organization when the creator is its admin.
+
+For transfer-type creations (`transfer`, `transferAllRights`,
+`transferCustody`, `move`), the caller passes `controller:` in
+`multi_on_create/4`, overriding this function with the event's
+receiver — the declared receiver *is* the controller there, decided
+by `EventPolicy` before the resource is created.
 
 The primary-accountable fallback (the final clause below) is reached
 only for an `:anonymous` principal, and only once that principal has
-cleared `resource.create` in `multi_on_create/3` — which in practice
+cleared `resource.create` in `multi_on_create/4` — which in practice
 means `allow_unchecked: true` (dev/test only; refused in production).
 """
 @spec controller_for(Ecto.Repo.t(), ExecutionContext.t(), EconomicResource.t())

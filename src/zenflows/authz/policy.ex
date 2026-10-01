@@ -69,8 +69,11 @@ defp decide(%Person{id: pid}, action, facts, _opts) do
 	if person_may?(pid, action, facts), do: :ok, else: {:error, :forbidden}
 end
 
-# Event authorization is the next slice: any signer may create
-# resources (through events) and organizations.
+# `resource.create`/`organization.create` stay open here: any signer
+# may create resources (through events) and organizations.  Events
+# themselves are decided above, by `EventPolicy.decide/3` via the
+# `event.create`/`event.update` clauses of `authorize/4`, not by this
+# function.
 defp person_may?(_pid, action, _f) when action in ~w[resource.create organization.create],
 	do: true
 defp person_may?(pid, action, %Facts{control: %{controller_id: cid}} = f)

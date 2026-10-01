@@ -97,7 +97,7 @@ also see the [Required Options](#required-options).
 * `AUTHZ_CLAIMABLE_AGENTS`: Comma-separated agent ids whose resources any
   signed person may claim into a new resource of their own (for example the
   LOSH import agent).  The default is empty.  The server refuses to start if
-  an entry is not a valid id.
+  an entry is not a 26-character ULID.
 
 
 ## Required Options

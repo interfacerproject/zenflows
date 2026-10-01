@@ -1225,9 +1225,14 @@ def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	end)
 	|> Multi.run("#{key}.one", fn _, changes ->
 		facts = Map.fetch!(changes, "#{key}.authz")
-		# `facts.event` is only ever `nil` here in theory: `EventPolicy.decide/3`
-		# requires an `%{event: %{...}}` match for "event.update", so a missing
-		# event already fails authorization above and never reaches this branch.
+		# `facts.event` can be `nil` here for real, not just in theory:
+		# `EventPolicy.decide/3` requires an `%{event: %{...}}` match for
+		# "event.update", so a missing event fails that clause, but
+		# `Authz.authorize/4` still reaches this branch for an unchecked
+		# anonymous caller (`allow_unchecked: true` short-circuits to `:ok`
+		# before the facts are even looked at) and for a verified Person
+		# under `AUTHZ_ENFORCE=false` (the deny is logged, not enforced).
+		# Both cases fall through to "not found" here, which is correct.
 		if facts.event, do: {:ok, facts.event}, else: {:error, "not found"}
 	end)
 	|> Multi.update(key,

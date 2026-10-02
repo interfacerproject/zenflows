@@ -94,6 +94,10 @@ also see the [Required Options](#required-options).
   `GQL_AUTH_CALLS=false`) may write.  The default is `true` in testing mode
   and `false` otherwise; the server refuses to start in production with
   `true`.
+* `AUTHZ_CLAIMABLE_AGENTS`: Comma-separated agent ids whose resources any
+  signed person may claim into a new resource of their own (for example the
+  LOSH import agent).  The default is empty.  The server refuses to start if
+  an entry is not a 26-character ULID.
 
 
 ## Required Options

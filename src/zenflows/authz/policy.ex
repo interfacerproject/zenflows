@@ -19,10 +19,12 @@
 defmodule Zenflows.Authz.Policy do
 @moduledoc """
 Deny-by-default authorization decisions.  Pure: it never touches the
-database; everything it needs is in `Zenflows.Authz.Facts`.
+database; everything it needs is in `Zenflows.Authz.Facts` (most
+actions) or `Zenflows.Authz.EventFacts` (`event.create`/`event.update`,
+decided by `Zenflows.Authz.EventPolicy`).
 """
 
-alias Zenflows.Authz.{Config, ExecutionContext, Facts}
+alias Zenflows.Authz.{Config, EventFacts, EventPolicy, ExecutionContext, Facts}
 alias Zenflows.VF.Person
 
 @actions ~w[
@@ -34,15 +36,22 @@ alias Zenflows.VF.Person
 	role.update role.delete
 	person.create person.update person.delete
 	sw_pass.import resource_control.set
+	event.create event.update
 ]
 
 @doc "Every action the policy knows about."
 @spec actions() :: [String.t()]
 def actions(), do: @actions
 
-@spec authorize(ExecutionContext.t(), String.t(), Facts.t(), Config.opts())
-	:: :ok | {:error, :forbidden | :unauthenticated}
-def authorize(%ExecutionContext{principal: principal}, action, %Facts{} = facts, opts) do
+@spec authorize(ExecutionContext.t(), String.t(), Facts.t() | EventFacts.t(), Config.opts())
+	:: :ok | {:error, :forbidden | :unauthenticated} | {:error, :forbidden, EventPolicy.rule()}
+def authorize(%ExecutionContext{principal: %Person{id: pid}}, action, %EventFacts{} = f, _opts)
+		when action in ~w[event.create event.update],
+	do: EventPolicy.decide(pid, action, f)
+def authorize(%ExecutionContext{principal: %Person{}}, _action, %EventFacts{}, _opts),
+	do: {:error, :forbidden}
+def authorize(%ExecutionContext{principal: principal}, action, facts, opts)
+		when is_struct(facts, Facts) or is_struct(facts, EventFacts) do
 	if action in @actions,
 		do: decide(principal, action, facts, opts),
 		else: {:error, :forbidden}
@@ -60,8 +69,11 @@ defp decide(%Person{id: pid}, action, facts, _opts) do
 	if person_may?(pid, action, facts), do: :ok, else: {:error, :forbidden}
 end
 
-# Event authorization is the next slice: any signer may create
-# resources (through events) and organizations.
+# `resource.create`/`organization.create` stay open here: any signer
+# may create resources (through events) and organizations.  Events
+# themselves are decided above, by `EventPolicy.decide/3` via the
+# `event.create`/`event.update` clauses of `authorize/4`, not by this
+# function.
 defp person_may?(_pid, action, _f) when action in ~w[resource.create organization.create],
 	do: true
 defp person_may?(pid, action, %Facts{control: %{controller_id: cid}} = f)

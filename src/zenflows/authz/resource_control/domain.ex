@@ -42,15 +42,24 @@ An `:anonymous` principal must first clear `resource.create` through
 `Zenflows.Authz.authorize/3`; a deny aborts the multi (so the event
 and resource are rolled back too), rather than falling back to
 assigning control to the declared receiver.
+
+`controller:` overrides the controller (transfer-type events give the
+new resource to the receiver); `event_id:` is recorded in the log
+entry.
 """
-@spec multi_on_create(Multi.t(), ExecutionContext.t(), term()) :: Multi.t()
-def multi_on_create(m, %ExecutionContext{principal: {:service, :migration, _}}, _res_key), do: m
-def multi_on_create(m, ctx, res_key) do
+@spec multi_on_create(Multi.t(), ExecutionContext.t(), term(), Keyword.t()) :: Multi.t()
+def multi_on_create(m, ctx, res_key, opts \\ [])
+def multi_on_create(m, %ExecutionContext{principal: {:service, :migration, _}}, _res_key, _opts), do: m
+def multi_on_create(m, ctx, res_key, opts) do
 	m
 	|> Multi.run("#{res_key}.control", fn repo, changes ->
 		%EconomicResource{} = res = Map.fetch!(changes, res_key)
 		with :ok <- check_anonymous(ctx) do
-			{controller_id, source} = controller_for(repo, ctx, res)
+			{controller_id, source} =
+				case Keyword.get(opts, :controller) do
+					nil -> controller_for(repo, ctx, res)
+					cid -> {cid, :creation}
+				end
 			%{resource_id: res.id, controller_id: controller_id, source: source}
 			|> ResourceControl.changeset()
 			|> repo.insert()
@@ -64,14 +73,19 @@ def multi_on_create(m, ctx, res_key) do
 			target_type: "economic_resource",
 			target_id: control.resource_id,
 			subject_id: control.controller_id,
-			after: %{
-				controller_id: control.controller_id,
-				source: control.source,
-				declared_receiver_id: res.primary_accountable_id,
-			},
+			after:
+				%{
+					controller_id: control.controller_id,
+					source: control.source,
+					declared_receiver_id: res.primary_accountable_id,
+				}
+				|> put_present(:event_id, Keyword.get(opts, :event_id)),
 		}
 	end)
 end
+
+defp put_present(map, _key, nil), do: map
+defp put_present(map, key, value), do: Map.put(map, key, value)
 
 # Anonymous callers must clear `resource.create` before we'll record
 # control; everyone else (verified Person, services) is handled by
@@ -82,13 +96,19 @@ defp check_anonymous(%ExecutionContext{principal: :anonymous} = ctx),
 defp check_anonymous(_ctx), do: :ok
 
 @doc """
-Who controls a new resource: the verified creator, or the receiving
-organization when the creator is its admin.  Never the declared
-receiver alone (events are not authorized yet).
+Who controls a new resource.  For `raise`/`produce` (and any other
+non-transfer creation): the verified creator, or the receiving
+organization when the creator is its admin.
+
+For transfer-type creations (`transfer`, `transferAllRights`,
+`transferCustody`, `move`), the caller passes `controller:` in
+`multi_on_create/4`, overriding this function with the event's
+receiver — the declared receiver *is* the controller there, decided
+by `EventPolicy` before the resource is created.
 
 The primary-accountable fallback (the final clause below) is reached
 only for an `:anonymous` principal, and only once that principal has
-cleared `resource.create` in `multi_on_create/3` — which in practice
+cleared `resource.create` in `multi_on_create/4` — which in practice
 means `allow_unchecked: true` (dev/test only; refused in production).
 """
 @spec controller_for(Ecto.Repo.t(), ExecutionContext.t(), EconomicResource.t())

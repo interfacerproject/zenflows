@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Authorization foundation — release notes
 
-**Status: CRUD enforced; events pending.**  `createEconomicEvent` can still
-change quantity, custody, accountability or containment of another agent's
-resource; that is the next slice.  Do not describe resources as generally
-protected.
+**Status: CRUD and events enforced; processes, intents and proposals
+pending.**  Do not describe resources as generally protected: processes,
+process groups, intents, proposals, proposed intents, satisfactions and
+agreements are still unauthorized.
 
 ## Behaviour changes
 
@@ -88,6 +88,67 @@ protected.
   `DELETE`, but not `TRUNCATE`.  In production, restrict table privileges
   (no `TRUNCATE` for the application role) to keep the log append-only.
 
+## Event authorization (slice 2)
+
+- `createEconomicEvent`: the signer must act for the provider or the
+  receiver (themselves, or an organization they administer), and must
+  control every resource the event changes (including a container's
+  contents).  `cite` and `use` may reference any resource.  `combine` and
+  `separate` are rejected.
+- Resources created by `transfer`, `transferAllRights`, `transferCustody`
+  and `move` are controlled by the receiver.
+- Claims: resources controlled by an agent in `AUTHZ_CLAIMABLE_AGENTS` may
+  be transferred by anyone into a new resource of their own; each claim is
+  logged as `resource.claim`.  **Set `AUTHZ_CLAIMABLE_AGENTS` to the LOSH
+  agent id before deploying, or the GUI claim page stops working.**
+- `updateEconomicEvent` works again (the resolver argument was broken) and
+  is limited to the event's provider or receiver.
+- Transferring into an existing destination (`toResourceInventoriedAs` set)
+  requires controlling that destination resource too, not just the source.
+- Resources whose controller is an organization — including ones backfilled
+  from `primaryAccountable` — block events, the same way they already block
+  CRUD, until that organization has an admin.
+- `cite` and `use` update the cited/used resource's lineage pointer
+  (`previousEventId`), and anyone may call them on any resource: a
+  stranger's `cite`/`use` event can therefore appear in a resource's trace.
+- The signer only has to act for one side of an event; they may name any
+  agent on the other side.  For example, signing as Bob, Bob may record a
+  `work` event with provider Alice and receiver Bob — Alice's participation
+  is not checked.
+- Still unauthorized: processes, process groups, intents, proposals,
+  proposed intents, satisfactions, agreements; attaching an event to
+  another agent's process is still possible.
+
+### Deploying slices 1 and 2
+
+Slice 1 (PR #71) alone gives the resource created by a transfer-type event
+(`transfer`, `transferAllRights`, `transferCustody`, `move`) to the
+**provider** (the creator); slice 2 gives it to the **receiver**.  Deploy
+both slices together.
+
+If slice 1 ran alone in some environment before slice 2 was deployed, run
+this fix-up once, after deploying slice 2, best as a migration (so each
+changed row is logged to `zf_permission_log` as `resource_control.set`,
+service `migration`, the way `Zenflows.Authz.Backfill` already does for the
+initial backfill):
+
+```sql
+UPDATE zf_resource_control AS rc
+SET controller_id = r.primary_accountable_id,
+    epoch = rc.epoch + 1
+FROM vf_economic_resource AS r
+JOIN vf_economic_event AS e ON e.id = r.previous_event_id
+WHERE rc.resource_id = r.id
+  AND rc.source = 'creation'
+  AND e.action_id IN ('transfer', 'transferAllRights', 'transferCustody', 'move')
+  AND rc.controller_id <> e.receiver_id;
+```
+
+(`primary_accountable_id` on these resources is always the event's
+`receiver_id` — the event handlers set it that way — so the two are
+interchangeable here; the statement uses the join only to find the right
+rows.)
+
 ## Known limitations
 
 - The last-admin protection is enforced by the policy only, so it does not
@@ -97,3 +158,20 @@ protected.
 - Admin-key GraphQL tests could not be exercised in the development
   environment used here (Restroom `byte_equal?` service mismatch);
   domain-level tests cover the logic.
+- Containment discovery for the container rule runs before the resource
+  locks are taken: a content attached to a changed resource between
+  discovery and lock would be missed.  No API sets containment today, so
+  this is a documented limitation, to be revisited with `combine`/
+  `separate`.
+- The SWPass import writes events and resources directly, without an
+  `event.create` decision or deny telemetry.  It runs only behind the
+  admin key, as the `:import` service, which is otherwise allowed to
+  create events; this is a documented exception, not a gap reachable by
+  ordinary callers.
+- A missing event on `updateEconomicEvent` is reported to operators with
+  deny telemetry rule `:agent` (the stored event is required to tell
+  which agent rule failed, so the generic fallback rule is used).
+- An event and a concurrent `deleteOrganization` of an agent it references
+  can deadlock on each other's foreign-key locks; PostgreSQL aborts one
+  side, so both outcomes are errors (the delete is blocked by foreign keys
+  anyway, regardless of which side wins).

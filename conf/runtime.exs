@@ -148,4 +148,9 @@ config :zenflows, Zenflows.Email,
 authz_unchecked_default = if config_env() == :test, do: "true", else: "false"
 config :zenflows, Zenflows.Authz,
 	enforce: get_env("AUTHZ_ENFORCE", "true") != "false",
-	allow_unchecked: get_env("AUTHZ_ALLOW_UNCHECKED", authz_unchecked_default) == "true"
+	allow_unchecked: get_env("AUTHZ_ALLOW_UNCHECKED", authz_unchecked_default) == "true",
+	claimable_agents:
+		get_env("AUTHZ_CLAIMABLE_AGENTS", "")
+		|> String.split(",", trim: true)
+		|> Enum.map(&String.trim/1)
+		|> Enum.reject(&(&1 == ""))

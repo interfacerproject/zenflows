@@ -20,7 +20,7 @@ defmodule ZenflowsTest.Authz.ObjectFacts do
 use ZenflowsTest.Help.EctoCase, async: true
 
 alias Zenflows.Authz.{Facts, ObjectControl}
-alias Zenflows.VF.{EconomicEvent, Intent, Process, ProposedIntent}
+alias Zenflows.VF.{EconomicEvent, Intent, Process, ProposedIntent, Satisfaction}
 
 describe "for_object/4" do
 	setup do
@@ -92,6 +92,82 @@ describe "for_intent_update/4" do
 		assert %Facts{finished_only: false} =
 			Facts.for_intent_update(Repo, Factory.ctx(bob), target.id, %{id: target.id, finished: false})
 	end
+
+	test "finished_only is true for an equivalent string-keyed params map" do
+		bob = Factory.insert!(:person)
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: bob.id}) |> Repo.insert!()
+
+		assert %Facts{finished_only: true} =
+			Facts.for_intent_update(Repo, Factory.ctx(bob), target.id, %{"id" => target.id, "finished" => true})
+	end
+
+	test "params changing input_of_id load new_target and that process's control into process_controls" do
+		alice = Factory.insert!(:person)
+		bob = Factory.insert!(:person)
+		proc = Factory.insert!(:process)
+		%{target_type: "process", target_id: proc.id, controller_id: bob.id, source: :creation}
+		|> ObjectControl.changeset()
+		|> Repo.insert!()
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+
+		f = Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{input_of_id: proc.id})
+		assert %Facts{new_target: %{input_of_id: input_of_id, provider_id: provider_id}} = f
+		assert input_of_id == proc.id
+		assert provider_id == alice.id
+		proc_id = proc.id
+		assert %{^proc_id => %ObjectControl{controller_id: cid}} = f.process_controls
+		assert cid == bob.id
+	end
+
+	test "params without any structural key leave new_target nil" do
+		alice = Factory.insert!(:person)
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+
+		assert %Facts{new_target: nil} =
+			Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{note: "n"})
+	end
+end
+
+describe "for_proposed_intent_create/4" do
+	test "loads the proposal's control, the intent, and the intent's control" do
+		alice = Factory.insert!(:person)
+		bob = Factory.insert!(:person)
+		proposal = Factory.insert!(:proposal)
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: bob.id}) |> Repo.insert!()
+		%{target_type: "proposal", target_id: proposal.id, controller_id: alice.id, source: :creation}
+		|> ObjectControl.changeset() |> Repo.insert!()
+		%{target_type: "intent", target_id: intent.id, controller_id: bob.id, source: :creation}
+		|> ObjectControl.changeset() |> Repo.insert!()
+
+		f = Facts.for_proposed_intent_create(Repo, Factory.ctx(alice), proposal.id, intent.id)
+		assert %Facts{control: %ObjectControl{controller_id: cid1, target_type: "proposal"},
+			intent: %Intent{id: iid},
+			intent_control: %ObjectControl{controller_id: cid2, target_type: "intent"}} = f
+		assert cid1 == alice.id
+		assert cid2 == bob.id
+		assert iid == intent.id
+	end
+end
+
+describe "for_proposed_intent/3" do
+	test "loads the proposed intent and its proposal's control" do
+		alice = Factory.insert!(:person)
+		proposal = Factory.insert!(:proposal)
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		pi = ProposedIntent.Domain.create!(%{publishes_id: intent.id, published_in_id: proposal.id})
+		%{target_type: "proposal", target_id: proposal.id, controller_id: alice.id, source: :creation}
+		|> ObjectControl.changeset() |> Repo.insert!()
+
+		f = Facts.for_proposed_intent(Repo, Factory.ctx(alice), pi.id)
+		assert %Facts{target: %ProposedIntent{id: pid}, control: %ObjectControl{controller_id: cid}} = f
+		assert pid == pi.id
+		assert cid == alice.id
+	end
+
+	test "no proposed intent: target and control are both nil" do
+		alice = Factory.insert!(:person)
+		assert %Facts{target: nil, control: nil} = Facts.for_proposed_intent(Repo, Factory.ctx(alice), Factory.id())
+	end
 end
 
 describe "for_satisfaction_create/3" do
@@ -116,6 +192,35 @@ describe "for_satisfaction_create/3" do
 			%{satisfied_by_commitment_id: commitment_id, satisfies_id: intent.id})
 		assert %Facts{event: nil, intent: %Intent{id: iid}} = f
 		assert iid == intent.id
+	end
+end
+
+describe "for_satisfaction/4" do
+	test "loads the current event and intent; new_event/new_intent are nil without params" do
+		alice = Factory.insert!(:person)
+		event_id = Factory.insert_economic_event!().id
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		satisfaction = Satisfaction.changeset(%{satisfied_by_event_id: event_id, satisfies_id: intent.id})
+			|> Repo.insert!()
+
+		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id)
+		assert %Facts{event: %EconomicEvent{id: eid}, intent: %Intent{id: iid}, new_event: nil, new_intent: nil} = f
+		assert eid == event_id
+		assert iid == intent.id
+	end
+
+	test "satisfied_by_event_id in params loads new_event" do
+		alice = Factory.insert!(:person)
+		event_id = Factory.insert_economic_event!().id
+		new_event_id = Factory.insert_economic_event!().id
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		satisfaction = Satisfaction.changeset(%{satisfied_by_event_id: event_id, satisfies_id: intent.id})
+			|> Repo.insert!()
+
+		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id,
+			%{satisfied_by_event_id: new_event_id})
+		assert %Facts{new_event: %EconomicEvent{id: new_eid}, new_intent: nil} = f
+		assert new_eid == new_event_id
 	end
 end
 end

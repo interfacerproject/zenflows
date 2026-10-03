@@ -114,7 +114,7 @@ defp person_may?(_pid, action, _f) when action in ~w[process.create proposal.cre
 	do: true
 defp person_may?(pid, action, %Facts{control: %ObjectControl{} = c} = f)
 		when action in ~w[process.update process.delete proposal.update proposal.delete intent.delete],
-	do: controls?(pid, f, c)
+	do: object_type_ok?(action, c.target_type) and controls?(pid, f, c)
 defp person_may?(pid, "intent.create", %Facts{target: %{} = t} = f) do
 	case Enum.reject([Map.get(t, :input_of_id), Map.get(t, :output_of_id)], &is_nil/1) do
 		[] -> acts_for?(pid, f, Map.get(t, :provider_id)) or acts_for?(pid, f, Map.get(t, :receiver_id))
@@ -122,25 +122,38 @@ defp person_may?(pid, "intent.create", %Facts{target: %{} = t} = f) do
 	end
 end
 defp person_may?(pid, "intent.update", %Facts{target: %Intent{} = i} = f) do
-	controls?(pid, f, f.control)
+	base = controls?(pid, f, f.control)
 		or acts_for?(pid, f, i.provider_id) or acts_for?(pid, f, i.receiver_id)
 		or (f.finished_only and Enum.any?(f.sibling_parties, &acts_for?(pid, f, &1)))
+	# Updates are judged only on the old state above; a structural
+	# change (new provider/receiver/process) must additionally pass the
+	# same rule a fresh `intent.create` with that shape would.
+	base and (f.new_target == nil or person_may?(pid, "intent.create", %{f | target: f.new_target}))
 end
 defp person_may?(pid, "proposed_intent.create", %Facts{intent: %Intent{} = i} = f) do
-	controls?(pid, f, f.control)
-		and (controls?(pid, f, f.intent_control)
+	(controls?(pid, f, f.control) and type_ok?(f.control, "proposal"))
+		and ((controls?(pid, f, f.intent_control) and type_ok?(f.intent_control, "intent"))
 			or acts_for?(pid, f, i.provider_id) or acts_for?(pid, f, i.receiver_id))
 end
 defp person_may?(pid, "proposed_intent.delete", %Facts{target: %ProposedIntent{}} = f),
-	do: controls?(pid, f, f.control)
+	do: controls?(pid, f, f.control) and type_ok?(f.control, "proposal")
 defp person_may?(pid, "satisfaction.create", %Facts{event: %EconomicEvent{} = e, intent: %Intent{} = i} = f) do
 	event_agents = Enum.reject([e.provider_id, e.receiver_id], &is_nil/1)
 	intent_agents = Enum.reject([i.provider_id, i.receiver_id], &is_nil/1)
 	Enum.any?(event_agents, &acts_for?(pid, f, &1))
 		and Enum.any?(event_agents, &(&1 in intent_agents))
 end
-defp person_may?(pid, action, %Facts{event: %EconomicEvent{} = e} = f)
-		when action in ~w[satisfaction.update satisfaction.delete],
+defp person_may?(pid, "satisfaction.update", %Facts{event: %EconomicEvent{} = e} = f) do
+	base = acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)
+	# As with `intent.update`: the old state alone decides the base
+	# case above; re-pointing to a different event or intent must
+	# additionally pass the `satisfaction.create` rule for the new pair.
+	base and (
+		(f.new_event == nil and f.new_intent == nil)
+			or person_may?(pid, "satisfaction.create",
+				%{f | event: f.new_event || f.event, intent: f.new_intent || f.intent}))
+end
+defp person_may?(pid, "satisfaction.delete", %Facts{event: %EconomicEvent{} = e} = f),
 	do: acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)
 defp person_may?(_pid, _action, _facts), do: false
 
@@ -153,4 +166,16 @@ defp acts_for?(pid, f, id), do: id == pid or MapSet.member?(f.admin_of, id)
 
 defp controls?(_pid, _f, nil), do: false
 defp controls?(pid, f, %{controller_id: cid}), do: acts_for?(pid, f, cid)
+
+# `process.update`/`process.delete` etc. only make sense against a
+# control row of the matching object type (the action's prefix); this
+# guards against a stale/mismatched control row silently authorizing
+# the wrong kind of object.
+defp object_type_ok?(action, type) do
+	[prefix | _] = String.split(action, ".", parts: 2)
+	prefix == type
+end
+
+defp type_ok?(nil, _type), do: true
+defp type_ok?(%ObjectControl{target_type: t}, type), do: t == type
 end

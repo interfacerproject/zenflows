@@ -40,12 +40,18 @@ test "create of process/proposal: any person", c do
 end
 
 test "update/delete of process/proposal/intent: controller or admin of controlling org", c do
-	for a <- ~w[process.update process.delete proposal.update proposal.delete intent.delete] do
-		assert :ok = auth(c.as_a, a, %Facts{control: ctl(c.a)})
-		assert {:error, :forbidden} = auth(c.as_b, a, %Facts{control: ctl(c.a)})
-		assert :ok = auth(c.as_b, a, %Facts{control: ctl(c.org), admin_of: MapSet.new([c.org])})
+	for {a, type} <- [{"process.update", "process"}, {"process.delete", "process"},
+			{"proposal.update", "proposal"}, {"proposal.delete", "proposal"},
+			{"intent.delete", "intent"}] do
+		assert :ok = auth(c.as_a, a, %Facts{control: ctl(c.a, type)})
+		assert {:error, :forbidden} = auth(c.as_b, a, %Facts{control: ctl(c.a, type)})
+		assert :ok = auth(c.as_b, a, %Facts{control: ctl(c.org, type), admin_of: MapSet.new([c.org])})
 		assert {:error, :forbidden} = auth(c.as_a, a, %Facts{control: nil})
 	end
+end
+
+test "a control of the wrong target type does not authorize: process control vs. intent.delete", c do
+	assert {:error, :forbidden} = auth(c.as_a, "intent.delete", %Facts{control: ctl(c.a, "process")})
 end
 
 describe "intent.create" do
@@ -79,6 +85,26 @@ describe "intent.update" do
 		sib = %Facts{target: int, sibling_parties: MapSet.new([c.b]), finished_only: true}
 		assert :ok = auth(c.as_b, "intent.update", sib)
 		assert {:error, :forbidden} = auth(c.as_b, "intent.update", %{sib | finished_only: false})
+	end
+
+	test "unchanged structure (no new_target): existing rule alone decides", c do
+		int = %Intent{provider_id: c.a, receiver_id: nil}
+		assert :ok = auth(c.as_a, "intent.update", %Facts{target: int, new_target: nil})
+	end
+
+	test "re-pointing input_of to a process the signer doesn't control: forbidden", c do
+		int = %Intent{provider_id: c.a, receiver_id: nil}
+		f = %Facts{target: int,
+			new_target: %{provider_id: c.a, receiver_id: nil, input_of_id: c.p1, output_of_id: nil},
+			process_controls: %{c.p1 => ctl(c.b)}}
+		assert {:error, :forbidden} = auth(c.as_a, "intent.update", f)
+	end
+
+	test "controller changing the receiver to someone they don't act for: forbidden", c do
+		int = %Intent{provider_id: c.org, receiver_id: nil}
+		f = %Facts{target: int, control: ctl(c.a, "intent"),
+			new_target: %{provider_id: c.org, receiver_id: c.b, input_of_id: nil, output_of_id: nil}}
+		assert {:error, :forbidden} = auth(c.as_a, "intent.update", f)
 	end
 end
 
@@ -120,6 +146,19 @@ describe "satisfaction" do
 			assert :ok = auth(c.as_a, a, f)
 			assert {:error, :forbidden} = auth(c.as_b, a, f)
 		end
+	end
+
+	test "update: unchanged target (no new_event/new_intent): existing rule alone decides", c do
+		f = %Facts{target: %Satisfaction{}, event: %EconomicEvent{provider_id: c.a, receiver_id: c.a}}
+		assert :ok = auth(c.as_a, "satisfaction.update", f)
+	end
+
+	test "update: re-pointing to an event the signer isn't a party to: forbidden", c do
+		f = %Facts{target: %Satisfaction{},
+			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
+			intent: %Intent{provider_id: c.a},
+			new_event: %EconomicEvent{provider_id: c.org, receiver_id: c.b}}
+		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
 	end
 end
 

@@ -51,6 +51,9 @@ alias Zenflows.VF.{
 	event: nil | EconomicEvent.t(),
 	sibling_parties: MapSet.t(String.t()),
 	finished_only: boolean(),
+	new_target: nil | map(),
+	new_event: nil | EconomicEvent.t(),
+	new_intent: nil | Intent.t(),
 }
 
 defstruct target: nil,
@@ -64,7 +67,10 @@ defstruct target: nil,
 	intent_control: nil,
 	event: nil,
 	sibling_parties: MapSet.new(),
-	finished_only: false
+	finished_only: false,
+	new_target: nil,
+	new_event: nil,
+	new_intent: nil
 
 @doc """
 The subset of `agent_ids` (nil entries ignored) where the acting Person
@@ -127,7 +133,10 @@ end
 @spec for_object(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
 def for_object(repo, ctx, type, id) do
 	schema = Map.fetch!(@schemas, type)
-	target = repo.one(from t in schema, where: t.id == ^id, lock: "FOR UPDATE")
+	# FOR NO KEY UPDATE: a plain FOR UPDATE would deadlock against the
+	# FOR KEY SHARE lock that a concurrent child insert's foreign-key
+	# check takes on this same row.
+	target = repo.one(from t in schema, where: t.id == ^id, lock: "FOR NO KEY UPDATE")
 	control = lock_object_control(repo, type, id, "FOR UPDATE")
 	%__MODULE__{target: target, control: control,
 		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
@@ -145,14 +154,26 @@ end
 
 @spec for_intent_update(Ecto.Repo.t(), ExecutionContext.t(), String.t(), map()) :: t()
 def for_intent_update(repo, ctx, id, params) do
-	target = repo.one(from i in Intent, where: i.id == ^id, lock: "FOR UPDATE")
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from i in Intent, where: i.id == ^id, lock: "FOR NO KEY UPDATE")
 	control = lock_object_control(repo, "intent", id, "FOR UPDATE")
 	siblings = sibling_parties(repo, id)
+	new_target = intent_new_target(target, params)
+	process_ids = case new_target do
+		nil -> []
+		nt -> Enum.reject([nt.input_of_id, nt.output_of_id], &is_nil/1)
+	end
+	process_controls = lock_object_controls(repo, "process", process_ids)
+	new_ids = case new_target do
+		nil -> []
+		nt -> [nt.provider_id, nt.receiver_id | Enum.map(Map.values(process_controls), & &1.controller_id)]
+	end
 	ids = [control && control.controller_id,
 		target && target.provider_id, target && target.receiver_id | MapSet.to_list(siblings)]
 	%__MODULE__{target: target, control: control, sibling_parties: siblings,
+		new_target: new_target, process_controls: process_controls,
 		finished_only: Map.drop(params, [:id, "id"]) in [%{finished: true}, %{"finished" => true}],
-		admin_of: admin_of(repo, ctx, ids)}
+		admin_of: admin_of(repo, ctx, ids ++ new_ids)}
 end
 
 @spec for_proposed_intent_create(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
@@ -168,7 +189,8 @@ end
 
 @spec for_proposed_intent(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
 def for_proposed_intent(repo, ctx, id) do
-	target = repo.one(from p in ProposedIntent, where: p.id == ^id, lock: "FOR UPDATE")
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from p in ProposedIntent, where: p.id == ^id, lock: "FOR NO KEY UPDATE")
 	control = target && lock_object_control(repo, "proposal", target.published_in_id, "FOR SHARE")
 	%__MODULE__{target: target, control: control,
 		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
@@ -188,12 +210,18 @@ def for_satisfaction_create(repo, ctx, changes) do
 		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
 end
 
-@spec for_satisfaction(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
-def for_satisfaction(repo, ctx, id) do
-	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR UPDATE")
+@spec for_satisfaction(Ecto.Repo.t(), ExecutionContext.t(), String.t(), map()) :: t()
+def for_satisfaction(repo, ctx, id, params \\ %{}) do
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR NO KEY UPDATE")
 	event = target && target.satisfied_by_event_id && repo.get(EconomicEvent, target.satisfied_by_event_id)
-	%__MODULE__{target: target, event: event,
-		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
+	intent = target && target.satisfies_id && repo.get(Intent, target.satisfies_id)
+	new_event = satisfaction_new_ref(params, :satisfied_by_event_id, EconomicEvent, repo)
+	new_intent = satisfaction_new_ref(params, :satisfies_id, Intent, repo)
+	%__MODULE__{target: target, event: event, intent: intent,
+		new_event: new_event, new_intent: new_intent,
+		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id,
+			new_event && new_event.provider_id, new_event && new_event.receiver_id])}
 end
 
 defp lock_object_control(repo, type, id, "FOR UPDATE"),
@@ -217,6 +245,42 @@ defp lock_object_controls(repo, type, ids) do
 		order_by: c.target_id, lock: "FOR SHARE")
 	|> repo.all()
 	|> Map.new(&{&1.target_id, &1})
+end
+
+@intent_struct_fields ~w[provider_id receiver_id input_of_id output_of_id]a
+
+# `nil` unless `params` names at least one of the four fields that
+# determine who an intent is *for* (either of its parties, or either
+# process it is attached to); when it does, returns the intent's
+# would-be values for all four, current values overridden by `params`
+# (atom or string keys).
+defp intent_new_target(nil, _params), do: nil
+defp intent_new_target(target, params) do
+	if Enum.any?(@intent_struct_fields, &param_key?(params, &1)) do
+		Map.new(@intent_struct_fields, fn field ->
+			value = case fetch_param(params, field) do
+				{:ok, v} -> v
+				:error -> Map.get(target, field)
+			end
+			{field, value}
+		end)
+	end
+end
+
+defp param_key?(params, key), do: Map.has_key?(params, key) or Map.has_key?(params, Atom.to_string(key))
+
+defp fetch_param(params, key) do
+	case Map.fetch(params, key) do
+		{:ok, _} = found -> found
+		:error -> Map.fetch(params, Atom.to_string(key))
+	end
+end
+
+defp satisfaction_new_ref(params, key, schema, repo) do
+	case fetch_param(params, key) do
+		{:ok, id} when is_binary(id) -> repo.get(schema, id)
+		_ -> nil
+	end
 end
 
 defp sibling_parties(repo, intent_id) do

@@ -158,10 +158,14 @@ defp person_may?(pid, "satisfaction.update", %Facts{event: %EconomicEvent{} = e}
 	# is used as-is (never falls back to the old `event`) so that
 	# re-pointing to "no event" is correctly judged against `nil`, not
 	# against the event being replaced.
+	# A changed `satisfies_id` (`retarget?`) is judged against the new
+	# intent only: if it doesn't exist (`new_intent` nil) the create
+	# clause doesn't match and the update is denied.
 	base and (
-		(not f.repoint? and f.new_intent == nil)
+		(not f.repoint? and not f.retarget?)
 			or person_may?(pid, "satisfaction.create",
-				%{f | event: (if f.repoint?, do: f.new_event, else: f.event), intent: f.new_intent || f.intent}))
+				%{f | event: (if f.repoint?, do: f.new_event, else: f.event),
+					intent: (if f.retarget?, do: f.new_intent, else: f.intent)}))
 end
 defp person_may?(pid, "satisfaction.delete", %Facts{event: %EconomicEvent{} = e} = f),
 	do: acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)

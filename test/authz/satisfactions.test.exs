@@ -104,6 +104,13 @@ describe "update/delete" do
 				%{note: "x", satisfied_by_event_id: c.event.id})
 	end
 
+	test "update re-pointing satisfies to a missing intent: forbidden, no fallback to the old intent", c do
+		assert {:error, :forbidden} =
+			Satisfaction.Domain.update(Factory.ctx(c.alice), c.satis.id,
+				%{satisfies_id: Factory.id(), satisfied_by_event_id: c.event.id})
+		assert Satisfaction.Domain.one!(c.satis.id).satisfies_id == c.satis.satisfies_id
+	end
+
 	test "delete by a party of the event: ok", c do
 		assert {:ok, %Satisfaction{}} = Satisfaction.Domain.delete(Factory.ctx(c.bob), c.satis.id)
 	end

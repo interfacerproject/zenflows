@@ -199,7 +199,18 @@ describe "satisfaction" do
 		f = %Facts{target: %Satisfaction{},
 			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
 			intent: %Intent{provider_id: c.a},
+			retarget?: true,
 			new_intent: %Intent{provider_id: c.org}}
+		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
+		assert :ok = auth(c.as_a, "satisfaction.update", %{f | new_intent: %Intent{receiver_id: c.a}})
+	end
+
+	test "update: re-pointing satisfies_id to a missing intent: forbidden (no fallback to the old one)", c do
+		f = %Facts{target: %Satisfaction{},
+			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
+			intent: %Intent{provider_id: c.a},
+			retarget?: true,
+			new_intent: nil}
 		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
 	end
 end

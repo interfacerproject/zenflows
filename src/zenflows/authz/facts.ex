@@ -55,6 +55,7 @@ alias Zenflows.VF.{
 	new_event: nil | EconomicEvent.t(),
 	new_intent: nil | Intent.t(),
 	repoint?: boolean(),
+	retarget?: boolean(),
 }
 
 defstruct target: nil,
@@ -72,7 +73,8 @@ defstruct target: nil,
 	new_target: nil,
 	new_event: nil,
 	new_intent: nil,
-	repoint?: false
+	repoint?: false,
+	retarget?: false
 
 @doc """
 The subset of `agent_ids` (nil entries ignored) where the acting Person
@@ -195,7 +197,7 @@ end
 @spec for_proposed_intent_create(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
 def for_proposed_intent_create(repo, ctx, proposal_id, intent_id) do
 	control = lock_object_control(repo, "proposal", proposal_id, "FOR SHARE")
-	intent = repo.get(Intent, intent_id)
+	intent = lock_intent_share(repo, intent_id)
 	intent_control = lock_object_control(repo, "intent", intent_id, "FOR SHARE")
 	%__MODULE__{control: control, intent: intent, intent_control: intent_control,
 		admin_of: admin_of(repo, ctx, [control && control.controller_id,
@@ -218,10 +220,7 @@ def for_satisfaction_create(repo, ctx, changes) do
 		nil -> nil
 		eid -> repo.get(EconomicEvent, eid)
 	end
-	intent = case Map.get(changes, :satisfies_id) do
-		nil -> nil
-		iid -> repo.get(Intent, iid)
-	end
+	intent = lock_intent_share(repo, Map.get(changes, :satisfies_id))
 	%__MODULE__{target: changes, event: event, intent: intent,
 		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
 end
@@ -231,7 +230,7 @@ def for_satisfaction(repo, ctx, id, params \\ %{}) do
 	# FOR NO KEY UPDATE: see for_object/4.
 	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR NO KEY UPDATE")
 	event = target && target.satisfied_by_event_id && repo.get(EconomicEvent, target.satisfied_by_event_id)
-	intent = target && target.satisfies_id && repo.get(Intent, target.satisfies_id)
+	intent = target && lock_intent_share(repo, target.satisfies_id)
 
 	# A satisfaction is re-pointed when `params` actually changes either
 	# of the two things it may be satisfied *by* (an event or a
@@ -248,10 +247,15 @@ def for_satisfaction(repo, ctx, id, params \\ %{}) do
 			eid -> repo.get(EconomicEvent, eid)
 		end
 	end
-	new_intent = satisfaction_new_ref(params, :satisfies_id, target && target.satisfies_id, Intent, repo)
+	# A changed `satisfies_id` is judged against the intent it names; if
+	# that intent does not exist, `new_intent` stays nil and
+	# `retarget?` tells the policy to deny (no fallback to the old one).
+	retarget? = target != nil and changed?(params, :satisfies_id, target.satisfies_id)
+	new_intent = if retarget?,
+		do: lock_intent_share(repo, resulting_value(params, :satisfies_id, nil))
 
 	%__MODULE__{target: target, event: event, intent: intent,
-		new_event: new_event, new_intent: new_intent, repoint?: repoint?,
+		new_event: new_event, new_intent: new_intent, repoint?: repoint?, retarget?: retarget?,
 		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id,
 			new_event && new_event.provider_id, new_event && new_event.receiver_id])}
 end
@@ -320,14 +324,17 @@ defp fetch_param(params, key) do
 	end
 end
 
-defp satisfaction_new_ref(params, key, current, schema, repo) do
-	if changed?(params, key, current) do
-		case resulting_value(params, key, current) do
-			id when is_binary(id) -> repo.get(schema, id)
-			_ -> nil
-		end
+# The intent row `FOR SHARE`: it conflicts with the `FOR NO KEY UPDATE`
+# an `updateIntent` takes, so a decision that reads an intent's parties
+# serializes with a concurrent change of them.  Same order as the update
+# path: intent row, then (if needed) its control row.
+defp lock_intent_share(repo, id) when is_binary(id) do
+	case Zenflows.DB.ID.cast(id) do
+		{:ok, id} -> repo.one(from i in Intent, where: i.id == ^id, lock: "FOR SHARE")
+		:error -> nil
 	end
 end
+defp lock_intent_share(_repo, _id), do: nil
 
 defp sibling_parties(repo, intent_id) do
 	from(pi in ProposedIntent,

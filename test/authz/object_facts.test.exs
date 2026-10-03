@@ -289,5 +289,24 @@ describe "for_satisfaction/4" do
 		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{note: "n"})
 		assert %Facts{repoint?: false, new_event: nil} = f
 	end
+
+	test "a changed satisfies_id marks retarget?; a missing or malformed intent loads nil" do
+		alice = Factory.insert!(:person)
+		event_id = Factory.insert_economic_event!().id
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		other = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		satisfaction = Satisfaction.changeset(%{satisfied_by_event_id: event_id, satisfies_id: intent.id})
+			|> Repo.insert!()
+
+		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{satisfies_id: other.id})
+		assert %Facts{retarget?: true, new_intent: %Intent{id: oid}} = f
+		assert oid == other.id
+		assert %Facts{retarget?: true, new_intent: nil} =
+			Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{satisfies_id: Factory.id()})
+		assert %Facts{retarget?: true, new_intent: nil} =
+			Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{satisfies_id: "not-an-id"})
+		assert %Facts{retarget?: false, new_intent: nil} =
+			Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{satisfies_id: intent.id})
+	end
 end
 end

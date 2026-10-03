@@ -24,16 +24,33 @@ Everything a policy decision may look at.  Domain functions load it
 
 import Ecto.Query
 
-alias Zenflows.Authz.{ExecutionContext, ResourceControl, Roles}
-alias Zenflows.VF.{AgentRelationship, EconomicResource, Organization, Person}
+alias Zenflows.Authz.{ExecutionContext, ObjectControl, ResourceControl, Roles}
+alias Zenflows.VF.{
+	AgentRelationship,
+	EconomicEvent,
+	EconomicResource,
+	Intent,
+	Organization,
+	Person,
+	Process,
+	Proposal,
+	ProposedIntent,
+	Satisfaction,
+}
 
 @type t() :: %__MODULE__{
 	target: nil | struct() | map(),
-	control: nil | ResourceControl.t(),
+	control: nil | ResourceControl.t() | ObjectControl.t(),
 	admin_of: MapSet.t(String.t()),
 	role_key: nil | String.t(),
 	new_subject_id: nil | String.t(),
 	active_admin_count: nil | non_neg_integer(),
+	process_controls: %{String.t() => ObjectControl.t()},
+	intent: nil | Intent.t(),
+	intent_control: nil | ObjectControl.t(),
+	event: nil | EconomicEvent.t(),
+	sibling_parties: MapSet.t(String.t()),
+	finished_only: boolean(),
 }
 
 defstruct target: nil,
@@ -41,7 +58,13 @@ defstruct target: nil,
 	admin_of: MapSet.new(),
 	role_key: nil,
 	new_subject_id: nil,
-	active_admin_count: nil
+	active_admin_count: nil,
+	process_controls: %{},
+	intent: nil,
+	intent_control: nil,
+	event: nil,
+	sibling_parties: MapSet.new(),
+	finished_only: false
 
 @doc """
 The subset of `agent_ids` (nil entries ignored) where the acting Person
@@ -97,5 +120,114 @@ def for_person(repo, id) do
 	%__MODULE__{
 		target: repo.one(from p in Person, where: p.id == ^id and p.type == :per, lock: "FOR UPDATE"),
 	}
+end
+
+@schemas %{"process" => Process, "proposal" => Proposal, "intent" => Intent}
+
+@spec for_object(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
+def for_object(repo, ctx, type, id) do
+	schema = Map.fetch!(@schemas, type)
+	target = repo.one(from t in schema, where: t.id == ^id, lock: "FOR UPDATE")
+	control = lock_object_control(repo, type, id, "FOR UPDATE")
+	%__MODULE__{target: target, control: control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
+end
+
+@spec for_intent_create(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
+def for_intent_create(repo, ctx, changes) do
+	ids = Enum.reject([Map.get(changes, :input_of_id), Map.get(changes, :output_of_id)], &is_nil/1)
+	controls = lock_object_controls(repo, "process", ids)
+	%__MODULE__{target: changes, process_controls: controls,
+		admin_of: admin_of(repo, ctx,
+			[Map.get(changes, :provider_id), Map.get(changes, :receiver_id)
+				| Enum.map(Map.values(controls), & &1.controller_id)])}
+end
+
+@spec for_intent_update(Ecto.Repo.t(), ExecutionContext.t(), String.t(), map()) :: t()
+def for_intent_update(repo, ctx, id, params) do
+	target = repo.one(from i in Intent, where: i.id == ^id, lock: "FOR UPDATE")
+	control = lock_object_control(repo, "intent", id, "FOR UPDATE")
+	siblings = sibling_parties(repo, id)
+	ids = [control && control.controller_id,
+		target && target.provider_id, target && target.receiver_id | MapSet.to_list(siblings)]
+	%__MODULE__{target: target, control: control, sibling_parties: siblings,
+		finished_only: Map.drop(params, [:id, "id"]) in [%{finished: true}, %{"finished" => true}],
+		admin_of: admin_of(repo, ctx, ids)}
+end
+
+@spec for_proposed_intent_create(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
+def for_proposed_intent_create(repo, ctx, proposal_id, intent_id) do
+	control = lock_object_control(repo, "proposal", proposal_id, "FOR SHARE")
+	intent = repo.get(Intent, intent_id)
+	intent_control = lock_object_control(repo, "intent", intent_id, "FOR SHARE")
+	%__MODULE__{control: control, intent: intent, intent_control: intent_control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id,
+			intent_control && intent_control.controller_id,
+			intent && intent.provider_id, intent && intent.receiver_id])}
+end
+
+@spec for_proposed_intent(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
+def for_proposed_intent(repo, ctx, id) do
+	target = repo.one(from p in ProposedIntent, where: p.id == ^id, lock: "FOR UPDATE")
+	control = target && lock_object_control(repo, "proposal", target.published_in_id, "FOR SHARE")
+	%__MODULE__{target: target, control: control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
+end
+
+@spec for_satisfaction_create(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
+def for_satisfaction_create(repo, ctx, changes) do
+	event = case Map.get(changes, :satisfied_by_event_id) do
+		nil -> nil
+		eid -> repo.get(EconomicEvent, eid)
+	end
+	intent = case Map.get(changes, :satisfies_id) do
+		nil -> nil
+		iid -> repo.get(Intent, iid)
+	end
+	%__MODULE__{target: changes, event: event, intent: intent,
+		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
+end
+
+@spec for_satisfaction(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
+def for_satisfaction(repo, ctx, id) do
+	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR UPDATE")
+	event = target && target.satisfied_by_event_id && repo.get(EconomicEvent, target.satisfied_by_event_id)
+	%__MODULE__{target: target, event: event,
+		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
+end
+
+defp lock_object_control(repo, type, id, "FOR UPDATE"),
+	do: lock_object_control_update(repo, type, id)
+defp lock_object_control(repo, type, id, "FOR SHARE"),
+	do: lock_object_control_share(repo, type, id)
+
+defp lock_object_control_update(repo, type, id) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id == ^id, lock: "FOR UPDATE")
+	|> repo.one()
+end
+
+defp lock_object_control_share(repo, type, id) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id == ^id, lock: "FOR SHARE")
+	|> repo.one()
+end
+
+defp lock_object_controls(_repo, _type, []), do: %{}
+defp lock_object_controls(repo, type, ids) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id in ^ids,
+		order_by: c.target_id, lock: "FOR SHARE")
+	|> repo.all()
+	|> Map.new(&{&1.target_id, &1})
+end
+
+defp sibling_parties(repo, intent_id) do
+	from(pi in ProposedIntent,
+		join: sib in ProposedIntent, on: sib.published_in_id == pi.published_in_id,
+		join: i in Intent, on: i.id == sib.publishes_id,
+		where: pi.publishes_id == ^intent_id,
+		select: [i.provider_id, i.receiver_id])
+	|> repo.all()
+	|> List.flatten()
+	|> Enum.reject(&is_nil/1)
+	|> MapSet.new()
 end
 end

@@ -20,12 +20,13 @@ defmodule Zenflows.Authz.Policy do
 @moduledoc """
 Deny-by-default authorization decisions.  Pure: it never touches the
 database; everything it needs is in `Zenflows.Authz.Facts` (most
-actions) or `Zenflows.Authz.EventFacts` (`event.create`/`event.update`,
-decided by `Zenflows.Authz.EventPolicy`).
+actions, including processes, proposals, intents, proposed intents,
+and satisfactions) or `Zenflows.Authz.EventFacts`
+(`event.create`/`event.update`, decided by `Zenflows.Authz.EventPolicy`).
 """
 
-alias Zenflows.Authz.{Config, EventFacts, EventPolicy, ExecutionContext, Facts}
-alias Zenflows.VF.Person
+alias Zenflows.Authz.{Config, EventFacts, EventPolicy, ExecutionContext, Facts, ObjectControl}
+alias Zenflows.VF.{EconomicEvent, Intent, Person, ProposedIntent}
 
 @actions ~w[
 	resource.create resource.update resource.delete
@@ -38,6 +39,11 @@ alias Zenflows.VF.Person
 	sw_pass.import resource_control.set
 	event.create event.update
 	object_control.assign
+	process.create process.update process.delete
+	proposal.create proposal.update proposal.delete
+	intent.create intent.update intent.delete
+	proposed_intent.create proposed_intent.delete
+	satisfaction.create satisfaction.update satisfaction.delete
 ]
 
 @doc "Every action the policy knows about."
@@ -104,9 +110,47 @@ defp person_may?(_pid, action, %Facts{target: %{system_key: sk}})
 	do: sk == nil
 defp person_may?(pid, "person.update", %Facts{target: %Person{id: id}}),
 	do: id == pid
+defp person_may?(_pid, action, _f) when action in ~w[process.create proposal.create],
+	do: true
+defp person_may?(pid, action, %Facts{control: %ObjectControl{} = c} = f)
+		when action in ~w[process.update process.delete proposal.update proposal.delete intent.delete],
+	do: controls?(pid, f, c)
+defp person_may?(pid, "intent.create", %Facts{target: %{} = t} = f) do
+	case Enum.reject([Map.get(t, :input_of_id), Map.get(t, :output_of_id)], &is_nil/1) do
+		[] -> acts_for?(pid, f, Map.get(t, :provider_id)) or acts_for?(pid, f, Map.get(t, :receiver_id))
+		ids -> Enum.all?(ids, &controls?(pid, f, Map.get(f.process_controls, &1)))
+	end
+end
+defp person_may?(pid, "intent.update", %Facts{target: %Intent{} = i} = f) do
+	controls?(pid, f, f.control)
+		or acts_for?(pid, f, i.provider_id) or acts_for?(pid, f, i.receiver_id)
+		or (f.finished_only and Enum.any?(f.sibling_parties, &acts_for?(pid, f, &1)))
+end
+defp person_may?(pid, "proposed_intent.create", %Facts{intent: %Intent{} = i} = f) do
+	controls?(pid, f, f.control)
+		and (controls?(pid, f, f.intent_control)
+			or acts_for?(pid, f, i.provider_id) or acts_for?(pid, f, i.receiver_id))
+end
+defp person_may?(pid, "proposed_intent.delete", %Facts{target: %ProposedIntent{}} = f),
+	do: controls?(pid, f, f.control)
+defp person_may?(pid, "satisfaction.create", %Facts{event: %EconomicEvent{} = e, intent: %Intent{} = i} = f) do
+	event_agents = Enum.reject([e.provider_id, e.receiver_id], &is_nil/1)
+	intent_agents = Enum.reject([i.provider_id, i.receiver_id], &is_nil/1)
+	Enum.any?(event_agents, &acts_for?(pid, f, &1))
+		and Enum.any?(event_agents, &(&1 in intent_agents))
+end
+defp person_may?(pid, action, %Facts{event: %EconomicEvent{} = e} = f)
+		when action in ~w[satisfaction.update satisfaction.delete],
+	do: acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)
 defp person_may?(_pid, _action, _facts), do: false
 
 defp admin?(%Facts{admin_of: set}, id), do: MapSet.member?(set, id)
 
 defp subject_ok?(pid, f, sid), do: sid == pid or admin?(f, sid)
+
+defp acts_for?(_pid, _f, nil), do: false
+defp acts_for?(pid, f, id), do: id == pid or MapSet.member?(f.admin_of, id)
+
+defp controls?(_pid, _f, nil), do: false
+defp controls?(pid, f, %{controller_id: cid}), do: acts_for?(pid, f, cid)
 end

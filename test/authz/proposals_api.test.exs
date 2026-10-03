@@ -227,6 +227,48 @@ test "acceptProposal as Alice succeeds: her new process, cite/accept/modify even
 			"eventCite" => evt_cite, "eventAccept" => evt_accept, "eventModify" => evt_modify})
 end
 
+test "interfacer-gui acceptProposal (pages/proposal/[id].tsx): events on the proposer's process, then satisfyIntents", c do
+	origin = raise!(c, c.alice).resource_inventoried_as_id
+	fork = raise!(c, c.bob).resource_inventoried_as_id
+
+	ids = propose_contribution!(c, c.bob, c.alice, fork, origin)
+
+	# The GUI passes `cite.inputOf?.id || cite.outputOf?.id`: Bob's
+	# process, which Alice does not control; she is invited by the
+	# unfinished accept/modify intents naming her as receiver.
+	assert %{data: %{
+			"cite" => %{"economicEvent" => %{"id" => evt_cite}},
+			"accept" => %{"economicEvent" => %{"id" => evt_accept}},
+			"modify" => %{"economicEvent" => %{"id" => evt_modify}}}} =
+		run_as!(c.alice, @accept_proposal, vars: %{
+			"process" => ids.process, "owner" => c.alice.id, "proposer" => c.bob.id,
+			"unitOne" => c.unit.id, "resourceForked" => fork, "resourceOrigin" => origin,
+			"creationTime" => Factory.iso_now(),
+			"metadata" => Jason.encode!(%{"relations" => [fork]})})
+
+	assert %{data: %{
+			"cite" => %{"satisfaction" => %{"id" => _}},
+			"accept" => %{"satisfaction" => %{"id" => _}},
+			"modify" => %{"satisfaction" => %{"id" => _}}}} =
+		run_as!(c.alice, @satisfy_intents, vars: %{
+			"unitOne" => c.unit.id,
+			"intentCited" => ids.cite_intent, "intentAccepted" => ids.accept_intent, "intentModify" => ids.modify_intent,
+			"eventCite" => evt_cite, "eventAccept" => evt_accept, "eventModify" => evt_modify})
+end
+
+test "interfacer-gui acceptProposal by Carol (named nowhere) on the proposer's process: FORBIDDEN", c do
+	origin = raise!(c, c.alice).resource_inventoried_as_id
+	fork = raise!(c, c.bob).resource_inventoried_as_id
+	ids = propose_contribution!(c, c.bob, c.alice, fork, origin)
+
+	assert %{errors: [err | _]} =
+		run_as!(c.carol, @accept_proposal, vars: %{
+			"process" => ids.process, "owner" => c.carol.id, "proposer" => c.bob.id,
+			"unitOne" => c.unit.id, "resourceForked" => fork, "resourceOrigin" => origin,
+			"creationTime" => Factory.iso_now()})
+	assert Map.take(err, [:message, :extensions]) == @forbidden
+end
+
 test "rejectProposal as Alice: all three intents (incl. the cite intent) finish, no error", c do
 	origin = raise!(c, c.alice).resource_inventoried_as_id
 	fork = raise!(c, c.bob).resource_inventoried_as_id

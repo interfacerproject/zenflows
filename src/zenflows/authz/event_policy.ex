@@ -22,8 +22,12 @@ Who may emit which economic event.  Pure: everything comes from
 `Zenflows.Authz.EventFacts`.
 
 - Agent rule: the signer acts for the provider or the receiver.
-- Process rule: the signer controls every process the event attaches
-  to (`input_of`/`output_of`), when that process has a control row.
+- Process rule: for every process the event attaches to
+  (`input_of`/`output_of`), the signer controls it (its control row
+  names an agent the signer acts for), or is invited to it: the
+  process holds an unfinished intent whose provider or receiver the
+  signer acts for.  A process without a control row (legacy) is
+  denied unless the invited-party rule applies.
 - Resource rule: the signer controls every resource the event changes
   (and, for containers, every contained resource).
 - Claim rule: resources of a claimable agent may be moved by a
@@ -109,12 +113,21 @@ end
 
 defp process_ok?(pid, f) do
 	Enum.all?(f.process_ids, fn id ->
-		case Map.get(f.process_controls, id) do
-			%{controller_id: cid} -> acts_for?(pid, f, cid)
-			nil -> false
-		end
+		process_controlled?(pid, f, id) or process_invited?(pid, f, id)
 	end)
 end
+
+defp process_controlled?(pid, f, id) do
+	case Map.get(f.process_controls, id) do
+		%{controller_id: cid} -> acts_for?(pid, f, cid)
+		nil -> false
+	end
+end
+
+# Invited-party rule: an unfinished intent of the process names an
+# agent the signer acts for (as provider or receiver).
+defp process_invited?(pid, f, id),
+	do: Enum.any?(Map.get(f.process_invites, id, MapSet.new()), &acts_for?(pid, f, &1))
 
 defp check_changes(pid, f) do
 	Enum.reduce_while(f.touched.changes, :ok, fn id, :ok ->

@@ -111,6 +111,49 @@ describe "process rule" do
 		assert :ok = EventPolicy.decide(c.alice, "event.create", f)
 	end
 
+	test "invited party: an unfinished intent of the process names the signer", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			provider_id: c.bob, receiver_id: c.bob, process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.alice}},
+			process_invites: %{c.p => MapSet.new([c.bob])})
+		assert :ok = EventPolicy.decide(c.bob, "event.create", f)
+	end
+
+	test "invited party via an org the signer administers", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			provider_id: c.bob, receiver_id: c.bob, process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.alice}},
+			process_invites: %{c.p => MapSet.new([c.org])})
+		assert {:error, :forbidden, :process} = EventPolicy.decide(c.bob, "event.create", f)
+		assert :ok = EventPolicy.decide(c.bob, "event.create", %{f | admin_of: MapSet.new([c.org])})
+	end
+
+	test "invited party works on a legacy process (no control row)", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			provider_id: c.bob, receiver_id: c.bob, process_ids: [c.p],
+			process_invites: %{c.p => MapSet.new([c.bob])})
+		assert :ok = EventPolicy.decide(c.bob, "event.create", f)
+	end
+
+	test "no invite (finished intents are not loaded) and a stranger are denied", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			provider_id: c.bob, receiver_id: c.bob, process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.alice}})
+		assert {:error, :forbidden, :process} = EventPolicy.decide(c.bob, "event.create", f)
+		f = %{f | process_invites: %{c.p => MapSet.new([c.alice, c.losh])}}
+		assert {:error, :forbidden, :process} = EventPolicy.decide(c.bob, "event.create", f)
+	end
+
+	test "every referenced process must be controlled or inviting", c do
+		q = ID.gen()
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			provider_id: c.bob, receiver_id: c.bob, process_ids: [c.p, q],
+			process_invites: %{c.p => MapSet.new([c.bob])})
+		assert {:error, :forbidden, :process} = EventPolicy.decide(c.bob, "event.create", f)
+		assert :ok = EventPolicy.decide(c.bob, "event.create",
+			%{f | process_invites: Map.put(f.process_invites, q, MapSet.new([c.bob]))})
+	end
+
 	test "agent rule is still checked first", c do
 		f = facts(c, action: "work", source_id: nil, controls: %{},
 			process_ids: [c.p],

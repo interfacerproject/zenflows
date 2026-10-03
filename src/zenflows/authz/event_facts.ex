@@ -25,7 +25,7 @@ loads it with row locks before the event is written.
 import Ecto.Query
 
 alias Zenflows.Authz.{Config, EventPolicy, ExecutionContext, Facts, ObjectControl, ResourceControl}
-alias Zenflows.VF.{EconomicEvent, EconomicResource}
+alias Zenflows.VF.{EconomicEvent, EconomicResource, Intent}
 
 @type t() :: %__MODULE__{
 	action: nil | String.t(),
@@ -39,6 +39,7 @@ alias Zenflows.VF.{EconomicEvent, EconomicResource}
 	contained: %{String.t() => [String.t()]},
 	process_ids: [String.t()],
 	process_controls: %{String.t() => ObjectControl.t()},
+	process_invites: %{String.t() => MapSet.t(String.t())},
 	admin_of: MapSet.t(String.t()),
 	claimable: MapSet.t(String.t()),
 }
@@ -54,6 +55,7 @@ defstruct action: nil,
 	contained: %{},
 	process_ids: [],
 	process_controls: %{},
+	process_invites: %{},
 	admin_of: MapSet.new(),
 	claimable: MapSet.new()
 
@@ -62,8 +64,10 @@ Facts for `event.create`.  Locks, in this order: touched resources and
 the resources contained in changed ones (one query, ascending id,
 FOR UPDATE), their control rows (ascending, FOR UPDATE), the process
 control rows of `input_of`/`output_of` (one query, ascending by
-target_id, FOR SHARE), then the admin rows the decision needs
-(FOR SHARE).
+target_id, FOR SHARE), the unfinished intents of those processes (one
+query, ascending id, FOR SHARE; their parties are the processes'
+invited agents, see `EventPolicy`), then the admin rows the decision
+needs (FOR SHARE).
 """
 @spec load(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
 def load(repo, ctx, changes) do
@@ -77,12 +81,14 @@ def load(repo, ctx, changes) do
 
 	process_ids = Enum.reject([Map.get(changes, :input_of_id), Map.get(changes, :output_of_id)], &is_nil/1)
 	process_controls = lock_process_controls(repo, process_ids)
+	process_invites = lock_process_invites(repo, process_ids)
 
 	provider = Map.get(changes, :provider_id)
 	receiver = Map.get(changes, :receiver_id)
 	admin_ids = [provider, receiver
 		| Enum.map(Map.values(controls), & &1.controller_id)
-			++ Enum.map(Map.values(process_controls), & &1.controller_id)]
+			++ Enum.map(Map.values(process_controls), & &1.controller_id)
+			++ Enum.flat_map(Map.values(process_invites), &MapSet.to_list/1)]
 
 	%__MODULE__{
 		action: Map.get(changes, :action_id),
@@ -95,6 +101,7 @@ def load(repo, ctx, changes) do
 		contained: contained,
 		process_ids: process_ids,
 		process_controls: process_controls,
+		process_invites: process_invites,
 		admin_of: Facts.admin_of(repo, ctx, admin_ids),
 		claimable: MapSet.new(Config.claimable_agents()),
 	}
@@ -138,5 +145,27 @@ defp lock_process_controls(repo, ids) do
 		order_by: c.target_id, lock: "FOR SHARE")
 	|> repo.all()
 	|> Map.new(&{&1.target_id, &1})
+end
+
+# Agents named (provider or receiver) by an unfinished intent of each
+# process.  `finished == false` is in the locking query's WHERE, so a
+# concurrent `updateIntent(finished: true)` that commits first is seen
+# (the row is re-checked after the lock wait) and no longer invites.
+defp lock_process_invites(_repo, []), do: %{}
+defp lock_process_invites(repo, ids) do
+	from(i in Intent,
+		where: (i.input_of_id in ^ids or i.output_of_id in ^ids) and i.finished == false,
+		order_by: i.id, lock: "FOR SHARE",
+		select: {i.input_of_id, i.output_of_id, i.provider_id, i.receiver_id})
+	|> repo.all()
+	|> Enum.reduce(%{}, fn {inp, out, prov, recv}, acc ->
+		parties = MapSet.new(Enum.reject([prov, recv], &is_nil/1))
+		[inp, out]
+		|> Enum.filter(&(&1 in ids))
+		|> Enum.uniq()
+		|> Enum.reduce(acc, fn pid, acc ->
+			Map.update(acc, pid, parties, &MapSet.union(&1, parties))
+		end)
+	end)
 end
 end

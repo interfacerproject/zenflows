@@ -70,4 +70,30 @@ test "objectControl query", c do
 		""", vars: %{"id" => proc.id})
 	assert id == c.alice.id
 end
+
+test "objectControl: unknown targetId is null; a malformed one is an ID argument error, not an exception", c do
+	{:ok, proc} = Process.Domain.create(Factory.ctx(c.alice), %{name: "p"})
+	for id <- [Factory.id(), proc.id] do
+		assert %{data: %{"objectControl" => nil}} =
+			run!("""
+				query ($id: ID!) { objectControl(targetType: "proposal", targetId: $id) { epoch } }
+			""", vars: %{"id" => id})
+	end
+	# The ID scalar casts ULIDs, so a malformed id never reaches the resolver.
+	assert %{errors: [%{message: ~s(Argument "targetId" has invalid value $id.)}]} =
+		run!("""
+			query ($id: ID!) { objectControl(targetType: "process", targetId: $id) { epoch } }
+		""", vars: %{"id" => "not-a-ulid"})
+end
+
+test "assignObjectControl with a malformed targetId or personId is an argument error", c do
+	for {t, p} <- [{"not-a-ulid", c.alice.id}, {Factory.id(), "not-a-ulid"}] do
+		assert %{errors: [%{message: "Argument " <> _}]} =
+			run!("""
+				mutation ($t: ID!, $p: ID!) {
+					assignObjectControl(targetType: "process", targetId: $t, personId: $p, reason: "x") { epoch }
+				}
+			""", vars: %{"t" => t, "p" => p})
+	end
+end
 end

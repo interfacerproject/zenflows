@@ -19,19 +19,21 @@
 defmodule Zenflows.Authz.ObjectControl.Domain do
 @moduledoc "Reads and writes of object control (processes, proposals, intents)."
 
-require Ecto.Query
+import Ecto.Query, only: [from: 2]
 
 alias Ecto.Multi
 alias Zenflows.Authz
 alias Zenflows.Authz.{ExecutionContext, Facts, Log, ObjectControl}
 alias Zenflows.DB.Repo
-alias Zenflows.VF.Person
+alias Zenflows.VF.{Intent, Person, Process, Proposal}
 
 @spec one(Ecto.Repo.t(), String.t(), String.t()) :: {:ok, ObjectControl.t()} | {:error, String.t()}
 def one(repo \\ Repo, type, id) do
-	case repo.get_by(ObjectControl, target_type: type, target_id: id) do
-		nil -> {:error, "not found"}
-		found -> {:ok, found}
+	with {:ok, id} <- cast_id(id),
+			%ObjectControl{} = found <- repo.get_by(ObjectControl, target_type: type, target_id: id) do
+		{:ok, found}
+	else
+		_ -> {:error, "not found"}
 	end
 end
 
@@ -81,9 +83,13 @@ end
 
 @doc """
 Admin key only: create or replace the controller, with a logged reason.
-`type` is validated against `ObjectControl.types/0`; the target object
-itself is not checked for existence (`target_id` is polymorphic across
-three tables and carries no foreign key).
+`type` is validated against `ObjectControl.types/0` and the target
+object must exist (`target_id` is polymorphic across three tables and
+carries no foreign key, so this is checked here).  The target row is
+locked `FOR NO KEY UPDATE` before the control row (the same order as
+`Facts.for_object/4`), so concurrent assigns on the same object
+serialize: the second one sees the first one's row and replaces it.
+Malformed ids are errors, not exceptions.
 """
 @spec assign(ExecutionContext.t(), String.t(), String.t(), String.t(), String.t())
 	:: {:ok, ObjectControl.t()} | {:error, term()}
@@ -96,13 +102,13 @@ def assign(ctx, type, id, person_id, reason) do
 		cond do
 			type not in ObjectControl.types() -> {:error, "unknown target type"}
 			not (is_binary(reason) and String.trim(reason) != "") -> {:error, "reason is required"}
-			not repo.exists?(Ecto.Query.from(p in Person, where: p.id == ^person_id and p.type == :per)) ->
-				{:error, "person not found"}
+			not person?(repo, person_id) -> {:error, "person not found"}
+			not lock_target(repo, type, id) -> {:error, "target not found"}
 			true -> {:ok, nil}
 		end
 	end)
 	|> Multi.run(:control, fn repo, _ ->
-		case repo.one(Ecto.Query.from(c in ObjectControl,
+		case repo.one(from(c in ObjectControl,
 				where: c.target_type == ^type and c.target_id == ^id, lock: "FOR UPDATE")) do
 			nil ->
 				%{target_type: type, target_id: id, controller_id: person_id, source: :admin}
@@ -125,4 +131,27 @@ def assign(ctx, type, id, person_id, reason) do
 		{:error, _, reason, _} -> {:error, reason}
 	end
 end
+
+@schemas %{"process" => Process, "proposal" => Proposal, "intent" => Intent}
+
+defp person?(repo, id) do
+	case cast_id(id) do
+		{:ok, id} -> repo.exists?(from p in Person, where: p.id == ^id and p.type == :per)
+		:error -> false
+	end
+end
+
+# Locks the target row FOR NO KEY UPDATE; false when it doesn't exist.
+defp lock_target(repo, type, id) do
+	with {:ok, id} <- cast_id(id),
+			%{} <- repo.one(from t in Map.fetch!(@schemas, type),
+				where: t.id == ^id, select: %{id: t.id}, lock: "FOR NO KEY UPDATE") do
+		true
+	else
+		_ -> false
+	end
+end
+
+defp cast_id(id) when is_binary(id), do: Zenflows.DB.ID.cast(id)
+defp cast_id(_), do: :error
 end

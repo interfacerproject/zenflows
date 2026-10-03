@@ -34,6 +34,7 @@ alias Zenflows.VF.{
 	Intent,
 	Person,
 	Process,
+	Proposal,
 }
 alias ZenflowsTest.Help.Factory
 
@@ -132,6 +133,55 @@ test "updateIntent(finished: true) by a party and deleteIntent by the controller
 	end
 
 	Sandbox.unboxed_run(Repo, fn -> Repo.query!("TRUNCATE zf_permission_log") end)
+end
+
+test "concurrent first-time assigns on a legacy object serialize: no primary-key exception", c do
+	# Parked: the first assign holds the target row (FOR NO KEY UPDATE)
+	# and its freshly inserted control row; the second waits on the
+	# target row, then finds and replaces that control row.
+	prop = Sandbox.unboxed_run(Repo, fn -> Repo.insert!(%Proposal{name: Factory.str("legacy")}) end)
+	task_a = parked_task(fn ->
+		ObjectControl.Domain.assign(admin_ctx(), "proposal", prop.id, c.owner.id, "first")
+	end)
+
+	try do
+		assert_receive :locked, 2_000
+		task_b = unboxed_task(fn ->
+			ObjectControl.Domain.assign(admin_ctx(), "proposal", prop.id, c.other.id, "second")
+		end)
+		assert Task.yield(task_b, 300) == nil
+
+		send(task_a.pid, :commit)
+		assert {:ok, %ObjectControl{epoch: 0}} = Task.await(task_a, 2_000)
+		assert {:ok, %ObjectControl{epoch: 1, controller_id: cid}} = Task.await(task_b, 2_000)
+		assert cid == c.other.id
+	after
+		send(task_a.pid, :commit)
+		Sandbox.unboxed_run(Repo, fn -> proposal_cleanup!(prop) end)
+	end
+
+	# Free races, repeated.
+	for _ <- 1..10 do
+		prop = Sandbox.unboxed_run(Repo, fn -> Repo.insert!(%Proposal{name: Factory.str("legacy")}) end)
+
+		try do
+			tasks = for per <- [c.owner, c.other] do
+				rescuing_task(fn ->
+					ObjectControl.Domain.assign(admin_ctx(), "proposal", prop.id, per.id, "race")
+				end)
+			end
+			results = Enum.map(tasks, &Task.await(&1, 5_000))
+			assert Enum.all?(results, &match?({:ok, %ObjectControl{}}, &1)), inspect(results)
+			assert results |> Enum.map(fn {:ok, oc} -> oc.epoch end) |> Enum.sort() == [0, 1]
+		after
+			Sandbox.unboxed_run(Repo, fn -> proposal_cleanup!(prop) end)
+		end
+	end
+end
+
+defp proposal_cleanup!(prop) do
+	Repo.delete_all(from c in ObjectControl, where: c.target_type == "proposal" and c.target_id == ^prop.id)
+	Repo.delete_all(from p in Proposal, where: p.id == ^prop.id)
 end
 
 defp attach_event(c) do

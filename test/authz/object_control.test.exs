@@ -74,4 +74,23 @@ test "assign: admin key only, reason required, replaces and bumps epoch", c do
 	assert cid == bob.id
 	assert {:error, _} = ObjectControl.Domain.assign(admin_ctx(), "planet", c.proc.id, bob.id, "x")
 end
+
+test "assign: the target must exist, of the given type", c do
+	assert {:error, "target not found"} =
+		ObjectControl.Domain.assign(admin_ctx(), "process", Factory.id(), c.alice.id, "x")
+	# A process id is not a proposal or an intent.
+	assert {:error, "target not found"} =
+		ObjectControl.Domain.assign(admin_ctx(), "proposal", c.proc.id, c.alice.id, "x")
+	assert {:error, "target not found"} =
+		ObjectControl.Domain.assign(admin_ctx(), "intent", c.proc.id, c.alice.id, "x")
+	assert Repo.all(from o in ObjectControl, where: o.target_id == ^c.proc.id) == []
+end
+
+test "assign and one: malformed ids are errors, not exceptions", c do
+	assert {:error, "target not found"} =
+		ObjectControl.Domain.assign(admin_ctx(), "process", "not-a-ulid", c.alice.id, "x")
+	assert {:error, "person not found"} =
+		ObjectControl.Domain.assign(admin_ctx(), "process", c.proc.id, "not-a-ulid", "x")
+	assert {:error, "not found"} = ObjectControl.Domain.one("process", "not-a-ulid")
+end
 end

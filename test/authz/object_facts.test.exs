@@ -72,8 +72,8 @@ describe "for_intent_update/4" do
 		proposal = Factory.insert!(:proposal)
 		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: bob.id}) |> Repo.insert!()
 		sibling = Intent.changeset(%{action_id: Factory.build(:action_id), receiver_id: alice.id}) |> Repo.insert!()
-		ProposedIntent.Domain.create!(%{publishes_id: target.id, published_in_id: proposal.id})
-		ProposedIntent.Domain.create!(%{publishes_id: sibling.id, published_in_id: proposal.id})
+		ProposedIntent.Domain.create!(Factory.ctx(), %{publishes_id: target.id, published_in_id: proposal.id})
+		ProposedIntent.Domain.create!(Factory.ctx(), %{publishes_id: sibling.id, published_in_id: proposal.id})
 
 		f = Facts.for_intent_update(Repo, Factory.ctx(bob), target.id, %{})
 		assert %Facts{target: %Intent{id: tid}} = f
@@ -197,7 +197,7 @@ describe "for_proposed_intent/3" do
 		alice = Factory.insert!(:person)
 		proposal = Factory.insert!(:proposal)
 		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
-		pi = ProposedIntent.Domain.create!(%{publishes_id: intent.id, published_in_id: proposal.id})
+		pi = ProposedIntent.Domain.create!(Factory.ctx(), %{publishes_id: intent.id, published_in_id: proposal.id})
 		%{target_type: "proposal", target_id: proposal.id, controller_id: alice.id, source: :creation}
 		|> ObjectControl.changeset() |> Repo.insert!()
 

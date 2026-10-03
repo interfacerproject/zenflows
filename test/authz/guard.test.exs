@@ -37,12 +37,10 @@ alias Zenflows.Authz.Policy
 	create_spatial_thing update_spatial_thing delete_spatial_thing
 	create_agreement update_agreement delete_agreement
 	create_process_group update_process_group delete_process_group
-	create_satisfaction update_satisfaction delete_satisfaction
 	create_scenario update_scenario delete_scenario
 	create_resource_specification update_resource_specification delete_resource_specification
 	create_agent_relationship_role
 	create_recipe_resource update_recipe_resource delete_recipe_resource
-	propose_intent delete_proposed_intent
 	create_scenario_definition update_scenario_definition delete_scenario_definition
 	keypairoom_server
 ]a

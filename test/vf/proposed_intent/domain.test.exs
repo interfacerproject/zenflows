@@ -50,25 +50,25 @@ end
 
 describe "create/1" do
 	test "with good params: creates a ProposedIntent", %{params: params} do
-		assert {:ok, %ProposedIntent{} = new} = Domain.create(params)
+		assert {:ok, %ProposedIntent{} = new} = Domain.create(Factory.ctx(), params)
 		assert new.reciprocal == params.reciprocal
 		assert new.publishes_id == params.publishes_id
 		assert new.published_in_id == params.published_in_id
 	end
 
 	test "with bad params: doesn't create a ProposedIntent" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
+		assert {:error, %Changeset{}} = Domain.create(Factory.ctx(), %{})
 	end
 end
 
 describe "delete/1" do
 	test "with good id: deletes the ProposedIntent", %{inserted: %{id: id}} do
-		assert {:ok, %ProposedIntent{id: ^id}} = Domain.delete(id)
+		assert {:ok, %ProposedIntent{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the ProposedIntent" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 

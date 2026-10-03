@@ -150,16 +150,19 @@ end
 
 object :mutation_satisfaction do
 	field :create_satisfaction, non_null(:satisfaction_response) do
+		meta authz: "satisfaction.create"
 		arg :satisfaction, non_null(:satisfaction_create_params)
 		resolve &Resolv.create_satisfaction/2
 	end
 
 	field :update_satisfaction, non_null(:satisfaction_response) do
+		meta authz: "satisfaction.update"
 		arg :satisfaction, non_null(:satisfaction_update_params)
 		resolve &Resolv.update_satisfaction/2
 	end
 
 	field :delete_satisfaction, non_null(:boolean) do
+		meta authz: "satisfaction.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_satisfaction/2
 	end

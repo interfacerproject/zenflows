@@ -17,9 +17,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule ZenflowsTest.Authz.Guard do
-use ExUnit.Case, async: true
+use ZenflowsTest.Help.EctoCase, async: true
 
-alias Zenflows.Authz.Policy
+alias Zenflows.Authz.{ObjectControl, Policy}
+alias Zenflows.VF.{Intent, Process, Proposal}
 
 # Mutations not covered by this slice: any valid signer, exactly as
 # before.  Later slices shrink this list; adding to it needs review.
@@ -124,5 +125,25 @@ test "resources are only inserted where control is recorded" do
 		"src/zenflows/vf/economic_resource/domain.ex",
 		"src/zenflows/sw_pass/domain.ex",
 	]) == []
+end
+
+test "deleting a process, a proposal, and an intent leaves no zf_object_control row behind", _c do
+	per = Factory.insert!(:person)
+
+	process = Process.Domain.create!(Factory.ctx(per), %{name: Factory.str("process")})
+	proposal = Proposal.Domain.create!(Factory.ctx(per), %{name: Factory.str("proposal")})
+	intent = Intent.Domain.create!(Factory.ctx(per), %{action_id: "transfer", provider_id: per.id})
+
+	assert {:ok, _} = Process.Domain.delete(Factory.ctx(per), process.id)
+	assert {:ok, _} = Proposal.Domain.delete(Factory.ctx(per), proposal.id)
+	assert {:ok, _} = Intent.Domain.delete(Factory.ctx(per), intent.id)
+
+	for {type, schema} <- [{"process", Process}, {"proposal", Proposal}, {"intent", Intent}] do
+		orphans =
+			from(c in ObjectControl, where: c.target_type == ^type, select: c.target_id)
+			|> Repo.all()
+			|> Enum.reject(&Repo.get(schema, &1))
+		assert orphans == [], "orphan #{type} zf_object_control rows: #{inspect(orphans)}"
+	end
 end
 end

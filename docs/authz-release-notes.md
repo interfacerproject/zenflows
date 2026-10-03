@@ -204,7 +204,7 @@ rows.)
   intent, satisfactions) still apply to legacy objects, so old
   contribution proposals can still be accepted or rejected.
 - New guest query: `objectControl(targetType: String!, targetId: ID!)
-  { controller { id } source epoch } }`.
+  { controller { id } source epoch }`.
 - New admin-key mutation: `assignObjectControl(targetType: String!,
   targetId: ID!, personId: ID!, reason: String!)` — creates or replaces
   a process/proposal/intent's control row, always logged with the

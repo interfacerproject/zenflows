@@ -515,7 +515,7 @@ end
 
 test "works on Intent" do
 	assert %Intent{} = int =
-		Intent.Domain.create!(%{
+		Intent.Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: Factory.insert!(:agent).id,
 			images: [
@@ -562,7 +562,7 @@ test "works on Intent" do
 	] = int.images
 
 	assert %Intent{} = int =
-		Intent.Domain.update!(int.id, %{
+		Intent.Domain.update!(Factory.ctx(), int.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",

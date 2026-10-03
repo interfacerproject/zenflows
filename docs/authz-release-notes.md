@@ -181,7 +181,7 @@ rows.)
   resulting intent; changing `inputOf`/`outputOf` away from a process
   (including to `null`) additionally requires controlling that *old*
   process, so a named party cannot use the process-less fallback to
-  unilaterally detach an intent someone else's process controls.
+  unilaterally detach an intent from a process someone else controls.
 - `proposeIntent`: the signer must control the proposal **and** either
   control the intent or act for its provider or receiver.
   `deleteProposedIntent`: the signer must control the proposal.
@@ -191,24 +191,41 @@ rows.)
   and that event must share a provider or receiver with the intent it
   satisfies.  `updateSatisfaction`/`deleteSatisfaction`: the signer
   acting for the provider or receiver of the satisfying event; changing
-  which event (or commitment) a satisfaction points to is additionally
-  checked against the `createSatisfaction` rule for the resulting pair.
-- Events and intents attach only to processes the signer controls: an
-  `inputOf`/`outputOf` reference on `createEconomicEvent` (telemetry
-  rule `:process`) or on `createIntent`/`updateIntent` both require
-  controlling that process.
+  which event (or commitment) or which intent a satisfaction points to
+  is additionally checked against the `createSatisfaction` rule for the
+  resulting pair (an intent that doesn't exist is denied).
+- Intents attach only to processes the signer controls: an
+  `inputOf`/`outputOf` reference on `createIntent`/`updateIntent`
+  requires controlling that process.
+- Events attach (`inputOf`/`outputOf` on `createEconomicEvent`) to a
+  process the signer controls **or is invited to**: the process holds
+  at least one unfinished intent (`finished: false`, `inputOf` or
+  `outputOf` that process) whose provider or receiver the signer acts
+  for (self, or an organization the signer is an active admin of).
+  Otherwise `FORBIDDEN` (telemetry rule `:process`).  This keeps
+  interfacer-gui's proposal acceptance working: its `ACCEPT_PROPOSAL`
+  attaches the owner's cite/accept/modify events to the *proposer's*
+  process, whose unfinished accept/modify intents name the owner.
+  Finishing those intents (e.g. `rejectProposal`) ends the invitation.
 - **Processes, proposals and intents created before this upgrade have
   no control row: deny-all for every controller action (update, delete,
-  attaching an event or intent) until `assignObjectControl` assigns
-  one.**  The party-based rules above (a named party updating an
-  intent, satisfactions) still apply to legacy objects, so old
-  contribution proposals can still be accepted or rejected.
+  attaching an intent; attaching an event unless invited, see above)
+  until `assignObjectControl` assigns one.**  The party-based rules
+  above (a named party updating an intent, satisfactions) and the
+  event invitation still apply to legacy objects.  So an old
+  contribution proposal can still be rejected (the owner finishes the
+  intents), and can still be accepted through the GUI flow
+  (`ACCEPT_PROPOSAL` with the proposer's legacy process, then
+  `SATISFY_INTENTS`) as long as that process holds the unfinished
+  accept/modify intents naming the owner.  Once those intents are
+  finished, events can no longer attach to the legacy process until it
+  gets a controller.
 - New guest query: `objectControl(targetType: String!, targetId: ID!)
   { controller { id } source epoch }`.
 - New admin-key mutation: `assignObjectControl(targetType: String!,
   targetId: ID!, personId: ID!, reason: String!)` — creates or replaces
   a process/proposal/intent's control row, always logged with the
-  reason.
+  reason.  The target must exist (`target not found` otherwise).
 - Still unauthorized: process groups, plans, scenarios, scenario
   definitions, agreements, catalogue types (resource specifications,
   process specifications, units, spatial things, recipes, role

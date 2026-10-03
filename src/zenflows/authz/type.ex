@@ -38,12 +38,32 @@ object :resource_control do
 	field :epoch, non_null(:integer)
 end
 
+@desc "Administrative control of a process, proposal or intent."
+object :object_control do
+	@desc "The agent that may administer the object."
+	field :controller, non_null(:agent), resolve: &Resolv.controller/3
+
+	@desc "How control was established: creation or admin."
+	field :source, non_null(:string), resolve: &Resolv.source/3
+
+	@desc "Incremented on every change of control."
+	field :epoch, non_null(:integer)
+end
+
 object :query_authz do
 	@desc "Who administratively controls the given economic resource."
 	field :resource_control, :resource_control do
 		meta only_guest?: true
 		arg :resource_id, non_null(:id)
 		resolve &Resolv.resource_control/2
+	end
+
+	@desc "Who administratively controls the given process, proposal or intent."
+	field :object_control, :object_control do
+		meta only_guest?: true
+		arg :target_type, non_null(:string)
+		arg :target_id, non_null(:id)
+		resolve &Resolv.object_control/2
 	end
 end
 
@@ -58,6 +78,19 @@ object :mutation_authz do
 		arg :person_id, non_null(:id)
 		arg :reason, non_null(:string)
 		resolve &Resolv.assign_organization_admin/2
+	end
+
+	@desc """
+	Make a person the controller of an existing process, proposal or
+	intent.  Admin key only; always logged with the given reason.
+	"""
+	field :assign_object_control, non_null(:object_control) do
+		meta only_admin?: true, authz: "object_control.assign"
+		arg :target_type, non_null(:string)
+		arg :target_id, non_null(:id)
+		arg :person_id, non_null(:id)
+		arg :reason, non_null(:string)
+		resolve &Resolv.assign_object_control/2
 	end
 end
 end

@@ -202,16 +202,19 @@ end
 
 object :mutation_process do
 	field :create_process, non_null(:process_response) do
+		meta authz: "process.create"
 		arg :process, non_null(:process_create_params)
 		resolve &Resolv.create_process/2
 	end
 
 	field :update_process, non_null(:process_response) do
+		meta authz: "process.update"
 		arg :process, non_null(:process_update_params)
 		resolve &Resolv.update_process/2
 	end
 
 	field :delete_process, non_null(:boolean) do
+		meta authz: "process.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_process/2
 	end

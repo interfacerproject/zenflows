@@ -72,7 +72,7 @@ end
 
 describe "create/1" do
 	test "with good params: creates a Proposal", %{params: params} do
-		assert {:ok, %Proposal{} = new} = Domain.create(params)
+		assert {:ok, %Proposal{} = new} = Domain.create(Factory.ctx(), params)
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.has_beginning == params.has_beginning
@@ -82,7 +82,7 @@ describe "create/1" do
 	end
 
 	test "with empty params: creates a Proposal" do
-		assert {:ok, %Proposal{} = new} = Domain.create(%{})
+		assert {:ok, %Proposal{} = new} = Domain.create(Factory.ctx(), %{})
 		assert new.name == nil
 		assert new.note == nil
 		assert new.has_beginning == nil
@@ -94,7 +94,7 @@ end
 
 describe "update/2" do
 	test "with good params: updates the Proposal", %{params: params, inserted: old} do
-		assert {:ok, %Proposal{} = new} = Domain.update(old.id, params)
+		assert {:ok, %Proposal{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.name == params.name
 		assert new.note == params.note
 		assert new.has_beginning == params.has_beginning
@@ -104,7 +104,7 @@ describe "update/2" do
 	end
 
 	test "with bad params: doesn't update the Proposal", %{inserted: old} do
-		assert {:ok, %Proposal{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %Proposal{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		assert new.name == old.name
 		assert new.note == old.note
 		assert new.has_beginning == old.has_beginning
@@ -116,12 +116,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the Proposal", %{inserted: %{id: id}} do
-		assert {:ok, %Proposal{id: ^id}} = Domain.delete(id)
+		assert {:ok, %Proposal{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the Proposal" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 

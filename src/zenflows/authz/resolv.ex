@@ -19,11 +19,18 @@
 defmodule Zenflows.Authz.Resolv do
 @moduledoc false
 
-alias Zenflows.Authz.ResourceControl
+alias Zenflows.Authz.{ExecutionContext, ObjectControl, ResourceControl}
 alias Zenflows.DB.Repo
 
 def resource_control(%{resource_id: id}, _) do
 	case ResourceControl.Domain.one(id) do
+		{:ok, control} -> {:ok, control}
+		{:error, _} -> {:ok, nil}
+	end
+end
+
+def object_control(%{target_type: type, target_id: id}, _) do
+	case ObjectControl.Domain.one(type, id) do
 		{:ok, control} -> {:ok, control}
 		{:error, _} -> {:ok, nil}
 	end
@@ -37,6 +44,10 @@ def source(control, _, _), do: {:ok, to_string(control.source)}
 
 def assign_organization_admin(%{organization_id: org, person_id: per, reason: reason}, res) do
 	Zenflows.VF.Organization.Domain.assign_admin(
-		Zenflows.Authz.ExecutionContext.admin_key(res), org, per, reason)
+		ExecutionContext.admin_key(res), org, per, reason)
+end
+
+def assign_object_control(%{target_type: type, target_id: id, person_id: per, reason: reason}, res) do
+	ObjectControl.Domain.assign(ExecutionContext.admin_key(res), type, id, per, reason)
 end
 end

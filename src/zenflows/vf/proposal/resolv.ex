@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.Proposal.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Proposal.Domain
 
@@ -53,20 +54,20 @@ def requests(_params, _) do
 	}}
 end
 
-def create_proposal(%{proposal: params}, _) do
-	with {:ok, prop} <- Domain.create(params) do
+def create_proposal(%{proposal: params}, res) do
+	with {:ok, prop} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{proposal: prop}}
 	end
 end
 
-def update_proposal(%{proposal: %{id: id} = params}, _) do
-	with {:ok, prop} <- Domain.update(id, params) do
+def update_proposal(%{proposal: %{id: id} = params}, res) do
+	with {:ok, prop} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{proposal: prop}}
 	end
 end
 
-def delete_proposal(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_proposal(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

@@ -196,16 +196,19 @@ end
 
 object :mutation_proposal do
 	field :create_proposal, non_null(:proposal_response) do
+		meta authz: "proposal.create"
 		arg :proposal, non_null(:proposal_create_params)
 		resolve &Resolv.create_proposal/2
 	end
 
 	field :update_proposal, non_null(:proposal_response) do
+		meta authz: "proposal.update"
 		arg :proposal, non_null(:proposal_update_params)
 		resolve &Resolv.update_proposal/2
 	end
 
 	field :delete_proposal, non_null(:boolean) do
+		meta authz: "proposal.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_proposal/2
 	end

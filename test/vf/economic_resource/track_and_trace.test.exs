@@ -346,7 +346,7 @@ test "trace/2" do
 	}, %{name: "cotton"})
 	res_cotton = EconomicResource.Domain.one!(evt_raise.resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{name: "create gowns"})
+	proc = Process.Domain.create!(Factory.ctx(), %{name: "create gowns"})
 	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
@@ -373,7 +373,7 @@ test "trace/2" do
 	}, %{name: "gown"})
 	res_gown = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{
+	proc = Process.Domain.create!(Factory.ctx(), %{
 		name: "cleaning the gowns",
 		based_on_id: proc_spec_clean.id,
 	})
@@ -427,7 +427,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	proc = Process.Domain.create!(%{
+	proc = Process.Domain.create!(Factory.ctx(), %{
 		name: "doing the surgery",
 		based_on_id: proc_spec_surgery.id,
 	})
@@ -481,7 +481,7 @@ test "trace/2" do
 		has_point_in_time: DateTime.utc_now(),
 	})
 
-	proc = Process.Domain.create!(%{
+	proc = Process.Domain.create!(Factory.ctx(), %{
 		name: "cleaning the gowns again",
 		based_on_id: proc_spec_clean.id,
 	})
@@ -548,7 +548,7 @@ test "trace/2" do
 	})
 	res_transferred_cotton = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{name: "create shirt design"})
+	proc = Process.Domain.create!(Factory.ctx(), %{name: "create shirt design"})
 	_evt_work = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "work",
 		input_of_id: proc.id,
@@ -575,7 +575,7 @@ test "trace/2" do
 	}, %{name: "shirt design"})
 	res_shirt_design = EconomicResource.Domain.one!(evt_produce.resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{name: "create shirt"})
+	proc = Process.Domain.create!(Factory.ctx(), %{name: "create shirt"})
 	_evt_consume = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
@@ -655,7 +655,7 @@ test "trace/2" do
 	})
 	res_moved_shirt = EconomicResource.Domain.one!(evt_move.to_resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{name: "transport shirt"})
+	proc = Process.Domain.create!(Factory.ctx(), %{name: "transport shirt"})
 	_evt_pickup = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "pickup",
 		input_of_id: proc.id,
@@ -706,7 +706,7 @@ test "trace/2" do
 	})
 	res_transferred_shirt = EconomicResource.Domain.one!(evt_transfer.to_resource_inventoried_as_id)
 
-	proc = Process.Domain.create!(%{name: "clean gown and shirt", based_on_id: proc_spec_clean.id})
+	proc = Process.Domain.create!(Factory.ctx(), %{name: "clean gown and shirt", based_on_id: proc_spec_clean.id})
 	_evt_accept_gown = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,

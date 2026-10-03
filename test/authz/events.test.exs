@@ -81,6 +81,20 @@ end
 test "Bob may cite Alice's resource in his own event", c do
 	res = res_of!(c, c.alice)
 	assert {:ok, %EconomicEvent{}} =
+		event(c, c.bob, %{action_id: "cite", input_of_id: Factory.insert_process!(c.bob).id,
+			provider_id: c.bob.id, receiver_id: c.bob.id, resource_inventoried_as_id: res.id})
+end
+
+test "Bob cannot cite into Alice's process", c do
+	res = res_of!(c, c.alice)
+	assert {:error, :forbidden} =
+		event(c, c.bob, %{action_id: "cite", input_of_id: Factory.insert_process!(c.alice).id,
+			provider_id: c.bob.id, receiver_id: c.bob.id, resource_inventoried_as_id: res.id})
+end
+
+test "Bob cannot cite into a legacy process with no control row", c do
+	res = res_of!(c, c.alice)
+	assert {:error, :forbidden} =
 		event(c, c.bob, %{action_id: "cite", input_of_id: Factory.insert!(:process).id,
 			provider_id: c.bob.id, receiver_id: c.bob.id, resource_inventoried_as_id: res.id})
 end

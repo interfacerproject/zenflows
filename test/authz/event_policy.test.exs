@@ -19,11 +19,12 @@
 defmodule ZenflowsTest.Authz.EventPolicy do
 use ExUnit.Case, async: true
 
-alias Zenflows.Authz.{EventFacts, EventPolicy, ResourceControl}
+alias Zenflows.Authz.{EventFacts, EventPolicy, ObjectControl, ResourceControl}
 alias Zenflows.DB.ID
 
 setup do
-	%{alice: ID.gen(), bob: ID.gen(), org: ID.gen(), losh: ID.gen(), r1: ID.gen(), r2: ID.gen(), c1: ID.gen()}
+	%{alice: ID.gen(), bob: ID.gen(), org: ID.gen(), losh: ID.gen(),
+		r1: ID.gen(), r2: ID.gen(), c1: ID.gen(), p: ID.gen()}
 end
 
 defp facts(c, attrs) do
@@ -86,6 +87,35 @@ describe "agent rule" do
 			EventPolicy.decide(c.alice, "event.create", facts(c, action: "teleport"))
 		assert {:error, :forbidden, :unsupported} =
 			EventPolicy.decide(c.alice, "event.create", facts(c, action: nil))
+	end
+end
+
+describe "process rule" do
+	test "process with no control row is deny-all", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{}, process_ids: [c.p])
+		assert {:error, :forbidden, :process} = EventPolicy.decide(c.alice, "event.create", f)
+	end
+
+	test "process controlled by the signer is ok", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.alice}})
+		assert :ok = EventPolicy.decide(c.alice, "event.create", f)
+	end
+
+	test "process controlled by an org the signer administers is ok", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.org}},
+			admin_of: MapSet.new([c.org]))
+		assert :ok = EventPolicy.decide(c.alice, "event.create", f)
+	end
+
+	test "agent rule is still checked first", c do
+		f = facts(c, action: "work", source_id: nil, controls: %{},
+			process_ids: [c.p],
+			process_controls: %{c.p => %ObjectControl{target_type: "process", target_id: c.p, controller_id: c.alice}})
+		assert {:error, :forbidden, :agent} = EventPolicy.decide(c.bob, "event.create", f)
 	end
 end
 

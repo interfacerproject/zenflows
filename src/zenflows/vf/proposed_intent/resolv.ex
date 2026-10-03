@@ -19,16 +19,17 @@
 defmodule Zenflows.VF.ProposedIntent.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.VF.ProposedIntent.Domain
 
-def propose_intent(params, _) do
-	with {:ok, prop_int} <- Domain.create(params) do
+def propose_intent(params, res) do
+	with {:ok, prop_int} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{proposed_intent: prop_int}}
 	end
 end
 
-def delete_proposed_intent(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_proposed_intent(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

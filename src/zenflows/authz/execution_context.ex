@@ -40,9 +40,11 @@ alias Zenflows.VF.Person
 defstruct @enforce_keys
 
 @service_actions %{
-	admin_key: ~w[person.create person.delete sw_pass.import organization.assign_admin],
-	import: ~w[resource.create organization.create relationship.grant event.create],
-	migration: ~w[resource.create organization.create resource_control.set event.create],
+	admin_key: ~w[person.create person.delete sw_pass.import organization.assign_admin object_control.assign],
+	import: ~w[resource.create organization.create relationship.grant event.create
+		process.create intent.create proposal.create],
+	migration: ~w[resource.create organization.create resource_control.set event.create
+		process.create intent.create proposal.create],
 }
 
 @doc "Context of a signed GraphQL field."

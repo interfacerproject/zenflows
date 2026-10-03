@@ -20,6 +20,8 @@ defmodule Zenflows.VF.Proposal.Domain do
 @moduledoc "Domain logic of Proposals."
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, ObjectControl}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{Proposal, Proposal.Query}
 
@@ -70,11 +72,15 @@ def status(id) do
 	end
 end
 
-@spec create(Schema.params()) :: {:ok, Proposal.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params()) :: {:ok, Proposal.t()} | {:error, term()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
 	Multi.new()
+	|> Multi.run(:authz, fn _, _ ->
+		with :ok <- Authz.authorize(ctx, "proposal.create", %Facts{}), do: {:ok, nil}
+	end)
 	|> multi_insert(params)
+	|> ObjectControl.Domain.multi_on_create(ctx, "proposal", key)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -82,18 +88,21 @@ def create(params) do
 	end
 end
 
-@spec create!(Schema.params()) :: Proposal.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: Proposal.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, Proposal.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, Proposal.t()} | {:error, term()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> Authz.multi_authorize(:authz, ctx, "proposal.update",
+		fn repo, _ -> Facts.for_object(repo, ctx, "proposal", id) end)
+	|> Authz.multi_target(:one, :authz)
+	|> Multi.update(key, fn %{one: prop} -> Proposal.changeset(prop, params) end)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -101,18 +110,22 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Proposal.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: Proposal.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id())
-	:: {:ok, Proposal.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id())
+	:: {:ok, Proposal.t()} | {:error, term()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> Authz.multi_authorize(:authz, ctx, "proposal.delete",
+		fn repo, _ -> Facts.for_object(repo, ctx, "proposal", id) end)
+	|> Authz.multi_target(:one, :authz)
+	|> Multi.delete(key, fn %{one: prop} -> prop end)
+	|> ObjectControl.Domain.multi_remove(ctx, "proposal", id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -120,9 +133,9 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id()) :: Proposal.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id()) :: Proposal.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -138,28 +151,8 @@ end
 @spec multi_key() :: atom()
 def multi_key(), do: :proposal
 
-@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_one(m, key \\ multi_key(), id) do
-	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
-end
-
 @spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
 def multi_insert(m, key \\ multi_key(), params) do
 	Multi.insert(m, key, Proposal.changeset(params))
-end
-
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.update(key,
-		&Proposal.changeset(Map.fetch!(&1, "#{key}.one"), params))
-end
-
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

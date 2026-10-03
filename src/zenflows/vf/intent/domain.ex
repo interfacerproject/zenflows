@@ -20,6 +20,8 @@ defmodule Zenflows.VF.Intent.Domain do
 @moduledoc "Domain logic of Intents."
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, ObjectControl}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.File
 alias Zenflows.VF.{
@@ -56,30 +58,22 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec create(Schema.params()) :: {:ok, Intent.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params()) :: {:ok, Intent.t()} | {:error, term()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
+	cset = Intent.changeset(params)
 	Multi.new()
-	|> multi_insert(params)
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
-		{:error, _, cset, _} -> {:error, cset}
-	end
-end
-
-@spec create!(Schema.params()) :: Intent.t()
-def create!(params) do
-	{:ok, value} = create(params)
-	value
-end
-
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, Intent.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
-	key = multi_key()
-	Multi.new()
-	|> multi_update(id, params)
+	|> Multi.run("#{key}.authz", fn repo, _ ->
+		if cset.valid? do
+			facts = Facts.for_intent_create(repo, ctx, cset.changes)
+			with :ok <- Authz.authorize(ctx, "intent.create", facts), do: {:ok, facts}
+		else
+			{:ok, nil}
+		end
+	end)
+	|> Multi.insert(key, cset)
+	|> File.Domain.multi_insert(key, :images, :intent_id)
+	|> ObjectControl.Domain.multi_on_create(ctx, "intent", key)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -87,17 +81,22 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Intent.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: Intent.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec delete(Schema.id()) :: {:ok, Intent.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, Intent.t()} | {:error, term()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "intent.update",
+		fn repo, _ -> Facts.for_intent_update(repo, ctx, id, params) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.update(key, &Intent.changeset(Map.fetch!(&1, "#{key}.one"), params))
+	|> File.Domain.multi_update(key, :images, :intent_id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -105,9 +104,31 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id) :: Intent.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: Intent.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
+	value
+end
+
+@spec delete(ExecutionContext.t(), Schema.id()) :: {:ok, Intent.t()} | {:error, term()}
+def delete(%ExecutionContext{} = ctx, id) do
+	key = multi_key()
+	Multi.new()
+	|> Authz.multi_authorize("#{key}.authz", ctx, "intent.delete",
+		fn repo, _ -> Facts.for_object(repo, ctx, "intent", id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+	|> ObjectControl.Domain.multi_remove(ctx, "intent", id)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
+@spec delete!(ExecutionContext.t(), Schema.id()) :: Intent.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -133,32 +154,4 @@ def preload(int, :images),
 
 @spec multi_key() :: atom()
 def multi_key(), do: :intent
-
-@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_one(m, key \\ multi_key(), id) do
-	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
-end
-
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
-	m
-	|> Multi.insert(key, Intent.changeset(params))
-	|> File.Domain.multi_insert(key, :images, :intent_id)
-end
-
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.update(key,
-		&Intent.changeset(Map.fetch!(&1, "#{key}.one"), params))
-	|> File.Domain.multi_update(key, :images, :intent_id)
-end
-
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
-end
 end

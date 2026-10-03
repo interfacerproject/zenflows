@@ -337,16 +337,19 @@ end
 
 object :mutation_intent do
 	field :create_intent, non_null(:intent_response) do
+		meta authz: "intent.create"
 		arg :intent, non_null(:intent_create_params)
 		resolve &Resolv.create_intent/2
 	end
 
 	field :update_intent, non_null(:intent_response) do
+		meta authz: "intent.update"
 		arg :intent, non_null(:intent_update_params)
 		resolve &Resolv.update_intent/2
 	end
 
 	field :delete_intent, non_null(:boolean) do
+		meta authz: "intent.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_intent/2
 	end

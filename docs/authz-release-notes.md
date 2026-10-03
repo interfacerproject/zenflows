@@ -20,10 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Authorization foundation — release notes
 
-**Status: CRUD and events enforced; processes, intents and proposals
-pending.**  Do not describe resources as generally protected: processes,
-process groups, intents, proposals, proposed intents, satisfactions and
-agreements are still unauthorized.
+**Status: CRUD, events, processes, intents and proposals enforced;
+groups, plans, agreements and catalogue types pending.**  Do not
+describe resources or processes/intents/proposals as generally
+protected: process groups, plans, scenarios, scenario definitions,
+agreements, catalogue types (resource specifications, process
+specifications, units, spatial things, recipes, role behaviors, product
+batches) and commitments are still unauthorized.
 
 ## Behaviour changes
 
@@ -115,9 +118,11 @@ agreements are still unauthorized.
   agent on the other side.  For example, signing as Bob, Bob may record a
   `work` event with provider Alice and receiver Bob — Alice's participation
   is not checked.
-- Still unauthorized: processes, process groups, intents, proposals,
-  proposed intents, satisfactions, agreements; attaching an event to
-  another agent's process is still possible.
+- Still unauthorized at the end of this slice: processes, process
+  groups, intents, proposals, proposed intents, satisfactions,
+  agreements; attaching an event to another agent's process is still
+  possible.  Slice 3 (below) closes the processes/intents/proposals
+  gap.
 
 ### Deploying slices 1 and 2
 
@@ -149,6 +154,83 @@ WHERE rc.resource_id = r.id
 interchangeable here; the statement uses the join only to find the right
 rows.)
 
+## Processes, intents and proposals (slice 3)
+
+- `createProcess`, `createProposal`, `createIntent`: the signer becomes
+  the controller (`source: creation`); there is no organization case
+  (these objects carry no agent field).  Service principals (`:import`,
+  `:migration`) create without a control row, as for resources;
+  anonymous calls follow slice 1 (`UNAUTHENTICATED` unless
+  `AUTHZ_ALLOW_UNCHECKED=true`, in which case they too create without a
+  control row).
+- `updateProcess`/`deleteProcess`, `updateProposal`/`deleteProposal`,
+  `deleteIntent`: the controller only.  Other agents' processes,
+  proposals and intents are now read-only through these mutations.
+- `createIntent`: if `inputOf`/`outputOf` is set, the signer must
+  control that process — the intent may then name only the other party
+  (the signer need not be its provider or receiver); otherwise the
+  signer must act for the provider or the receiver.
+- `updateIntent`: the controller, or an agent acting for its provider or
+  receiver, or — only when the update sets nothing but `finished: true`
+  — an agent acting for a provider or receiver of any intent published
+  in the same proposal (this keeps the SDK's `rejectProposal`, which
+  finishes all three intents of a contribution proposal signed by the
+  owner, working without letting anyone change anything else on those
+  intents).  Changing provider, receiver, `inputOf` or `outputOf` is
+  additionally checked against the `createIntent` rule for the
+  resulting intent; changing `inputOf`/`outputOf` away from a process
+  (including to `null`) additionally requires controlling that *old*
+  process, so a named party cannot use the process-less fallback to
+  unilaterally detach an intent from a process someone else controls.
+- `proposeIntent`: the signer must control the proposal **and** either
+  control the intent or act for its provider or receiver.
+  `deleteProposedIntent`: the signer must control the proposal.
+- `createSatisfaction`: requires `satisfiedByEvent` (`satisfiedByCommitment`
+  is always denied — it is also not exposed as an input field);
+  the signer must act for the satisfying event's provider or receiver,
+  and that event must share a provider or receiver with the intent it
+  satisfies.  `updateSatisfaction`/`deleteSatisfaction`: the signer
+  acting for the provider or receiver of the satisfying event; changing
+  which event (or commitment) or which intent a satisfaction points to
+  is additionally checked against the `createSatisfaction` rule for the
+  resulting pair (an intent that doesn't exist is denied).
+- Intents attach only to processes the signer controls: an
+  `inputOf`/`outputOf` reference on `createIntent`/`updateIntent`
+  requires controlling that process.
+- Events attach (`inputOf`/`outputOf` on `createEconomicEvent`) to a
+  process the signer controls **or is invited to**: the process holds
+  at least one unfinished intent (`finished: false`, `inputOf` or
+  `outputOf` that process) whose provider or receiver the signer acts
+  for (self, or an organization the signer is an active admin of).
+  Otherwise `FORBIDDEN` (telemetry rule `:process`).  This keeps
+  interfacer-gui's proposal acceptance working: its `ACCEPT_PROPOSAL`
+  attaches the owner's cite/accept/modify events to the *proposer's*
+  process, whose unfinished accept/modify intents name the owner.
+  Finishing those intents (e.g. `rejectProposal`) ends the invitation.
+- **Processes, proposals and intents created before this upgrade have
+  no control row: deny-all for every controller action (update, delete,
+  attaching an intent; attaching an event unless invited, see above)
+  until `assignObjectControl` assigns one.**  The party-based rules
+  above (a named party updating an intent, satisfactions) and the
+  event invitation still apply to legacy objects.  So an old
+  contribution proposal can still be rejected (the owner finishes the
+  intents), and can still be accepted through the GUI flow
+  (`ACCEPT_PROPOSAL` with the proposer's legacy process, then
+  `SATISFY_INTENTS`) as long as that process holds the unfinished
+  accept/modify intents naming the owner.  Once those intents are
+  finished, events can no longer attach to the legacy process until it
+  gets a controller.
+- New guest query: `objectControl(targetType: String!, targetId: ID!)
+  { controller { id } source epoch }`.
+- New admin-key mutation: `assignObjectControl(targetType: String!,
+  targetId: ID!, personId: ID!, reason: String!)` — creates or replaces
+  a process/proposal/intent's control row, always logged with the
+  reason.  The target must exist (`target not found` otherwise).
+- Still unauthorized: process groups, plans, scenarios, scenario
+  definitions, agreements, catalogue types (resource specifications,
+  process specifications, units, spatial things, recipes, role
+  behaviors, product batches) and commitments.
+
 ## Known limitations
 
 - The last-admin protection is enforced by the policy only, so it does not
@@ -175,3 +257,16 @@ rows.)
   can deadlock on each other's foreign-key locks; PostgreSQL aborts one
   side, so both outcomes are errors (the delete is blocked by foreign keys
   anyway, regardless of which side wins).
+- `updateSatisfaction` cannot change only the note or quantities: the
+  existing changeset requires the event/commitment reference to change
+  (pre-existing, unrelated to authorization).
+- Satisfactions backed by a commitment can't be updated or deleted by
+  persons (commitments aren't exposed in the API).
+- Telemetry for denied process/proposal/intent/proposed-intent/
+  satisfaction actions carries no specific rule (only events report
+  `:process`); these denials are reported with rule `nil`, as in
+  slice 1.
+- A delete of a process/proposal/intent racing a concurrent child
+  insert (an event or intent attaching to it, a satisfaction referencing
+  it) can still deadlock on each other's foreign-key locks; PostgreSQL
+  aborts one side, so both outcomes are errors.

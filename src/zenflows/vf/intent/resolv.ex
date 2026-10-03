@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.Intent.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Intent.Domain
 
@@ -33,20 +34,20 @@ def intents(params, _) do
 	end
 end
 
-def create_intent(%{intent: params}, _) do
-	with {:ok, int} <- Domain.create(params) do
+def create_intent(%{intent: params}, res) do
+	with {:ok, int} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{intent: int}}
 	end
 end
 
-def update_intent(%{intent: %{id: id} = params}, _) do
-	with {:ok, int} <- Domain.update(id, params) do
+def update_intent(%{intent: %{id: id} = params}, res) do
+	with {:ok, int} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{intent: int}}
 	end
 end
 
-def delete_intent(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_intent(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

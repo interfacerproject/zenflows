@@ -20,6 +20,8 @@ defmodule Zenflows.VF.ProposedIntent.Domain do
 @moduledoc "Domain logic of ProposedIntents."
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.ProposedIntent
 
@@ -51,11 +53,21 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec create(Schema.params()) :: {:ok, ProposedIntent.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params()) :: {:ok, ProposedIntent.t()} | {:error, term()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
+	cset = ProposedIntent.changeset(params)
 	Multi.new()
-	|> multi_insert(params)
+	|> Multi.run("#{key}.authz", fn repo, _ ->
+		if cset.valid? do
+			facts = Facts.for_proposed_intent_create(repo, ctx,
+				cset.changes.published_in_id, cset.changes.publishes_id)
+			with :ok <- Authz.authorize(ctx, "proposed_intent.create", facts), do: {:ok, facts}
+		else
+			{:ok, nil}
+		end
+	end)
+	|> Multi.insert(key, cset)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -63,9 +75,9 @@ def create(params) do
 	end
 end
 
-@spec create!(Schema.params()) :: ProposedIntent.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: ProposedIntent.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
@@ -88,11 +100,14 @@ def update!(id, params) do
 	value
 end
 
-@spec delete(Schema.id()) :: {:ok, ProposedIntent.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id()) :: {:ok, ProposedIntent.t()} | {:error, term()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "proposed_intent.delete",
+		fn repo, _ -> Facts.for_proposed_intent(repo, ctx, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -100,9 +115,9 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id()) :: ProposedIntent.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id()) :: ProposedIntent.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -120,23 +135,11 @@ def multi_one(m, key \\ multi_key(), id) do
 	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, ProposedIntent.changeset(params))
-end
-
 @spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
 def multi_update(m, key \\ multi_key(), id, params) do
 	m
 	|> multi_one("#{key}.one", id)
 	|> Multi.update(key,
 		&ProposedIntent.changeset(Map.fetch!(&1, "#{key}.one"), params))
-end
-
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
 end
 end

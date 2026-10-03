@@ -54,6 +54,7 @@ alias Zenflows.VF.{
 	new_target: nil | map(),
 	new_event: nil | EconomicEvent.t(),
 	new_intent: nil | Intent.t(),
+	repoint?: boolean(),
 }
 
 defstruct target: nil,
@@ -70,7 +71,8 @@ defstruct target: nil,
 	finished_only: false,
 	new_target: nil,
 	new_event: nil,
-	new_intent: nil
+	new_intent: nil,
+	repoint?: false
 
 @doc """
 The subset of `agent_ids` (nil entries ignored) where the acting Person
@@ -159,15 +161,29 @@ def for_intent_update(repo, ctx, id, params) do
 	control = lock_object_control(repo, "intent", id, "FOR UPDATE")
 	siblings = sibling_parties(repo, id)
 	new_target = intent_new_target(target, params)
-	process_ids = case new_target do
+	new_process_ids = case new_target do
 		nil -> []
 		nt -> Enum.reject([nt.input_of_id, nt.output_of_id], &is_nil/1)
 	end
-	process_controls = lock_object_controls(repo, "process", process_ids)
+	# Whichever of input_of/output_of is actually moving away from a
+	# process (new value differs from the current one, nil included)
+	# needs that *old* process's control too: the policy must not let a
+	# named party silently detach an intent from a process they don't
+	# control.  Both old and new ids share one `process_controls` map,
+	# keyed by process id, so the policy can look either up.
+	old_process_ids = case new_target do
+		nil -> []
+		nt ->
+			~w[input_of_id output_of_id]a
+			|> Enum.filter(&(Map.get(nt, &1) != Map.get(target, &1)))
+			|> Enum.map(&Map.get(target, &1))
+			|> Enum.reject(&is_nil/1)
+	end
+	process_controls = lock_object_controls(repo, "process", Enum.uniq(old_process_ids ++ new_process_ids))
 	new_ids = case new_target do
 		nil -> []
-		nt -> [nt.provider_id, nt.receiver_id | Enum.map(Map.values(process_controls), & &1.controller_id)]
-	end
+		nt -> [nt.provider_id, nt.receiver_id]
+	end ++ Enum.map(Map.values(process_controls), & &1.controller_id)
 	ids = [control && control.controller_id,
 		target && target.provider_id, target && target.receiver_id | MapSet.to_list(siblings)]
 	%__MODULE__{target: target, control: control, sibling_parties: siblings,
@@ -216,10 +232,26 @@ def for_satisfaction(repo, ctx, id, params \\ %{}) do
 	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR NO KEY UPDATE")
 	event = target && target.satisfied_by_event_id && repo.get(EconomicEvent, target.satisfied_by_event_id)
 	intent = target && target.satisfies_id && repo.get(Intent, target.satisfies_id)
-	new_event = satisfaction_new_ref(params, :satisfied_by_event_id, EconomicEvent, repo)
-	new_intent = satisfaction_new_ref(params, :satisfies_id, Intent, repo)
+
+	# A satisfaction is re-pointed when `params` actually changes either
+	# of the two things it may be satisfied *by* (an event or a
+	# commitment) -- including switching to/from a commitment, which
+	# clears the event side without naming a new event.  `new_event` is
+	# then the resulting event (nil if the result has none), never the
+	# stale old `event`.
+	repoint? = target != nil and
+		(changed?(params, :satisfied_by_event_id, target.satisfied_by_event_id)
+			or changed?(params, :satisfied_by_commitment_id, target.satisfied_by_commitment_id))
+	new_event = if repoint? do
+		case resulting_value(params, :satisfied_by_event_id, target && target.satisfied_by_event_id) do
+			nil -> nil
+			eid -> repo.get(EconomicEvent, eid)
+		end
+	end
+	new_intent = satisfaction_new_ref(params, :satisfies_id, target && target.satisfies_id, Intent, repo)
+
 	%__MODULE__{target: target, event: event, intent: intent,
-		new_event: new_event, new_intent: new_intent,
+		new_event: new_event, new_intent: new_intent, repoint?: repoint?,
 		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id,
 			new_event && new_event.provider_id, new_event && new_event.receiver_id])}
 end
@@ -249,25 +281,37 @@ end
 
 @intent_struct_fields ~w[provider_id receiver_id input_of_id output_of_id]a
 
-# `nil` unless `params` names at least one of the four fields that
-# determine who an intent is *for* (either of its parties, or either
-# process it is attached to); when it does, returns the intent's
-# would-be values for all four, current values overridden by `params`
-# (atom or string keys).
+# `nil` unless `params` actually *changes* at least one of the four
+# fields that determine who an intent is for (either of its parties,
+# or either process it is attached to) -- a field present in `params`
+# with its current value is not a change (atom or string keys either
+# way).  When it does change, returns the intent's would-be values for
+# all four, current values overridden by `params`.
 defp intent_new_target(nil, _params), do: nil
 defp intent_new_target(target, params) do
-	if Enum.any?(@intent_struct_fields, &param_key?(params, &1)) do
+	if Enum.any?(@intent_struct_fields, &changed?(params, &1, Map.get(target, &1))) do
 		Map.new(@intent_struct_fields, fn field ->
-			value = case fetch_param(params, field) do
-				{:ok, v} -> v
-				:error -> Map.get(target, field)
-			end
-			{field, value}
+			{field, resulting_value(params, field, Map.get(target, field))}
 		end)
 	end
 end
 
-defp param_key?(params, key), do: Map.has_key?(params, key) or Map.has_key?(params, Atom.to_string(key))
+# True when `params` names `key` (atom or string) and its value there
+# differs from `current`.
+defp changed?(params, key, current) do
+	case fetch_param(params, key) do
+		{:ok, v} -> v != current
+		:error -> false
+	end
+end
+
+# `params`'s value for `key` if named (atom or string), else `current`.
+defp resulting_value(params, key, current) do
+	case fetch_param(params, key) do
+		{:ok, v} -> v
+		:error -> current
+	end
+end
 
 defp fetch_param(params, key) do
 	case Map.fetch(params, key) do
@@ -276,10 +320,12 @@ defp fetch_param(params, key) do
 	end
 end
 
-defp satisfaction_new_ref(params, key, schema, repo) do
-	case fetch_param(params, key) do
-		{:ok, id} when is_binary(id) -> repo.get(schema, id)
-		_ -> nil
+defp satisfaction_new_ref(params, key, current, schema, repo) do
+	if changed?(params, key, current) do
+		case resulting_value(params, key, current) do
+			id when is_binary(id) -> repo.get(schema, id)
+			_ -> nil
+		end
 	end
 end
 

@@ -126,6 +126,49 @@ describe "for_intent_update/4" do
 		assert %Facts{new_target: nil} =
 			Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{note: "n"})
 	end
+
+	test "a structural field present at its current value is not a change: new_target stays nil" do
+		alice = Factory.insert!(:person)
+		proc = Factory.insert!(:process)
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id,
+			input_of_id: proc.id}) |> Repo.insert!()
+
+		# No control row for `proc` at all: if this were (wrongly) treated
+		# as a change, the create-style check downstream would need a
+		# control alice doesn't have.
+		assert %Facts{new_target: nil, process_controls: controls} =
+			Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{input_of_id: proc.id, note: "n"})
+		assert controls == %{}
+	end
+
+	test "a string-keyed structural param still fills new_target" do
+		alice = Factory.insert!(:person)
+		bob = Factory.insert!(:person)
+
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+
+		f = Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{"receiver_id" => bob.id})
+		assert %Facts{new_target: %{receiver_id: receiver_id, provider_id: provider_id}} = f
+		assert receiver_id == bob.id
+		assert provider_id == alice.id
+	end
+
+	test "detaching from a process loads that OLD process's control too, alongside the new (empty) state" do
+		alice = Factory.insert!(:person)
+		bob = Factory.insert!(:person)
+		proc = Factory.insert!(:process)
+		%{target_type: "process", target_id: proc.id, controller_id: bob.id, source: :creation}
+		|> ObjectControl.changeset()
+		|> Repo.insert!()
+		target = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id,
+			input_of_id: proc.id}) |> Repo.insert!()
+
+		f = Facts.for_intent_update(Repo, Factory.ctx(alice), target.id, %{input_of_id: nil})
+		assert %Facts{new_target: %{input_of_id: nil}} = f
+		proc_id = proc.id
+		assert %{^proc_id => %ObjectControl{controller_id: cid}} = f.process_controls
+		assert cid == bob.id
+	end
 end
 
 describe "for_proposed_intent_create/4" do
@@ -219,8 +262,32 @@ describe "for_satisfaction/4" do
 
 		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id,
 			%{satisfied_by_event_id: new_event_id})
-		assert %Facts{new_event: %EconomicEvent{id: new_eid}, new_intent: nil} = f
+		assert %Facts{new_event: %EconomicEvent{id: new_eid}, new_intent: nil, repoint?: true} = f
 		assert new_eid == new_event_id
+	end
+
+	test "re-pointing to a bare commitment marks repoint? and loads a nil new_event" do
+		alice = Factory.insert!(:person)
+		event_id = Factory.insert_economic_event!().id
+		commitment_id = Factory.insert!(:commitment).id
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		satisfaction = Satisfaction.changeset(%{satisfied_by_event_id: event_id, satisfies_id: intent.id})
+			|> Repo.insert!()
+
+		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id,
+			%{satisfied_by_event_id: nil, satisfied_by_commitment_id: commitment_id})
+		assert %Facts{repoint?: true, new_event: nil} = f
+	end
+
+	test "params that don't touch either satisfied-by field are not a re-point" do
+		alice = Factory.insert!(:person)
+		event_id = Factory.insert_economic_event!().id
+		intent = Intent.changeset(%{action_id: Factory.build(:action_id), provider_id: alice.id}) |> Repo.insert!()
+		satisfaction = Satisfaction.changeset(%{satisfied_by_event_id: event_id, satisfies_id: intent.id})
+			|> Repo.insert!()
+
+		f = Facts.for_satisfaction(Repo, Factory.ctx(alice), satisfaction.id, %{note: "n"})
+		assert %Facts{repoint?: false, new_event: nil} = f
 	end
 end
 end

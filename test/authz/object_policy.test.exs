@@ -106,6 +106,30 @@ describe "intent.update" do
 			new_target: %{provider_id: c.org, receiver_id: c.b, input_of_id: nil, output_of_id: nil}}
 		assert {:error, :forbidden} = auth(c.as_a, "intent.update", f)
 	end
+
+	test "a named party detaching from a process they don't control: forbidden", c do
+		int = %Intent{provider_id: nil, receiver_id: c.a, input_of_id: c.p1}
+		f = %Facts{target: int,
+			new_target: %{provider_id: nil, receiver_id: c.a, input_of_id: nil, output_of_id: nil},
+			process_controls: %{c.p1 => ctl(c.b)}}
+		assert {:error, :forbidden} = auth(c.as_a, "intent.update", f)
+	end
+
+	test "detaching from a process the signer controls (the process controller): ok", c do
+		int = %Intent{provider_id: nil, receiver_id: c.a, input_of_id: c.p1}
+		f = %Facts{target: int,
+			new_target: %{provider_id: nil, receiver_id: c.a, input_of_id: nil, output_of_id: nil},
+			process_controls: %{c.p1 => ctl(c.a)}}
+		assert :ok = auth(c.as_a, "intent.update", f)
+	end
+
+	test "swapping to a different process the signer doesn't control the old one of: forbidden", c do
+		int = %Intent{provider_id: nil, receiver_id: c.a, input_of_id: c.p1}
+		f = %Facts{target: int,
+			new_target: %{provider_id: nil, receiver_id: c.a, input_of_id: c.p2, output_of_id: nil},
+			process_controls: %{c.p1 => ctl(c.b), c.p2 => ctl(c.a)}}
+		assert {:error, :forbidden} = auth(c.as_a, "intent.update", f)
+	end
 end
 
 describe "proposed_intent" do
@@ -157,7 +181,25 @@ describe "satisfaction" do
 		f = %Facts{target: %Satisfaction{},
 			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
 			intent: %Intent{provider_id: c.a},
+			repoint?: true,
 			new_event: %EconomicEvent{provider_id: c.org, receiver_id: c.b}}
+		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
+	end
+
+	test "update: re-pointing to a bare commitment (no event): forbidden", c do
+		f = %Facts{target: %Satisfaction{},
+			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
+			intent: %Intent{provider_id: c.a},
+			repoint?: true,
+			new_event: nil}
+		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
+	end
+
+	test "update: re-pointing satisfies_id to an intent sharing no agent with the event: forbidden", c do
+		f = %Facts{target: %Satisfaction{},
+			event: %EconomicEvent{provider_id: c.a, receiver_id: c.a},
+			intent: %Intent{provider_id: c.a},
+			new_intent: %Intent{provider_id: c.org}}
 		assert {:error, :forbidden} = auth(c.as_a, "satisfaction.update", f)
 	end
 end

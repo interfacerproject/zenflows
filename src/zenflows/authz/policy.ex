@@ -127,8 +127,13 @@ defp person_may?(pid, "intent.update", %Facts{target: %Intent{} = i} = f) do
 		or (f.finished_only and Enum.any?(f.sibling_parties, &acts_for?(pid, f, &1)))
 	# Updates are judged only on the old state above; a structural
 	# change (new provider/receiver/process) must additionally pass the
-	# same rule a fresh `intent.create` with that shape would.
-	base and (f.new_target == nil or person_may?(pid, "intent.create", %{f | target: f.new_target}))
+	# same rule a fresh `intent.create` with that shape would, AND
+	# (`detach_ok?/3`) a named party may not use that same rule's
+	# process-less fallback to detach from a process they never
+	# controlled in the first place.
+	base
+		and (f.new_target == nil or person_may?(pid, "intent.create", %{f | target: f.new_target}))
+		and detach_ok?(pid, f, i)
 end
 defp person_may?(pid, "proposed_intent.create", %Facts{intent: %Intent{} = i} = f) do
 	(controls?(pid, f, f.control) and type_ok?(f.control, "proposal"))
@@ -146,12 +151,17 @@ end
 defp person_may?(pid, "satisfaction.update", %Facts{event: %EconomicEvent{} = e} = f) do
 	base = acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)
 	# As with `intent.update`: the old state alone decides the base
-	# case above; re-pointing to a different event or intent must
-	# additionally pass the `satisfaction.create` rule for the new pair.
+	# case above; re-pointing (`repoint?`, which covers switching to a
+	# bare commitment -- `new_event` nil -- just as much as pointing at
+	# a different event) or naming a different intent must additionally
+	# pass the `satisfaction.create` rule for the new pair.  `new_event`
+	# is used as-is (never falls back to the old `event`) so that
+	# re-pointing to "no event" is correctly judged against `nil`, not
+	# against the event being replaced.
 	base and (
-		(f.new_event == nil and f.new_intent == nil)
+		(not f.repoint? and f.new_intent == nil)
 			or person_may?(pid, "satisfaction.create",
-				%{f | event: f.new_event || f.event, intent: f.new_intent || f.intent}))
+				%{f | event: (if f.repoint?, do: f.new_event, else: f.event), intent: f.new_intent || f.intent}))
 end
 defp person_may?(pid, "satisfaction.delete", %Facts{event: %EconomicEvent{} = e} = f),
 	do: acts_for?(pid, f, e.provider_id) or acts_for?(pid, f, e.receiver_id)
@@ -178,4 +188,20 @@ end
 
 defp type_ok?(nil, _type), do: true
 defp type_ok?(%ObjectControl{target_type: t}, type), do: t == type
+
+# For each of `input_of_id`/`output_of_id` that `new_target` actually
+# changes away from `i`'s current value (nil included: detaching
+# counts), the signer must control that *old*, non-nil process.
+# Without this, a named party could use `intent.create`'s process-less
+# fallback (acting for a party is enough when the new state has no
+# process) to unilaterally detach from a process someone else
+# controls, simply by removing or swapping out the process reference.
+defp detach_ok?(_pid, %Facts{new_target: nil}, _i), do: true
+defp detach_ok?(pid, f, i) do
+	~w[input_of_id output_of_id]a
+	|> Enum.filter(&(Map.get(f.new_target, &1) != Map.get(i, &1)))
+	|> Enum.map(&Map.get(i, &1))
+	|> Enum.reject(&is_nil/1)
+	|> Enum.all?(&controls?(pid, f, Map.get(f.process_controls, &1)))
+end
 end

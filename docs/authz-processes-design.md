@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # Processes, intents and proposals (RBAC slice 3) — design
 
 - **Date:** 2026-10-03
-- **Status:** Draft, awaiting review
+- **Status:** Implemented on `feat/authz-processes`
 - **Builds on:** `docs/authz-foundation-design.md` (slice 1, PR #71) and
   `docs/authz-events-design.md` (slice 2, PR #72); this work is on
   `feat/authz-processes`, stacked on `feat/authz-events`.
@@ -142,17 +142,19 @@ follows the slice-1 shape (authorize → target → write → log in one
 
 - **Process, Proposal** — create: insert, then `ObjectControl.Domain
   .multi_on_create/4`; update/delete: `Facts.for_object(repo, ctx, type,
-  id)` (target row `FOR UPDATE`, control row `FOR UPDATE`, `admin_of`
-  for the controller).
+  id)` (target row `FOR NO KEY UPDATE`, control row `FOR UPDATE`,
+  `admin_of` for the controller).
 - **Intent** — create: facts from the validated changeset (process control
   row `FOR SHARE` if a process is referenced; `admin_of` for provider,
   receiver and the process controller); update/delete:
-  `Facts.for_intent/3` (intent `FOR UPDATE`, its control row `FOR UPDATE`,
-  parties of the intents published in the same proposals, unlocked).
-- **ProposedIntent** — proposal control row `FOR SHARE`, intent and its
-  control row.
+  `Facts.for_intent/3` (intent `FOR NO KEY UPDATE`, its control row
+  `FOR UPDATE`, parties of the intents published in the same proposals,
+  unlocked).
+- **ProposedIntent** — create: proposal control row `FOR SHARE`, intent
+  and its control row `FOR SHARE`; delete: target row `FOR NO KEY
+  UPDATE`, proposal control row `FOR SHARE`.
 - **Satisfaction** — event and intent (unlocked; their parties are
-  immutable), satisfaction row `FOR UPDATE` for update/delete.
+  immutable), satisfaction row `FOR NO KEY UPDATE` for update/delete.
 - **Events** — `EventFacts.load` loads the control rows of `inputOf` /
   `outputOf` `FOR SHARE` after resource control rows and before admin rows;
   `EventPolicy` adds the process rule.
@@ -235,3 +237,34 @@ privacy (F05).
 
 All tests in §9 pass; the full suite fails only on the known baseline;
 release notes updated.
+
+## 11. Deltas from the original draft
+
+1. Telemetry rules `:control`/`:party` are not added: object actions go
+   through `Policy` clauses that return `{:error, :forbidden}` (rule
+   `nil`), as in slice 1. Only events gain the `:process` rule (§3.2).
+2. Anonymous calls under `allow_unchecked` create processes, proposals
+   and intents **without** a control row (there is no agent to make
+   controller); in production anonymous creates are `UNAUTHENTICATED`.
+3. `Process.Domain` write functions are rewritten from the functional
+   `Repo.multi(fn -> ... end)` style into `Ecto.Multi` with authorize
+   steps; the "a ProcessGroup must not group other ProcessGroups" check
+   is kept.
+4. Updates are checked against their new values too: an `updateIntent`
+   that changes provider, receiver, `inputOf` or `outputOf` must satisfy
+   the create rule for the resulting intent, and changing
+   `inputOf`/`outputOf` (including to `null`) also requires controlling
+   the old process; an `updateSatisfaction` that changes its event or
+   commitment runs the create rule on the result (a commitment-only
+   result is denied). Fields sent with their current value don't count
+   as changes.
+5. Target rows of process/proposal/intent/proposed-intent/satisfaction
+   decisions are locked `FOR NO KEY UPDATE` (not `FOR UPDATE`), so child
+   inserts' foreign-key checks don't deadlock against parent updates; a
+   delete racing a child insert can still deadlock (PostgreSQL aborts
+   one; both outcomes are errors). §4 is updated accordingly (it
+   previously said `FOR UPDATE` for satisfactions/targets).
+6. Policy also checks that a control row's target type matches the
+   action (a process control row never authorizes an intent action).
+7. The guard's pending list lost each family's mutations in the task
+   that wired them, not all at once at the end of the slice.

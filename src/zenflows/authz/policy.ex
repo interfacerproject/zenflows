@@ -37,6 +37,7 @@ alias Zenflows.VF.Person
 	person.create person.update person.delete
 	sw_pass.import resource_control.set
 	event.create event.update
+	object_control.assign
 ]
 
 @doc "Every action the policy knows about."

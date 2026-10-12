@@ -58,6 +58,18 @@ def update_economic_resource(%{resource: %{id: id} = params}, res) do
 	end
 end
 
+def metadata_hash(resource, _, _) do
+	{:ok, Zenflows.VF.EconomicResource.Metadata.hash(resource.metadata)}
+end
+
+def patch_economic_resource_metadata(%{resource_id: id, fields: fields} = params, res) do
+	opts = if Map.has_key?(params, :expected_metadata_hash),
+		do: [expected_metadata_hash: params.expected_metadata_hash], else: []
+	with {:ok, resource} <- Domain.patch_metadata(ExecutionContext.from_resolution(res), id, fields, opts) do
+		{:ok, %{economic_resource: resource}}
+	end
+end
+
 def delete_economic_resource(%{id: id}, res) do
 	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}

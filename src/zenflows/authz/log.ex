@@ -18,8 +18,10 @@
 
 defmodule Zenflows.Authz.Log do
 @moduledoc """
-Append-only trace of permission changes (`zf_permission_log`).  Each
-entry is written in the same transaction as the change it records;
+Append-only trace of permission changes and administrative metadata patches
+(`zf_permission_log`). Metadata patches record changed keys/content fingerprints,
+not raw metadata or fabricated physical events. Each entry is written in the
+same transaction as the change it records;
 actor, service and request id always come from the context.
 """
 

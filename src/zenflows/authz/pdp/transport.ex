@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zenflows is software that implements the Valueflows vocabulary.
+# Zenflows is designed, written, and maintained by srfsh <srfsh@dyne.org>
+# Copyright (C) 2021-2023 Dyne.org foundation <foundation@dyne.org>.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+defmodule Zenflows.Authz.Pdp.Transport do
+@moduledoc """
+Wire boundary for the cross-service PDP (contract §4, transport §3 of
+`cross-service-authz-transport-design.md`).
+
+`prepare/2` is pure: it validates a decoded request body and sets
+`principal_proven` **solely** from an independent re-verification of the
+user's signature (never from a caller-supplied field), honoring contract
+§4.3 property 2.  The real verifier is `Restroom.verify_graphql/3`,
+injected so the pure logic is unit-testable without zenroom.
+
+`handle/2` is the Plug entrypoint used by the router: it runs `prepare/2`
+with the real verifier and delegates the prepared request to the pure
+`Zenflows.Authz.Pdp.decision/1`.
+"""
+
+@type verify_fun :: (binary(), String.t(), String.t() -> :ok | {:error, term()})
+
+@doc """
+Validate a decoded request body and attach `principal_proven` from a
+re-verification of the proof.  Returns `{:ok, request}` or
+`{:error, {400, reason}}`.
+"""
+@spec prepare(map(), verify_fun()) :: {:ok, map()} | {:error, {400, String.t()}}
+def prepare(params, verify_fun) when is_map(params) do
+	with {:ok, action} <- req_string(params, "action"),
+			{:ok, principal} <- req_map(params, "principal"),
+			{:ok, pk} <- req_string(principal, "pk"),
+			{:ok, binding} <- req_map(params, "binding"),
+			{:ok, _parent} <- req_string(binding, "parent_id"),
+			{:ok, proof} <- req_map(params, "proof"),
+			{:ok, sig} <- req_string(proof, "signature"),
+			{:ok, payload_b64} <- req_string(proof, "payload_b64"),
+			{:ok, payload} <- decode_b64(payload_b64) do
+		proven? = verify_fun.(payload, sig, pk) == :ok
+
+		request =
+			params
+			|> Map.put("action", action)
+			|> Map.put("principal_proven", proven?)
+
+		{:ok, request}
+	end
+end
+
+defp req_string(map, key) do
+	case Map.get(map, key) do
+		v when is_binary(v) and v != "" -> {:ok, v}
+		_ -> {:error, {400, "missing or invalid #{key}"}}
+	end
+end
+
+defp req_map(map, key) do
+	case Map.get(map, key) do
+		v when is_map(v) -> {:ok, v}
+		_ -> {:error, {400, "missing or invalid #{key}"}}
+	end
+end
+
+defp decode_b64(s) do
+	case Base.decode64(s) do
+		{:ok, bin} -> {:ok, bin}
+		:error -> {:error, {400, "payload_b64 is not valid base64"}}
+	end
+end
+end

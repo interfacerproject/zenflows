@@ -2,7 +2,18 @@
 defmodule ZenflowsTest.Authz.PdpTransport do
 use ExUnit.Case, async: true
 
+import Plug.Test
+
 alias Zenflows.Authz.Pdp.Transport
+
+# handle/2 reads conn.body_params (populated in production by the router's
+# existing Plug.Parsers JSON parser). Plug.Test does not run that parser, so
+# the tests set body_params directly — the parser itself is not under test.
+defp with_params(map) do
+	%{conn(:post, "/authz/decide") | body_params: map}
+end
+
+defp decoded(conn), do: Jason.decode!(conn.resp_body)
 
 # A valid request body as decoded from JSON (string keys), with a proof
 # block whose payload is valid base64. The stub verify_fun decides the
@@ -63,5 +74,37 @@ end
 
 test "a non-string action is a 400" do
 	assert {:error, {400, _}} = Transport.prepare(Map.put(body(), "action", 7), &ok_verify/3)
+end
+
+test "handle/2: malformed body (missing action) responds 400 without calling decide" do
+	parent = self()
+	decide = fn _ -> send(parent, :decided); %{} end
+	conn =
+		with_params(%{"principal" => %{"pk" => "P"}})
+		|> Transport.handle(verify_fun: fn _, _, _ -> :ok end, decide_fun: decide)
+
+	assert conn.status == 400
+	refute_receive :decided
+end
+
+test "handle/2: a valid body passes the prepared request (principal_proven from verify) to decide and returns 200" do
+	parent = self()
+	decide = fn req ->
+		send(parent, {:req, req})
+		%{"decision" => "deny", "reason_code" => "not_controller",
+			"permission_epoch" => 1, "obligations" => %{}}
+	end
+	conn =
+		with_params(%{
+			"request_id" => "r1", "action" => "dpp.delete",
+			"principal" => %{"pk" => "P"}, "binding" => %{"parent_id" => "R1"},
+			"proof" => %{"signature" => "S", "payload_b64" => Base.encode64("x")}
+		})
+		|> Transport.handle(verify_fun: fn _, _, _ -> {:error, "no"} end, decide_fun: decide)
+
+	assert conn.status == 200
+	assert decoded(conn)["decision"] == "deny"
+	assert_receive {:req, req}
+	assert req["principal_proven"] == false
 end
 end

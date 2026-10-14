@@ -32,6 +32,11 @@ with the real verifier and delegates the prepared request to the pure
 `Zenflows.Authz.Pdp.decision/1`.
 """
 
+import Plug.Conn
+
+alias Zenflows.Authz.Pdp
+alias Zenflows.Restroom
+
 @type verify_fun :: (binary(), String.t(), String.t() -> :ok | {:error, term()})
 
 @doc """
@@ -80,5 +85,32 @@ defp decode_b64(s) do
 		{:ok, bin} -> {:ok, bin}
 		:error -> {:error, {400, "payload_b64 is not valid base64"}}
 	end
+end
+
+@doc """
+Plug entrypoint for `POST /authz/decide`.  Reads the JSON body (already
+decoded by the router's parsers when present), runs `prepare/2`, and
+delegates to the PDP.  Fail closed: a prepare error is a 400; every
+rendered decision is a 200 with the contract response (allow and deny
+alike — `decision/1` already rescues internal failures to a deny).
+"""
+@spec handle(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
+def handle(conn, opts \\ []) do
+	verify_fun = Keyword.get(opts, :verify_fun, &Restroom.verify_graphql/3)
+	decide_fun = Keyword.get(opts, :decide_fun, &Pdp.decision/1)
+
+	case prepare(conn.body_params, verify_fun) do
+		{:ok, request} ->
+			send_json(conn, 200, decide_fun.(request))
+
+		{:error, {status, reason}} ->
+			send_json(conn, status, %{"error" => reason})
+	end
+end
+
+defp send_json(conn, status, body) do
+	conn
+	|> put_resp_content_type("application/json")
+	|> send_resp(status, Jason.encode!(body))
 end
 end

@@ -163,11 +163,20 @@ to invoke.
 The decision document's first slice is **the contract + authentication of the
 DPP writes**. Concretely, against this contract:
 
-- **Fully:** §2 properties 1–3 (signature required, DID resolves, object-id
-  bound to path) on `UpdateDPP`, `UpdateDPPStatus`, `DeleteDPP`,
-  `DeleteAttachment`, reusing the same `VerifyDid`+`IsAuth` the other DPP
-  handlers already call, extracted into one shared helper so the copy the
-  decision doc criticizes shrinks rather than grows.
+- **Fully:** §2 properties 1 and 2 (a signature is required, and the DID must
+  resolve) on `UpdateDPP`, `UpdateDPPStatus`, `DeleteDPP`, `DeleteAttachment`,
+  reusing the same `VerifyDid`+`IsAuth` the other DPP handlers already call,
+  behind one shared helper (`authenticateWrite`) so the copy the decision doc
+  criticizes shrinks rather than grows. The three already-authenticated
+  handlers migrate onto the same helper in a follow-up.
+- **By construction for deletes, over the body for updates (§2 property 3,
+  object-id binding):** a body-less `DELETE` signs the id string, which the
+  service reconstructs from the path, so the signature is bound to exactly
+  that object. An update signs its body; binding the update's object id into
+  the signed content is the job of the signed envelope and lands with it, not
+  in P0. So `DeleteDPP`/`DeleteAttachment` are object-bound now;
+  `UpdateDPP`/`UpdateDPPStatus` are authenticated now and object-bound with
+  the envelope.
 - **Shape only, enforcement as fast-follow:** §2 property 4 (nonce/TTL replay
   defense) — the signed-payload envelope carries the fields and the PEP logs
   them; rejection is turned on once clients emit them.

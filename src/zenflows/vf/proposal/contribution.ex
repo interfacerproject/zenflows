@@ -23,8 +23,9 @@ shapes it (see `docs/atomic-accept-contribution.md`).
 
 The owner's cite/accept/modify events and the three satisfactions are
 written in one transaction, through the existing `event.create` and
-`satisfaction.create` policy.  Accepting an accepted proposal returns its
-events and writes nothing.
+`satisfaction.create` policy; the three intents are then marked finished
+(`intent.update`), ending the owner's invitation to the proposer's process.
+Accepting an accepted proposal returns its events and writes nothing.
 """
 
 import Ecto.Query
@@ -171,6 +172,16 @@ defp write(ctx, s, %{origin: origin}) do
 					has_unit_id: intent.resource_quantity_has_unit_id,
 				},
 			})
+		end)
+	end)
+	# Close the intents: the proposal stays ACCEPTED (status counts satisfactions)
+	# and the owner's invitation to the proposer's process ends with it.
+	|> Multi.run(:finished, fn _, _ ->
+		Enum.reduce_while([s.cite, s.accept, s.modify], {:ok, []}, fn intent, {:ok, acc} ->
+			case Intent.Domain.update(ctx, intent.id, %{finished: true}) do
+				{:ok, updated} -> {:cont, {:ok, [updated | acc]}}
+				error -> {:halt, error}
+			end
 		end)
 	end)
 	|> Multi.run(:events, fn _, changes ->

@@ -56,17 +56,8 @@ end
 @spec create(ExecutionContext.t(), Schema.params()) :: {:ok, Satisfaction.t()} | {:error, term()}
 def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
-	cset = Satisfaction.changeset(params)
 	Multi.new()
-	|> Multi.run("#{key}.authz", fn repo, _ ->
-		if cset.valid? do
-			facts = Facts.for_satisfaction_create(repo, ctx, cset.changes)
-			with :ok <- Authz.authorize(ctx, "satisfaction.create", facts), do: {:ok, facts}
-		else
-			{:ok, nil}
-		end
-	end)
-	|> Multi.insert(key, cset)
+	|> multi_insert(ctx, key, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -135,4 +126,20 @@ def preload(satis, x) when x in ~w[effort_quantity resource_quantity]a,
 
 @spec multi_key() :: atom()
 def multi_key(), do: :satisfaction
+
+@doc "Authorize (`satisfaction.create`) and insert under `key`; composable."
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, ctx, key \\ multi_key(), params) do
+	cset = Satisfaction.changeset(params)
+	m
+	|> Multi.run("#{key}.authz", fn repo, _ ->
+		if cset.valid? do
+			facts = Facts.for_satisfaction_create(repo, ctx, cset.changes)
+			with :ok <- Authz.authorize(ctx, "satisfaction.create", facts), do: {:ok, facts}
+		else
+			{:ok, nil}
+		end
+	end)
+	|> Multi.insert(key, cset)
+end
 end

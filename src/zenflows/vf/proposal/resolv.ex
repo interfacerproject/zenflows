@@ -60,6 +60,10 @@ def create_proposal(%{proposal: params}, res) do
 	end
 end
 
+def propose_contribution(params, res) do
+	Zenflows.VF.Proposal.Propose.propose(ExecutionContext.from_resolution(res), params)
+end
+
 def accept_contribution(%{proposal_id: id}, res) do
 	Zenflows.VF.Proposal.Contribution.accept(ExecutionContext.from_resolution(res), id)
 end

@@ -131,6 +131,16 @@ object :proposal_response do
 	field :proposal, non_null(:proposal)
 end
 
+object :propose_contribution_response do
+	field :proposal, non_null(:proposal)
+	field :process, non_null(:process)
+	field :cite_intent, non_null(:intent)
+	field :accept_intent, non_null(:intent)
+	field :modify_intent, non_null(:intent)
+	@desc "False when an existing pending proposal was returned."
+	field :created, non_null(:boolean)
+end
+
 object :accept_contribution_response do
 	field :proposal, non_null(:proposal)
 	field :cite_event, non_null(:economic_event)
@@ -202,6 +212,22 @@ object :query_proposal do
 end
 
 object :mutation_proposal do
+	@desc """
+	Create a contribution proposal in one transaction: the signer's process,
+	cite/accept/modify intents and the proposal with its links. The owner is
+	the origin's controller (Person or Organization); the signer must control
+	the fork. A pending proposal by the same signer for the same fork and
+	origin is returned (created: false) instead of a second one.
+	"""
+	field :propose_contribution, non_null(:propose_contribution_response) do
+		meta authz: "proposal.create"
+		arg :resource_forked_id, non_null(:id)
+		arg :resource_origin_id, non_null(:id)
+		arg :name, :string
+		arg :note, :string
+		resolve &Resolv.propose_contribution/2
+	end
+
 	@desc """
 	Accept a contribution proposal (as `proposeContribution` shapes it) in
 	one transaction: the owner's cite/accept/modify events in the proposer's

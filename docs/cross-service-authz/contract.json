@@ -1,0 +1,140 @@
+{
+  "layer": "contract",
+  "doc": "The PDP request/response contract, §3 and §4. These need the Elixir PDP side, which is a later slice. A runner with no PDP wired MUST report each as PENDING (never green). They are written now so the PDP is built to a fixed target.",
+  "vectors": [
+    {
+      "name": "contract.allow.controller_updates_own_dpp",
+      "layer": "contract",
+      "doc": "The verified principal controls the resource the DPP is bound to: dpp.spec.update is allowed.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000001",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:aa",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.non_controller_updates_foreign_dpp",
+      "layer": "contract",
+      "doc": "Bob is authenticated but does not control the bound resource: deny with a non-sensitive reason.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000002",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.delete",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:bb",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "not_controller",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.parent_from_binding_not_payload",
+      "layer": "contract",
+      "doc": "The service loads the parent from the DPP's immutable binding (resource Alice). A caller who hoped to be evaluated against their own resource cannot: the binding, not a client field, picks the parent. Evaluated against Alice's resource, Bob is denied.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000003",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:cc",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "not_controller",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.service_asserts_subject_without_proof",
+      "layer": "contract",
+      "doc": "A service sends principal=Alice with no user signature and no delegation assertion: the PDP must not take a service's word for who the user is. Deny.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000004",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:dd",
+        "issued_at": "2026-10-14T10:00:00Z",
+        "_note": "In a real request this principal must be backed by the user's own verified signature at the PEP (§2) or by a non-null delegation. This vector models the forbidden case where neither is present; a conforming PEP would not even emit it, and a conforming PDP rejects it if it does."
+      },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "unproven_subject",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.fail_closed_on_pdp_error",
+      "layer": "contract",
+      "doc": "The PDP is unreachable or returns an unparseable decision: the PEP must treat it as deny, never fall back to the pre-contract path. Modeled as an injected transport error the PEP maps to deny.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000005",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:ee",
+        "issued_at": "2026-10-14T10:00:00Z",
+        "_inject": { "pdp_transport": "timeout" }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "pdp_unavailable",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.allow.with_field_obligation",
+      "layer": "contract",
+      "doc": "A repair role may update only some DPP sections: the PDP allows but returns obligations the PEP must enforce, narrowing the write.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000006",
+        "principal": { "did": "did:dyne:ifacer:pkCarol", "pk": "pkCarol" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:ff",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": 7,
+        "obligations": { "allowed_sections": ["repair", "maintenance"] }
+      }
+    }
+  ]
+}

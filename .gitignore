@@ -114,6 +114,9 @@
 !/docs/*.md
 !/docs/*.png
 !/docs/*.jpg
+# cross-service authz shared test vectors (JSON fixtures live beside the docs)
+!/docs/cross-service-authz/
+!/docs/cross-service-authz/**
 
 # devops stuff
 !/Dockerfile

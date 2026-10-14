@@ -40,7 +40,12 @@ One transaction, on success:
 - `modify` event: owner → owner, origin, `outputOf` P, with
   `resourceMetadata` = the origin's **current** metadata with the fork id
   appended to `relations` (no duplicate). Other keys are preserved;
-- one satisfaction per intent, linking it to its event.
+- one satisfaction per intent, linking it to its event;
+- the three intents marked `finished` (through `intent.update`, the
+  same-proposal `finished` rule of slice 3 §3.1). The status stays
+  `ACCEPTED` (it counts satisfactions), and the owner is no longer invited
+  to attach events to the proposer's process (§3.2): before this change the
+  unfinished intents kept that invitation open after acceptance.
 
 Quantities and units come from the intents; timestamps are server time.
 
@@ -70,7 +75,10 @@ nothing is written. The mutation is tagged `meta authz: "event.create"`.
 
 Origin and fork resource rows `FOR UPDATE`, ascending id, first; then the
 three intent rows (with their proposed-intent link rows) `FOR SHARE`,
-ascending id; the proposal's shape is re-checked on the locked rows. This follows the slice-3 order
+ascending id; the proposal's shape is re-checked on the locked rows. Finishing the intents then takes them `FOR NO KEY UPDATE`
+(`intent.update`) in the same transaction; this cannot cycle with another
+writer, because anything that would need the same resource rows waits
+before taking any intent lock. This follows the slice-3 order
 (resource rows → control rows → intent rows → admin rows). Concurrent
 accepts of one proposal serialize on the origin row. A concurrent
 `rejectProposal` (`updateIntent` takes the intent `FOR NO KEY UPDATE`)

@@ -147,6 +147,29 @@ test "a fork already in relations is not duplicated; no metadata becomes relatio
 	assert EconomicResource.Domain.one!(ids2.origin).metadata == %{"relations" => [ids2.fork]}
 end
 
+test "acceptance finishes the three intents, ending the owner's invitation to the proposer's process", c do
+	ids = fixture!(c)
+	assert {:ok, _} = Contribution.accept(Factory.ctx(c.alice), ids.proposal)
+	for id <- [ids.cite, ids.accept, ids.modify], do: assert Intent.Domain.one!(id).finished
+	assert Proposal.Domain.status(ids.proposal) == {:ok, :accepted}
+
+	# Before acceptance Alice could attach events to Bob's process by invitation; now she cannot.
+	assert {:error, :forbidden} = EconomicEvent.Domain.create(Factory.ctx(c.alice), %{
+		action_id: "work", input_of_id: ids.process, provider_id: c.alice.id, receiver_id: c.alice.id,
+		resource_conforms_to_id: c.spec.id,
+		effort_quantity: %{has_numerical_value: "1", has_unit_id: c.unit.id},
+		has_point_in_time: Factory.now()})
+end
+
+test "before acceptance the owner is still invited (control case for the test above)", c do
+	ids = fixture!(c)
+	assert {:ok, _} = EconomicEvent.Domain.create(Factory.ctx(c.alice), %{
+		action_id: "work", input_of_id: ids.process, provider_id: c.alice.id, receiver_id: c.alice.id,
+		resource_conforms_to_id: c.spec.id,
+		effort_quantity: %{has_numerical_value: "1", has_unit_id: c.unit.id},
+		has_point_in_time: Factory.now()})
+end
+
 test "retrying an accepted proposal returns the same events and writes nothing", c do
 	ids = fixture!(c)
 	assert {:ok, first} = Contribution.accept(Factory.ctx(c.alice), ids.proposal)

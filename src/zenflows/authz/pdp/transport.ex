@@ -49,12 +49,11 @@ def prepare(params, verify_fun) when is_map(params) do
 	with {:ok, action} <- req_string(params, "action"),
 			{:ok, principal} <- req_map(params, "principal"),
 			{:ok, pk} <- req_string(principal, "pk"),
-			{:ok, binding} <- req_map(params, "binding"),
-			{:ok, _parent} <- req_string(binding, "parent_id"),
 			{:ok, proof} <- req_map(params, "proof"),
 			{:ok, sig} <- req_string(proof, "signature"),
 			{:ok, payload_b64} <- req_string(proof, "payload_b64"),
-			{:ok, payload} <- decode_b64(payload_b64) do
+			{:ok, payload} <- decode_b64(payload_b64),
+			:ok <- require_binding(params, action) do
 		proven? = verify_fun.(payload, sig, pk) == :ok
 
 		request =
@@ -63,6 +62,20 @@ def prepare(params, verify_fun) when is_map(params) do
 			|> Map.put("principal_proven", proven?)
 
 		{:ok, request}
+	end
+end
+
+# A resource-control action is evaluated against the parent named in its
+# binding; the binding must be present.  An identity-proof action (feedback)
+# has no resource parent, so a binding is not required.
+defp require_binding(params, action) do
+	if Zenflows.Authz.Pdp.capability(action) == :resource_control do
+		with {:ok, binding} <- req_map(params, "binding"),
+				{:ok, _parent} <- req_string(binding, "parent_id") do
+			:ok
+		end
+	else
+		:ok
 	end
 end
 

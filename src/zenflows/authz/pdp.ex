@@ -188,6 +188,28 @@ follow-up.
 def load_facts(request) do
 	proven? = request["principal_proven"] == true
 	pk = get_in(request, ["principal", "pk"])
+
+	if capability(request["action"]) == :proven_identity do
+		# Identity-proof actions (feedback) have no resource parent: resolve the
+		# principal to its Person id and surface it as the subject.  No
+		# ResourceControl lookup — the consuming service owns its own rows.
+		subject =
+			case resolve_principal(pk) do
+				%Person{id: id} -> id
+				_ -> nil
+			end
+
+		%{"principal_proven" => proven?, "subject" => subject}
+	else
+		load_resource_control_facts(request, proven?, pk)
+	end
+rescue
+	e ->
+		Logger.error("pdp load_facts crashed: #{inspect(e)}")
+		%{"error" => "fact_load_failed"}
+end
+
+defp load_resource_control_facts(request, proven?, pk) do
 	parent_id = get_in(request, ["binding", "parent_id"])
 
 	with %Person{id: person_id} <- resolve_principal(pk),

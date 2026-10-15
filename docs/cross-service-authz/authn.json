@@ -1,0 +1,126 @@
+{
+  "layer": "authn",
+  "doc": "The authentication floor, contract §2. Executable against a PEP with stubbed VerifyDid/IsAuth; no PDP required. These are the first-slice (P0) cases for the DPP write handlers.",
+  "vectors": [
+    {
+      "name": "authn.accept.update_with_valid_signature",
+      "layer": "authn",
+      "doc": "A valid signature over an envelope whose object.id matches the path yields a verified principal from the signing key.",
+      "input": {
+        "route": "PUT /dpp/:id",
+        "path": { "id": "01J0A000000000000000000001" },
+        "headers": { "did-pk": "pkBob", "did-sign": "sigBob", "x-user-id": "01USERBOB" },
+        "signed_payload": {
+          "action": "dpp.spec.update",
+          "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+          "nonce": "n-0001",
+          "timestamp": "2026-10-14T10:00:00Z",
+          "body": { "status": "draft" }
+        },
+        "did_resolves": true,
+        "signature_valid": true
+      },
+      "expect": {
+        "outcome": "accept",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "reason": "ok"
+      }
+    },
+    {
+      "name": "authn.reject.missing_signature",
+      "layer": "authn",
+      "doc": "No did-sign/did-pk at all: the four write handlers used to run this straight to Mongo. Must now fail closed.",
+      "input": {
+        "route": "DELETE /dpp/:id",
+        "path": { "id": "01J0A000000000000000000001" },
+        "headers": {},
+        "signed_payload": null,
+        "did_resolves": false,
+        "signature_valid": false
+      },
+      "expect": { "outcome": "reject", "principal": null, "reason": "missing_signature" }
+    },
+    {
+      "name": "authn.reject.bad_signature",
+      "layer": "authn",
+      "doc": "Headers present but the signature does not verify (IsAuth fails).",
+      "input": {
+        "route": "PUT /dpp/:id/status",
+        "path": { "id": "01J0A000000000000000000001" },
+        "headers": { "did-pk": "pkBob", "did-sign": "forged", "x-user-id": "01USERBOB" },
+        "signed_payload": {
+          "action": "dpp.status.update",
+          "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+          "nonce": "n-0002",
+          "timestamp": "2026-10-14T10:00:00Z",
+          "body": { "status": "published" }
+        },
+        "did_resolves": true,
+        "signature_valid": false
+      },
+      "expect": { "outcome": "reject", "principal": null, "reason": "bad_signature" }
+    },
+    {
+      "name": "authn.reject.unresolvable_did",
+      "layer": "authn",
+      "doc": "Signature verifies locally but the DID does not resolve (VerifyDid fails): not a registered identity.",
+      "input": {
+        "route": "DELETE /dpp/:id/attachments/:a",
+        "path": { "id": "01J0A000000000000000000001", "a": "att-9" },
+        "headers": { "did-pk": "pkGhost", "did-sign": "sigGhost" },
+        "signed_payload": {
+          "action": "dpp.attachment.delete",
+          "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+          "nonce": "n-0003",
+          "timestamp": "2026-10-14T10:00:00Z"
+        },
+        "did_resolves": false,
+        "signature_valid": true
+      },
+      "expect": { "outcome": "reject", "principal": null, "reason": "did_unresolved" }
+    },
+    {
+      "name": "authn.reject.object_id_mismatch",
+      "layer": "authn",
+      "doc": "A signature over object 0001 presented to a delete of object 0002: the signed object.id must equal the path id, or one capture drives any delete.",
+      "input": {
+        "route": "DELETE /dpp/:id",
+        "path": { "id": "01J0A000000000000000000002" },
+        "headers": { "did-pk": "pkBob", "did-sign": "sigBob" },
+        "signed_payload": {
+          "action": "dpp.delete",
+          "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+          "nonce": "n-0004",
+          "timestamp": "2026-10-14T10:00:00Z"
+        },
+        "did_resolves": true,
+        "signature_valid": true
+      },
+      "expect": { "outcome": "reject", "principal": null, "reason": "object_id_mismatch" }
+    },
+    {
+      "name": "authn.principal.from_signature_not_header",
+      "layer": "authn",
+      "doc": "x-user-id claims Alice but the signing key is Bob's: the principal is Bob (the proven key), and x-user-id is only a logged hint. This is the core defect of DPP/feedback stated as a passing case.",
+      "input": {
+        "route": "PUT /dpp/:id",
+        "path": { "id": "01J0A000000000000000000001" },
+        "headers": { "did-pk": "pkBob", "did-sign": "sigBob", "x-user-id": "01USERALICE" },
+        "signed_payload": {
+          "action": "dpp.spec.update",
+          "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+          "nonce": "n-0005",
+          "timestamp": "2026-10-14T10:00:00Z",
+          "body": { "status": "draft" }
+        },
+        "did_resolves": true,
+        "signature_valid": true
+      },
+      "expect": {
+        "outcome": "accept",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "reason": "ok"
+      }
+    }
+  ]
+}

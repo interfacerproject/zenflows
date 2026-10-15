@@ -1,0 +1,167 @@
+{
+  "layer": "contract",
+  "doc": "The PDP request/response contract, §3 and §4. Consumed by the Elixir PDP (Zenflows). Each vector carries a `facts` block: the facts the PDP's fact-loader would have produced from the database (does the principal control the bound parent, at what epoch, with what obligations, was the subject proven, did the decision transport fail). The pure decision function maps (request, facts) -> expect, so it is testable without Postgres; a separate integration test wires the fact-loader to real rows. A runner with no PDP wired at all MUST report each as PENDING, never green.",
+  "vectors": [
+    {
+      "name": "contract.allow.controller_updates_own_dpp",
+      "layer": "contract",
+      "doc": "The verified principal controls the resource the DPP is bound to: dpp.spec.update is allowed.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000001",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:aa",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": true, "controls_parent": true, "epoch": 7, "obligations": {} },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.non_controller_updates_foreign_dpp",
+      "layer": "contract",
+      "doc": "Bob is authenticated but does not control the bound resource: deny with a non-sensitive reason.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000002",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.delete",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:bb",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": true, "controls_parent": false, "epoch": 7, "obligations": {} },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "not_controller",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.parent_from_binding_not_payload",
+      "layer": "contract",
+      "doc": "The service loads the parent from the DPP's immutable binding (resource Alice). A caller who hoped to be evaluated against their own resource cannot: the binding, not a client field, picks the parent. Evaluated against Alice's resource, Bob is denied. The facts carry controls_parent=false because the parent the fact-loader used is the bound one, not anything from the payload.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000003",
+        "principal": { "did": "did:dyne:ifacer:pkBob", "pk": "pkBob" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:cc",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": true, "controls_parent": false, "epoch": 7, "obligations": {} },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "not_controller",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.service_asserts_subject_without_proof",
+      "layer": "contract",
+      "doc": "A service sends principal=Alice with no user signature and no delegation assertion: the PDP must not take a service's word for who the user is. Deny. facts.principal_proven=false models the missing proof.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000004",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:dd",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": false, "controls_parent": true, "epoch": 7, "obligations": {} },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "unproven_subject",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.fail_closed_on_pdp_error",
+      "layer": "contract",
+      "doc": "The fact-loader could not reach the database or produced an unusable result: the decision must be deny, never a fallback to allow. facts.error carries the transport failure.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000005",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:ee",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "error": "timeout" },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "pdp_unavailable",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.allow.with_field_obligation",
+      "layer": "contract",
+      "doc": "A repair role may update only some DPP sections: the PDP allows but returns obligations the PEP must enforce, narrowing the write.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000006",
+        "principal": { "did": "did:dyne:ifacer:pkCarol", "pk": "pkCarol" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.spec.update",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:ff",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": true, "controls_parent": true, "epoch": 7, "obligations": { "allowed_sections": ["repair", "maintenance"] } },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": 7,
+        "obligations": { "allowed_sections": ["repair", "maintenance"] }
+      }
+    },
+    {
+      "name": "contract.deny.unknown_action_fails_closed",
+      "layer": "contract",
+      "doc": "An action the PDP does not have a rule for must be denied, not allowed by default. Even with full control facts, an unregistered action is refused.",
+      "input": {
+        "request_id": "01J0REQ00000000000000000007",
+        "principal": { "did": "did:dyne:ifacer:pkAlice", "pk": "pkAlice" },
+        "delegation": null,
+        "service": { "id": "dpp", "credential": "svc-dpp" },
+        "action": "dpp.unknown.capability",
+        "object": { "type": "dpp", "id": "01J0A000000000000000000001" },
+        "binding": { "parent_type": "resource", "parent_id": "01RESALICE", "epoch": 7 },
+        "operation_digest": "sha256:0a",
+        "issued_at": "2026-10-14T10:00:00Z"
+      },
+      "facts": { "principal_proven": true, "controls_parent": true, "epoch": 7, "obligations": {} },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "unknown_action",
+        "permission_epoch": 7,
+        "obligations": {}
+      }
+    }
+  ]
+}

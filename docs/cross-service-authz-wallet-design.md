@@ -180,3 +180,40 @@ idempotency decision) separated from I/O, per the tranche pattern. Each
 authority's attestation verified with stubs; the live
 event-lookup/idempotency is integration-tier. A first spike proves one
 accepted-contribution payout end-to-end before the remaining events.
+
+---
+
+## Appendix: accept event (spiked, Task 1)
+
+`Zenflows.VF.Proposal.Contribution.accept(ctx, proposal_id)` (zenflows
+`src/zenflows/vf/proposal/contribution.ex`) returns:
+
+```
+%{proposal, cite_event, accept_event, modify_event}   # all EconomicEvent
+```
+
+- **Idempotent.** `state/2` detects an already-accepted proposal and returns
+  its existing events, writing nothing; a `:pending` proposal writes them
+  once in a transaction. So re-accepting yields the **same** `accept_event.id`.
+- **Payout key:** `accept_event.id` — stable across retries; the wallet
+  payout store dedupes on it.
+- **Roles** (from `shape/1`): `owner = accept.receiver_id` (resource owner
+  who accepts), `contributor = cite.provider_id` (proposer whose fork was
+  contributed), `origin`/`fork` the two resources.
+
+### Ruling (Task 1): accept recipients + amount for the vertical
+
+The GUI's OnAccept mapping is buggy (`proposal/[id].tsx` credits the owner
+twice, with the Idea/Strengths enums swapped, and gives the contributor
+nothing). For the accept vertical the PDP schedule credits, derived from the
+event roles:
+
+- `contributor (cite.provider_id)` ← **strengths**, 10000 (100 ×100)
+- `owner (accept.receiver_id)` ← **idea**, 10000
+
+**Why:** corrects the swap, rewards the contributor whose work was accepted
+(the economic point of contribution rewards), keeps the owner's curation
+credit. **Cost if wrong:** a config-level change to the schedule module;
+architecture is unaffected (recipient/amount are data, not structure). The
+authoritative cross-event economics (all 7 events, who earns what) remains
+the deferred product decision (spec §6); this vertical fixes only `accept`.

@@ -51,6 +51,7 @@ to false, so nothing is granted on a service's unbacked say-so.
 
 require Logger
 
+alias Zenflows.Authz.PointsSchedule
 alias Zenflows.Authz.ResourceControl
 alias Zenflows.DB.Repo
 alias Zenflows.VF.Person
@@ -70,7 +71,7 @@ alias Zenflows.VF.Person
 	"dpp.attachment.add" => :resource_control,
 	"dpp.attachment.delete" => :resource_control,
 	"dpp.file.upload" => :resource_control,
-	"wallet.points.issue" => :resource_control
+	"wallet.points.issue" => :issuance
 }
 
 @doc "The policy version recorded with every decision."
@@ -135,6 +136,9 @@ def decide(request, facts) do
 					if facts["controls_parent"] == true,
 						do: allow(epoch, facts["obligations"] || %{}),
 						else: deny("not_controller", epoch, %{})
+
+				:issuance ->
+					issue(facts, epoch)
 			end
 	end
 end
@@ -155,6 +159,37 @@ defp deny(reason, epoch, obligations) do
 		"permission_epoch" => epoch,
 		"obligations" => obligations
 	}
+end
+
+# Point issuance: mint only against a verified, not-yet-paid event, with the
+# amount and recipients taken from the server-side schedule (never the body).
+# Fails closed on a missing/unknown/already-paid event.
+defp issue(facts, epoch) do
+	event = facts["event"]
+
+	cond do
+		is_nil(event) ->
+			deny("event_not_found", epoch, %{})
+
+		event["paid"] == true ->
+			deny("already_paid", epoch, %{})
+
+		true ->
+			case PointsSchedule.for_event(event["type"]) do
+				nil ->
+					deny("no_schedule", epoch, %{})
+
+				%{amount: amount, roles: roles} ->
+					payouts =
+						for {role, token} <- roles,
+								recipient = facts[role],
+								not is_nil(recipient) do
+							%{"recipient" => recipient, "token" => token, "amount" => amount}
+						end
+
+					allow(epoch, %{}) |> Map.put("payouts", payouts)
+			end
+	end
 end
 
 @doc """

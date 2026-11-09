@@ -44,9 +44,10 @@ alias Mint.HTTP
 			},
 		},
 	},
+	queue: :queue.queue(),
 }
 
-defstruct [:conn, conn_info: {}, requests: %{}]
+defstruct [:conn, conn_info: {}, requests: %{}, queue: :queue.new()]
 
 def start_link(opts) do
 	scheme = Keyword.fetch!(opts, :scheme)
@@ -83,38 +84,22 @@ def init({scheme, host, port}) do
 	{:ok, %__MODULE__{conn_info: {scheme, host, port}}}
 end
 
+# One request in flight per connection, the others wait in a queue: when the
+# server closes a connection (keep-alive timeout, `connection: close`), what
+# was pipelined behind the answered request would otherwise never get a
+# reply, and its caller would hang until the GenServer.call timeout.
 @impl true
 def handle_call({:request, method, path, headers, body}, from, state) do
-	if state.conn && HTTP.open?(state.conn) do
-		{:ok, state}
-	else
-		{scheme, host, port} = state.conn_info
-		case HTTP.connect(scheme, host, port) do
-			{:ok, conn} ->
-				state = put_in(state.conn, conn)
-				{:ok, state}
-			{:error, reason} ->
-				{:error, reason}
-		end
-	end
-	|> case do
-		{:ok, state} ->
-			case HTTP.request(state.conn, method, path, headers, body) do
-				{:ok, conn, request_ref} ->
-					state = put_in(state.conn, conn)
-					state = put_in(state.requests[request_ref], %{from: from, response: %{}})
-					{:noreply, state}
-
-				{:error, conn, reason} ->
-					state = put_in(state.conn, conn)
-					{:reply, {:error_req, reason}, state}
-			end
-		{:error, reason} ->
-			{:reply, {:error_conn, reason}, state}
-	end
+	state = update_in(state.queue, &:queue.in({method, path, headers, body, from}, &1))
+	{:noreply, drain(state)}
 end
 
 @impl true
+def handle_info(message, %{conn: nil} = state) do
+	Logger.error("Received unknown message: #{inspect(message)}")
+	{:noreply, state}
+end
+
 def handle_info(message, state) do
 	case HTTP.stream(state.conn, message) do
 		:unknown ->
@@ -124,15 +109,70 @@ def handle_info(message, state) do
 		{:ok, conn, responses} ->
 			state = put_in(state.conn, conn)
 			state = Enum.reduce(responses, state, &process_response/2)
+			state =
+				if HTTP.open?(conn),
+					do: state,
+					else: fail_pending(state, {:error_conn, :closed})
+			{:noreply, drain(state)}
 
-			{:noreply, state}
-		{:error, conn, _reason, responses} ->
+		{:error, conn, reason, responses} ->
 			state = put_in(state.conn, conn)
-			# Send a response to all the succesful request
+			# Answer what completed, then let the rest retry on a new connection.
 			state = Enum.reduce(responses, state, &process_response/2)
-
-			{:noreply, state}
+			{:noreply, state |> fail_pending({:error_conn, reason}) |> drain()}
 	end
+end
+
+# Sends the next queued request when none is in flight. A request that cannot
+# be sent is answered at once and the next one is tried.
+@spec drain(state()) :: state()
+defp drain(state) do
+	with true <- map_size(state.requests) == 0,
+			{{:value, {method, path, headers, body, from}}, queue} <- :queue.out(state.queue) do
+		state = put_in(state.queue, queue)
+		case send_request(state, method, path, headers, body, from) do
+			{:ok, state} ->
+				state
+			{:error, reply, state} ->
+				GenServer.reply(from, reply)
+				drain(state)
+		end
+	else
+		_ -> state
+	end
+end
+
+defp send_request(state, method, path, headers, body, from) do
+	case connect(state) do
+		{:ok, state} ->
+			case HTTP.request(state.conn, method, path, headers, body) do
+				{:ok, conn, request_ref} ->
+					state = put_in(state.conn, conn)
+					{:ok, put_in(state.requests[request_ref], %{from: from, response: %{}})}
+				{:error, conn, reason} ->
+					{:error, {:error_req, reason}, put_in(state.conn, conn)}
+			end
+		{:error, reason} ->
+			{:error, {:error_conn, reason}, state}
+	end
+end
+
+defp connect(state) do
+	if state.conn && HTTP.open?(state.conn) do
+		{:ok, state}
+	else
+		{scheme, host, port} = state.conn_info
+		case HTTP.connect(scheme, host, port) do
+			{:ok, conn} -> {:ok, put_in(state.conn, conn)}
+			{:error, reason} -> {:error, reason}
+		end
+	end
+end
+
+@spec fail_pending(state(), term()) :: state()
+defp fail_pending(state, reply) do
+	Enum.each(state.requests, fn {_ref, %{from: from}} -> GenServer.reply(from, reply) end)
+	put_in(state.requests, %{})
 end
 
 @spec process_response({:status, Mint.Types.request_ref(), Mint.Types.status()}
@@ -140,6 +180,9 @@ end
 	| {:data, Mint.Types.request_ref(), binary()}
 	| {:done, Mint.Types.request_ref()}
 	| {:error, Mint.Types.request_ref(), term()}, state()) :: state()
+defp process_response(response, state) when not is_map_key(state.requests, elem(response, 1)),
+	do: state
+
 defp process_response({:status, request_ref, status}, state) do
 	put_in(state.requests[request_ref].response[:status], status)
 end
@@ -152,8 +195,11 @@ defp process_response({:data, request_ref, new_data}, state) do
 	update_in(state.requests[request_ref].response[:data], fn data -> [data || "", new_data] end)
 end
 
+# Mint sends no :done after a request-level error: answer the caller now.
 defp process_response({:error, request_ref, error}, state) do
-	update_in(state.requests[request_ref].response[:error], error)
+	{%{from: from}, state} = pop_in(state.requests[request_ref])
+	GenServer.reply(from, {:error_req, error})
+	state
 end
 
 defp process_response({:done, request_ref}, state) do

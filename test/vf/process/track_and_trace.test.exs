@@ -31,7 +31,7 @@ test "previous/2 works" do
 	amount = Factory.decimal()
 	proc = Factory.insert!(:process)
 
-	evt0 = EconomicEvent.Domain.create!(%{
+	evt0 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: agent.id,
 			receiver_id: agent.id,
@@ -46,7 +46,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt0.id
 	assert evt0.previous_event_id == nil
 
-	evt1 = EconomicEvent.Domain.create!(%{
+	evt1 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -61,7 +61,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt1.id
 	assert evt1.previous_event_id == evt0.id
 
-	evt2 = EconomicEvent.Domain.create!(%{
+	evt2 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "lower",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -76,7 +76,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt2.id
 	assert evt2.previous_event_id == evt1.id
 
-	evt3 = EconomicEvent.Domain.create!(%{
+	evt3 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -92,7 +92,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt3.id
 	assert evt3.previous_event_id == evt2.id
 
-	evt4 = EconomicEvent.Domain.create!(%{
+	evt4 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -108,7 +108,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt4.id
 	assert evt4.previous_event_id == evt3.id
 
-	evt5 = EconomicEvent.Domain.create!(%{
+	evt5 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "use",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -128,7 +128,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt5.id
 	assert evt5.previous_event_id == evt4.id
 
-	evt6 = EconomicEvent.Domain.create!(%{
+	evt6 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "cite",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -144,7 +144,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt6.id
 	assert evt6.previous_event_id == evt5.id
 
-	evt7 = EconomicEvent.Domain.create!(%{
+	evt7 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "pickup",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -160,7 +160,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt7.id
 	assert evt7.previous_event_id == evt6.id
 
-	evt8 = EconomicEvent.Domain.create!(%{
+	evt8 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "dropoff",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -176,7 +176,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt8.id
 	assert evt8.previous_event_id == evt7.id
 
-	evt9 = EconomicEvent.Domain.create!(%{
+	evt9 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -192,7 +192,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt9.id
 	assert evt9.previous_event_id == evt8.id
 
-	evt10 = EconomicEvent.Domain.create!(%{
+	evt10 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -208,7 +208,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt10.id
 	assert evt10.previous_event_id == evt9.id
 
-	evt11 = EconomicEvent.Domain.create!(%{
+	evt11 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferCustody",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -223,7 +223,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt11.id
 	assert evt11.previous_event_id == evt10.id
 
-	evt12 = EconomicEvent.Domain.create!(%{
+	evt12 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transferAllRights",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -238,7 +238,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt12.id
 	assert evt12.previous_event_id == evt11.id
 
-	evt13 = EconomicEvent.Domain.create!(%{
+	evt13 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "transfer",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -253,7 +253,7 @@ test "previous/2 works" do
 	assert res.previous_event_id == evt13.id
 	assert evt13.previous_event_id == evt12.id
 
-	evt14 = EconomicEvent.Domain.create!(%{
+	evt14 = EconomicEvent.Domain.create!(Factory.ctx(), %{
 		action_id: "move",
 		provider_id: agent.id,
 		receiver_id: agent.id,

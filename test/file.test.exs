@@ -125,7 +125,7 @@ end
 test "works on EconomicResource" do
 	agent = Factory.insert!(:agent)
 	%EconomicResource{} = res =
-		EconomicEvent.Domain.create!(
+		EconomicEvent.Domain.create!(Factory.ctx(),
 			%{
 				action_id: "raise",
 				provider_id: agent.id,
@@ -185,7 +185,7 @@ test "works on EconomicResource" do
 	] = res.images
 
 	assert %EconomicResource{} = res =
-		EconomicResource.Domain.update!(res.id, %{
+		EconomicResource.Domain.update!(Factory.ctx(), res.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",
@@ -232,7 +232,7 @@ end
 
 test "works on Person Agent" do
 	assert %Person{} = per =
-		Person.Domain.create!(%{
+		Person.Domain.create!(Factory.ctx(), %{
 			name: Factory.str("name"),
 			user: Factory.str("user"),
 			email: "#{Factory.str("user")}@example.com",
@@ -280,7 +280,7 @@ test "works on Person Agent" do
 	] = per.images
 
 	assert %Person{} = per =
-		Person.Domain.update!(per.id, %{
+		Person.Domain.update!(Factory.ctx(), per.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",
@@ -327,7 +327,7 @@ end
 
 test "works on Organization Agent" do
 	assert %Organization{} = org =
-		Organization.Domain.create!(%{
+		Organization.Domain.create!(Factory.ctx(), %{
 			name: Factory.str("name"),
 			user: Factory.str("user"),
 			email: "#{Factory.str("user")}@example.com",
@@ -375,7 +375,7 @@ test "works on Organization Agent" do
 	] = org.images
 
 	assert %Organization{} = org =
-		Organization.Domain.update!(org.id, %{
+		Organization.Domain.update!(Factory.ctx(), org.id, %{
 			images: [
 				%{
 					hash: "cccccccccccccccc",

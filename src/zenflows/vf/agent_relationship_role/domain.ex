@@ -19,7 +19,11 @@
 defmodule Zenflows.VF.AgentRelationshipRole.Domain do
 @moduledoc "Domain logic of AgentRelationshipRoles."
 
+require Ecto.Query
+
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.AgentRelationshipRole
 
@@ -69,12 +73,12 @@ def create!(params) do
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, AgentRelationshipRole.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, AgentRelationshipRole.t()} | {:error, atom() | String.t() | Changeset.t()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> multi_update(ctx, id, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -82,18 +86,18 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: AgentRelationshipRole.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: AgentRelationshipRole.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id())
-	:: {:ok, AgentRelationshipRole.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id())
+	:: {:ok, AgentRelationshipRole.t()} | {:error, atom() | String.t() | Changeset.t()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> multi_delete(ctx, id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -101,9 +105,9 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id) :: AgentRelationshipRole.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id) :: AgentRelationshipRole.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -125,18 +129,35 @@ def multi_insert(m, key \\ multi_key(), params) do
 	Multi.insert(m, key, AgentRelationshipRole.changeset(params))
 end
 
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
+@spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> multi_authorize_role(ctx, key, "role.update", id)
 	|> Multi.update(key,
 		&AgentRelationshipRole.changeset(Map.fetch!(&1, "#{key}.one"), params))
 end
 
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
+@spec multi_delete(Multi.t(), ExecutionContext.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, ctx, key \\ multi_key(), id) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> multi_authorize_role(ctx, key, "role.delete", id)
 	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+end
+
+# System roles are immutable for every principal, including unchecked
+# anonymous calls: the policy is not enough here.
+defp multi_authorize_role(m, ctx, key, action, id) do
+	m
+	|> Authz.multi_authorize("#{key}.authz", ctx, action, fn repo, _ ->
+		%Facts{target: repo.one(Ecto.Query.from(r in AgentRelationshipRole,
+			where: r.id == ^id, lock: "FOR UPDATE"))}
+	end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.run("#{key}.system", fn _, changes ->
+		case Map.fetch!(changes, "#{key}.one") do
+			%AgentRelationshipRole{system_key: nil} -> {:ok, nil}
+			%AgentRelationshipRole{} -> {:error, :forbidden}
+		end
+	end)
 end
 end

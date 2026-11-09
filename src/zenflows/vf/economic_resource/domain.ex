@@ -22,6 +22,8 @@ defmodule Zenflows.VF.EconomicResource.Domain do
 require Logger
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, Log, ResourceControl}
 alias Zenflows.File
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
@@ -243,12 +245,12 @@ def classifications(page \\ Page.new()) do
 	end
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, EconomicResource.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, EconomicResource.t()} | {:error, atom() | String.t() | Changeset.t()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_update(id, params)
+	|> multi_update(ctx, id, params)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -256,18 +258,18 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: EconomicResource.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: EconomicResource.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id()) ::
-	{:ok, EconomicResource.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec delete(ExecutionContext.t(), Schema.id())
+	:: {:ok, EconomicResource.t()} | {:error, atom() | String.t() | Changeset.t()}
+def delete(%ExecutionContext{} = ctx, id) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> multi_delete(ctx, id)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -275,9 +277,9 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id) :: EconomicResource.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id()) :: EconomicResource.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -307,26 +309,44 @@ def multi_one(m, key \\ multi_key(), id) do
 	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
+def multi_insert(m, ctx, key \\ multi_key(), params) do
 	m
 	|> Multi.insert(key, EconomicResource.changeset(params))
 	|> File.Domain.multi_insert(key, :images, :economic_resource_id)
+	|> ResourceControl.Domain.multi_on_create(ctx, key)
 end
 
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
+@spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
+def multi_update(m, ctx, key \\ multi_key(), id, params) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "resource.update",
+		fn repo, _ -> Facts.for_resource(repo, ctx, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
 	|> Multi.update(key,
 		&EconomicResource.changeset(Map.fetch!(&1, "#{key}.one"), params))
 	|> File.Domain.multi_update(key, :images, :economic_resource_id)
 end
 
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
+@spec multi_delete(Multi.t(), ExecutionContext.t(), term(), Schema.id()) :: Multi.t()
+def multi_delete(m, ctx, key \\ multi_key(), id) do
 	m
-	|> multi_one("#{key}.one", id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "resource.delete",
+		fn repo, _ -> Facts.for_resource(repo, ctx, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
 	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+	|> Log.multi_insert("#{key}.control.log", ctx, fn changes ->
+		case Map.fetch!(changes, "#{key}.authz") do
+			%Facts{control: %ResourceControl{} = c} ->
+				%{
+					action: "resource_control.remove",
+					target_type: "economic_resource",
+					target_id: c.resource_id,
+					subject_id: c.controller_id,
+					before: %{controller_id: c.controller_id, source: c.source, epoch: c.epoch},
+				}
+			_ -> nil
+		end
+	end)
 end
 end

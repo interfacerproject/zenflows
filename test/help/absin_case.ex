@@ -63,4 +63,14 @@ def run!(doc, opts \\ []) do
 		|> Keyword.put(:variables, vars)
 	Absinthe.run!(doc, Zenflows.GQL.Schema, opts)
 end
+
+@doc """
+Run `doc` as `person`: puts `req_user` into the context exactly like
+`MW.Sign` does after verifying a signature.  Signature checks are off.
+"""
+@spec run_as!(Zenflows.VF.Person.t(), String.t(), Keyword.t()) :: Absinthe.run_result()
+def run_as!(person, doc, opts \\ []) do
+	ctx = opts |> Keyword.get(:ctx, %{}) |> Map.put(:req_user, person)
+	run!(doc, Keyword.put(opts, :ctx, ctx))
+end
 end

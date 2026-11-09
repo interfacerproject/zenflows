@@ -341,11 +341,13 @@ end
 
 object :mutation_economic_resource do
 	field :update_economic_resource, non_null(:economic_resource_response) do
+		meta authz: "resource.update"
 		arg :resource, non_null(:economic_resource_update_params)
 		resolve &Resolv.update_economic_resource/2
 	end
 
 	field :delete_economic_resource, non_null(:boolean) do
+		meta authz: "resource.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_economic_resource/2
 	end

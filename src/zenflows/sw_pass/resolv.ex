@@ -21,9 +21,10 @@ defmodule Zenflows.SWPass.Resolv do
 
 alias Zenflows.SWPass.Domain
 
-def import_repos(%{url: url}, _) do
-	case Domain.import_repos(url) do
+def import_repos(%{url: url}, res) do
+	case Domain.import_repos(Zenflows.Authz.ExecutionContext.admin_key(res), url) do
 		{:ok, _} -> {:ok, "successfully imported"}
+		{:error, reason} when reason in [:forbidden, :unauthenticated] -> {:error, reason}
 		_ -> {:error, "something went wrong"}
 	end
 end

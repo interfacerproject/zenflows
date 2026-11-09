@@ -33,6 +33,7 @@ alias Zenflows.VF.RoleBehavior
 	role_label: String.t(),
 	inverse_role_label: String.t() | nil,
 	note: String.t() | nil,
+	system_key: String.t() | nil,
 }
 
 schema "vf_agent_relationship_role" do
@@ -40,6 +41,8 @@ schema "vf_agent_relationship_role" do
 	field :role_label, :string
 	field :inverse_role_label, :string
 	field :note, :string
+	# Stable key of a system role (e.g. "org.admin"); never user-editable.
+	field :system_key, :string
 	timestamps()
 end
 

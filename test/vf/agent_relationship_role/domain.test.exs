@@ -61,7 +61,7 @@ end
 
 describe "update/2" do
 	test "with good params: updates the AgentRelationshipRole", %{params: params, inserted: old} do
-		assert {:ok, %AgentRelationshipRole{} = new} = Domain.update(old.id, params)
+		assert {:ok, %AgentRelationshipRole{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.role_behavior_id == params.role_behavior_id
 		assert new.role_label == params.role_label
 		assert new.inverse_role_label == params.inverse_role_label
@@ -69,7 +69,7 @@ describe "update/2" do
 	end
 
 	test "with bad params: doesn't update the AgentRelationshipRole", %{inserted: old} do
-		assert {:ok, %AgentRelationshipRole{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %AgentRelationshipRole{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		assert new.role_behavior_id == old.role_behavior_id
 		assert new.role_label == old.role_label
 		assert new.inverse_role_label == old.inverse_role_label
@@ -79,12 +79,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the AgentRelationshipRole", %{inserted: %{id: id}} do
-		assert {:ok, %AgentRelationshipRole{id: ^id}} = Domain.delete(id)
+		assert {:ok, %AgentRelationshipRole{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the AgentRelationshipRole" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 end

@@ -47,7 +47,7 @@ setup ctx do
 			has_end: Factory.now(),
 		}
 		assert %EconomicEvent{resource_inventoried_as: res} =
-			Domain.create!(params, %{name: Factory.str("name")})
+			Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 			|> Domain.preload(:resource_inventoried_as)
 
 		if ctx[:want_contained] || ctx[:want_container] do
@@ -64,7 +64,7 @@ setup ctx do
 				has_end: Factory.now(),
 			}
 			assert %EconomicEvent{resource_inventoried_as: tmp_res} =
-				Domain.create!(params, %{name: Factory.str("name")})
+				Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 				|> Domain.preload(:resource_inventoried_as)
 
 			# TODO: use combine-separate when implemented instead
@@ -136,7 +136,7 @@ describe "`create/2` with raise:" do
 			license: Factory.str("license"),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(evt_params, res_params)
+			Domain.create(Factory.ctx(), evt_params, res_params)
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		res = evt.resource_inventoried_as
 
@@ -163,7 +163,7 @@ describe "`create/2` with raise:" do
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
@@ -179,23 +179,23 @@ describe "`create/2` with raise:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have ownership over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
-		assert {:error, "you can't raise into a contained resource"} = Domain.create(params)
+		assert {:error, "you can't raise into a contained resource"} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container resource", %{params: params} do
-		assert {:error, "you can't raise into a container resource"} = Domain.create(params)
+		assert {:error, "you can't raise into a container resource"} = Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -251,7 +251,7 @@ describe "`create/2` with produce:" do
 			license: Factory.str("license"),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(evt_params, res_params)
+			Domain.create(Factory.ctx(), evt_params, res_params)
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		res = evt.resource_inventoried_as
 
@@ -278,7 +278,7 @@ describe "`create/2` with produce:" do
 
 	test "pass with `:resource_inventoried_as`", %{params: params} do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
@@ -294,23 +294,23 @@ describe "`create/2` with produce:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have ownership over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
-		assert {:error, "you can't produce into a contained resource"} = Domain.create(params)
+		assert {:error, "you can't produce into a contained resource"} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container resource", %{params: params} do
-		assert {:error, "you can't produce into a container resource"} = Domain.create(params)
+		assert {:error, "you can't produce into a container resource"} = Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -331,7 +331,7 @@ describe "`create/2` with lower:" do
 
 	test "pass when all good", %{params: params} do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
 			Decimal.sub(res_before.accounting_quantity_has_numerical_value, params.resource_quantity.has_numerical_value))
@@ -346,23 +346,23 @@ describe "`create/2` with lower:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have ownership over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
-		assert {:error, "you can't lower a contained resource"} = Domain.create(params)
+		assert {:error, "you can't lower a contained resource"} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container resource", %{params: params} do
-		assert {:error, "you can't lower a container resource"} = Domain.create(params)
+		assert {:error, "you can't lower a container resource"} = Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -385,7 +385,7 @@ describe "`create/2` with consume:" do
 
 	test "pass when all good", %{params: params} do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
@@ -401,23 +401,23 @@ describe "`create/2` with consume:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have ownership over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
-		assert {:error, "you can't consume a contained resource"} = Domain.create(params)
+		assert {:error, "you can't consume a contained resource"} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container resource", %{params: params} do
-		assert {:error, "you can't consume a container resource"} = Domain.create(params)
+		assert {:error, "you can't consume a container resource"} = Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -442,23 +442,23 @@ describe "`create/2` with use:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when the event's resource quantity unit doesn't match with the resource's", %{params: params} do
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
 			update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
-			|> Domain.create()
+			|> then(&Domain.create(Factory.ctx(), &1))
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
-		assert {:error, "you can't use a contained resource"} = Domain.create(params)
+		assert {:error, "you can't use a contained resource"} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container resource", %{params: params} do
-		assert {:error, "you can't use a container resource"} = Domain.create(params)
+		assert {:error, "you can't use a container resource"} = Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -479,7 +479,7 @@ describe "`create/2` with pickup:" do
 	end
 
 	test "pass when all good", %{params: params} do
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -489,38 +489,38 @@ describe "`create/2` with pickup:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't pickup a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the pickup events need to fully pickup the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when more than one pickup event references the same resource in the same process", %{params: params} do
-		assert {:ok, _} = Domain.create(params)
+		assert {:ok, _} = Domain.create(Factory.ctx(), params)
 		assert {:error, "no more than one pickup event in the same process, referring to the same resource is allowed"}
-			= Domain.create(params)
+			= Domain.create(Factory.ctx(), params)
 	end
 end
 
 describe "`create/2` with dropoff:" do
 	setup %{res: res} do
 		assert %EconomicEvent{} = pair_evt =
-			Domain.create!(%{
+			Domain.create!(Factory.ctx(), %{
 				action_id: "pickup",
 				input_of_id: Factory.insert!(:process).id,
 				provider_id: res.custodian_id,
@@ -550,7 +550,7 @@ describe "`create/2` with dropoff:" do
 	end
 
 	test "pass when all good", %{params: params} do
-			assert {:ok, %EconomicEvent{} = evt} = Domain.create(params)
+			assert {:ok, %EconomicEvent{} = evt} = Domain.create(Factory.ctx(), params)
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		res = evt.resource_inventoried_as
 		assert res.current_location_id == params.to_location_id
@@ -563,26 +563,26 @@ describe "`create/2` with dropoff:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and paired event's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of the paired event"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when the resource is a container and event's quantity value and resource's onhand-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the dropoff events need to fully dropoff the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when more than one dropoff event references the same resource in the same process", %{params: params} do
-		assert {:ok, _} = Domain.create(params)
+		assert {:ok, _} = Domain.create(Factory.ctx(), params)
 		assert {:error, "no more than one dropoff event in the same process, referring to the same resource is allowed"}
-			= Domain.create(params)
+			= Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -604,7 +604,7 @@ describe "`create/2` with accept:" do
 
 	test "pass when all good", %{params: params} do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		assert Decimal.eq?(res_after.accounting_quantity_has_numerical_value,
@@ -620,56 +620,56 @@ describe "`create/2` with accept:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't accept a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource quantity must match with the unit of this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the accept events need to fully accept the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag skip: "TODO: use combine-separate when implemented"
 	@tag :want_combine
 	test "fail when the there are any combine events", %{params: params} do
 		assert {:error, "you can't add another accept event to the same process where there are at least one combine or separate events"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag skip: "TODO: use combine-separate when implemented"
 	@tag :want_combine
 	test "fail when the there are any separate events", %{params: params} do
 		assert {:error, "you can't add another accept event to the same process where there are at least one combine or separate events"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when more than one accept event references the same resource in the same process", %{params: params} do
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 
 		# in order to satisfy the fact that they it should fully
 		# accept the resource
-		params |> Map.put(:action_id, "raise") |> Domain.create()
+		params |> Map.put(:action_id, "raise") |> then(&Domain.create(Factory.ctx(), &1))
 		assert {:error, "no more than one accept event in the same process, referring to the same resource is allowed"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 
 describe "`create/2` with modify:" do
 	setup %{res: res} do
 		assert %EconomicEvent{} = pair_evt =
-			Domain.create!(%{
+			Domain.create!(Factory.ctx(), %{
 				action_id: "accept",
 				input_of_id: Factory.insert!(:process).id,
 				provider_id: res.custodian_id,
@@ -701,7 +701,7 @@ describe "`create/2` with modify:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		assert res_before.stage_id == nil
 
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		proc = Process.Domain.one!(params.output_of_id)
 		assert res_after.stage_id == proc.based_on_id
@@ -718,7 +718,7 @@ describe "`create/2` with modify:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and paired event's unit differ", %{params: params} do
@@ -726,23 +726,23 @@ describe "`create/2` with modify:" do
 			Factory.insert!(:unit).id
 		end)
 		assert {:error, "the unit of resource quantity must match with the unit of the paired event"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the modify events need to fully modify the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when more than one modify event references the same resource in the same process", %{params: params} do
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 
 		# in order to satisfy the fact that they it should fully
 		# modify the resource
-		params |> Map.put(:action_id, "raise") |> Domain.create!()
+		params |> Map.put(:action_id, "raise") |> then(&Domain.create!(Factory.ctx(), &1))
 		assert {:error, "no more than one modify event in the same process, referring to the same resource is allowed"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -762,7 +762,7 @@ describe "`create/2` with transferCustody:" do
 				has_point_in_time: Factory.now(),
 			}
 			assert %EconomicEvent{resource_inventoried_as_id: to_res_id} =
-				Domain.create!(params, %{name: Factory.str("name")})
+				Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 
 			%{params: %{
 				action_id: "transferCustody",
@@ -811,7 +811,7 @@ describe "`create/2` with transferCustody:" do
 				has_end: Factory.now(),
 			}
 			assert %EconomicEvent{} = evt =
-			Domain.create!(raise_params, %{name: Factory.str("name")})
+			Domain.create!(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 			tmp_res = evt.resource_inventoried_as
 
@@ -833,7 +833,7 @@ describe "`create/2` with transferCustody:" do
 			licensor: Factory.str("licensor"),
 			license: Factory.str("license"),
 		}
-		assert {:ok, %EconomicEvent{} = evt} = Domain.create(params, res_params)
+		assert {:ok, %EconomicEvent{} = evt} = Domain.create(Factory.ctx(), params, res_params)
 		evt = Domain.preload(evt, :to_resource_inventoried_as)
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
@@ -878,7 +878,7 @@ describe "`create/2` with transferCustody:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_before = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
@@ -900,19 +900,19 @@ describe "`create/2` with transferCustody:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't transfer-custody a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -921,24 +921,24 @@ describe "`create/2` with transferCustody:" do
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: 0.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: -1.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's onhand-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the transfer-custody events need to fully transfer the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	@tag :want_to_resource
 	test "fail when transferring a container resource into another resource", %{params: params} do
 		assert {:error, "you can't transfer-custody a container resource into another resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -956,7 +956,7 @@ describe "`create/2` with transferCustody:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{resource_inventoried_as_id: tmp_res_id}} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 
 		# TODO: use combine-separate when implemented instead
 		EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
@@ -964,7 +964,7 @@ describe "`create/2` with transferCustody:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't transfer-custody into a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -982,7 +982,7 @@ describe "`create/2` with transferCustody:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		tmp_res = evt.resource_inventoried_as
 		# TODO: use combine-separate when implemented instead
@@ -990,7 +990,7 @@ describe "`create/2` with transferCustody:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't transfer-custody into a container resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1000,7 +1000,7 @@ describe "`create/2` with transferCustody:" do
 		|> Repo.update!()
 
 		assert {:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1010,7 +1010,7 @@ describe "`create/2` with transferCustody:" do
 		|> Repo.update!()
 
 		assert {:error, "the resources must conform to the same specification"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -1030,7 +1030,7 @@ describe "`create/2` with transferAllRights:" do
 				has_point_in_time: Factory.now(),
 			}
 			assert %EconomicEvent{resource_inventoried_as_id: to_res_id} =
-				Domain.create!(params, %{name: Factory.str("name")})
+				Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 
 			%{params: %{
 				action_id: "transferAllRights",
@@ -1078,7 +1078,7 @@ describe "`create/2` with transferAllRights:" do
 				has_end: Factory.now(),
 			}
 			assert {:ok, %EconomicEvent{} = evt} =
-				Domain.create(raise_params, %{name: Factory.str("name")})
+				Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 			evt = Domain.preload(evt, :resource_inventoried_as)
 			tmp_res = evt.resource_inventoried_as
 			Changeset.change(tmp_res, contained_in_id: params.resource_inventoried_as_id)
@@ -1100,7 +1100,7 @@ describe "`create/2` with transferAllRights:" do
 			license: Factory.str("license"),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(params, res_params)
+			Domain.create(Factory.ctx(), params, res_params)
 		evt = Domain.preload(evt, :to_resource_inventoried_as)
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
@@ -1144,7 +1144,7 @@ describe "`create/2` with transferAllRights:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_before = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
@@ -1166,19 +1166,19 @@ describe "`create/2` with transferAllRights:" do
 			|> Map.put(:provider_id, agent.id)
 			|> Map.put(:receiver_id, agent.id)
 		assert {:error, "you don't have accountability over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't transfer-all-rights a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1187,24 +1187,24 @@ describe "`create/2` with transferAllRights:" do
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(0)) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(-1)) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	test "fail when event's quantity value and resource's accounting-quantity value differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_numerical_value, &Decimal.add(&1, 1))
 		assert {:error, "the transfer-all-rights events need to fully transfer the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	@tag :want_to_resource
 	test "fail when transferring a container resource into another resource", %{params: params} do
 		assert {:error, "you can't transfer-all-rights a container resource into another resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1222,7 +1222,7 @@ describe "`create/2` with transferAllRights:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{resource_inventoried_as_id: tmp_res_id}} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 
 		# TODO: use combine-separate when implemented instead
 		EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
@@ -1230,7 +1230,7 @@ describe "`create/2` with transferAllRights:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't transfer-all-rights into a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1248,7 +1248,7 @@ describe "`create/2` with transferAllRights:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		tmp_res = evt.resource_inventoried_as
 		# TODO: use combine-separate when implemented instead
@@ -1256,7 +1256,7 @@ describe "`create/2` with transferAllRights:" do
 		|> Repo.update()
 
 		assert {:error, "you can't transfer-all-rights into a container resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1266,7 +1266,7 @@ describe "`create/2` with transferAllRights:" do
 		|> Repo.update!()
 
 		assert {:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1276,7 +1276,7 @@ describe "`create/2` with transferAllRights:" do
 		|> Repo.update!()
 
 		assert {:error, "the resources must conform to the same specification"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -1296,7 +1296,7 @@ describe "`create/2` with transfer:" do
 				has_point_in_time: Factory.now(),
 			}
 			assert %EconomicEvent{resource_inventoried_as_id: to_res_id} =
-				Domain.create!(params, %{name: Factory.str("name")})
+				Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 
 			%{params: %{
 				action_id: "transfer",
@@ -1344,7 +1344,7 @@ describe "`create/2` with transfer:" do
 				has_end: Factory.now(),
 			}
 			assert {:ok, %EconomicEvent{} = evt} =
-				Domain.create(raise_params, %{name: Factory.str("name")})
+				Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 			evt = Domain.preload(evt, :resource_inventoried_as)
 			tmp_res = evt.resource_inventoried_as
 			Changeset.change(tmp_res, contained_in_id: params.resource_inventoried_as_id)
@@ -1366,7 +1366,7 @@ describe "`create/2` with transfer:" do
 			license: Factory.str("license"),
 		}
 		assert {:ok, %EconomicEvent{} = evt}
-			= Domain.create(
+			= Domain.create(Factory.ctx(),
 				params,
 				res_params)
 		evt = Domain.preload(evt, :to_resource_inventoried_as)
@@ -1413,7 +1413,7 @@ describe "`create/2` with transfer:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_before = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
@@ -1434,7 +1434,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have accountability over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -1443,19 +1443,19 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have custody over this resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't transfer a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1465,7 +1465,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1475,10 +1475,10 @@ describe "`create/2` with transfer:" do
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(0))
 		|> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: Decimal.new(-1)) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1488,11 +1488,11 @@ describe "`create/2` with transfer:" do
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new(0))
 		|> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: Decimal.new(-1))
 		|> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1502,7 +1502,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "the transfer events need to fully transfer the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1511,14 +1511,14 @@ describe "`create/2` with transfer:" do
 		|> Changeset.change(onhand_quantity_has_numerical_value: Decimal.add(params.resource_quantity.has_numerical_value, 1))
 		|> Repo.update!()
 		assert {:error, "the transfer events need to fully transfer the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	@tag :want_to_resource
 	test "fail when transferring a container resource into another resource", %{params: params} do
 		assert {:error, "you can't transfer a container resource into another resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1536,7 +1536,7 @@ describe "`create/2` with transfer:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{resource_inventoried_as_id: tmp_res_id}} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 
 		# TODO: use combine-separate when implemented instead
 		EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
@@ -1544,7 +1544,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't transfer into a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1562,7 +1562,7 @@ describe "`create/2` with transfer:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		tmp_res = evt.resource_inventoried_as
 		# TODO: use combine-separate when implemented instead
@@ -1570,7 +1570,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update()
 
 		assert {:error, "you can't transfer into a container resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1580,7 +1580,7 @@ describe "`create/2` with transfer:" do
 		|> Repo.update!()
 
 		assert {:error, "the resources must conform to the same specification"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 
@@ -1599,7 +1599,7 @@ describe "`create/2` with move:" do
 				has_point_in_time: Factory.now(),
 			}
 			assert %EconomicEvent{resource_inventoried_as_id: to_res_id} =
-				Domain.create!(params, %{name: Factory.str("name")})
+				Domain.create!(Factory.ctx(), params, %{name: Factory.str("name")})
 
 			%{params: %{
 				action_id: "move",
@@ -1647,7 +1647,7 @@ describe "`create/2` with move:" do
 				has_end: Factory.now(),
 			}
 			assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 			tmp_res = evt.resource_inventoried_as
 			Changeset.change(tmp_res, contained_in_id: params.resource_inventoried_as_id)
@@ -1669,7 +1669,7 @@ describe "`create/2` with move:" do
 			license: Factory.str("license"),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(params, res_params)
+			Domain.create(Factory.ctx(), params, res_params)
 		evt = Domain.preload(evt, :to_resource_inventoried_as)
 		to_res = evt.to_resource_inventoried_as
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
@@ -1714,7 +1714,7 @@ describe "`create/2` with move:" do
 		res_before = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_before = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
-		assert {:ok, %EconomicEvent{}} = Domain.create(params)
+		assert {:ok, %EconomicEvent{}} = Domain.create(Factory.ctx(), params)
 		res_after = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 		to_res_after = EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
 
@@ -1735,7 +1735,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have accountability over resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when provider doesn't have custody over the resource", %{params: params} do
@@ -1744,7 +1744,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have custody over resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1754,7 +1754,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have accountability over to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1764,19 +1764,19 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you don't have custody over to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_contained
 	test "fail when the resource is a contained resource", %{params: params} do
 		assert {:error, "you can't move a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	test "fail when event's unit and resource's unit differ", %{params: params} do
 		params = update_in(params.resource_quantity.has_unit_id, fn _ -> Factory.insert!(:unit).id end)
 		assert {:error, "the unit of resource-quantity must match with the unit of resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1786,7 +1786,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "the unit of resource-quantity must match with the unit of to-resource-inventoried-as"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1795,10 +1795,10 @@ describe "`create/2` with move:" do
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: 0.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, accounting_quantity_has_numerical_value: -1.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1807,10 +1807,10 @@ describe "`create/2` with move:" do
 		res = EconomicResource.Domain.one!(params.resource_inventoried_as_id)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: 0.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 
 		Changeset.change(res, onhand_quantity_has_numerical_value: -1.0) |> Repo.update!()
-		assert {:error, ^err} = Domain.create(params)
+		assert {:error, ^err} = Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1820,7 +1820,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "the move events need to fully move the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
@@ -1830,14 +1830,14 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "the move events need to fully move the resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_container
 	@tag :want_to_resource
 	test "fail when transfering a container resource into another resource", %{params: params} do
 		assert {:error, "you can't move a container resource into another resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1855,7 +1855,7 @@ describe "`create/2` with move:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{resource_inventoried_as_id: tmp_res_id}} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 
 		# TODO: use combine-separate when implemented instead
 		EconomicResource.Domain.one!(params.to_resource_inventoried_as_id)
@@ -1863,7 +1863,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't move into a contained resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1881,7 +1881,7 @@ describe "`create/2` with move:" do
 			has_end: Factory.now(),
 		}
 		assert {:ok, %EconomicEvent{} = evt} =
-			Domain.create(raise_params, %{name: Factory.str("name")})
+			Domain.create(Factory.ctx(), raise_params, %{name: Factory.str("name")})
 		evt = Domain.preload(evt, :resource_inventoried_as)
 		tmp_res = evt.resource_inventoried_as
 		# TODO: use combine-separate when implemented instead
@@ -1889,7 +1889,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "you can't move into a container resource"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 
 	@tag :want_to_resource
@@ -1899,7 +1899,7 @@ describe "`create/2` with move:" do
 		|> Repo.update!()
 
 		assert {:error, "the resources must conform to the same specification"} =
-			Domain.create(params)
+			Domain.create(Factory.ctx(), params)
 	end
 end
 

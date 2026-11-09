@@ -28,7 +28,7 @@ defp insert_resource!(opts) do
 	spec_id = opts[:conforms_to_id] || Factory.insert!(:resource_specification).id
 	agent = Factory.insert!(:agent)
 	%{resource_inventoried_as_id: res_id} =
-		Zenflows.VF.EconomicEvent.Domain.create!(%{
+		Zenflows.VF.EconomicEvent.Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: agent.id,
 			receiver_id: agent.id,

@@ -36,7 +36,7 @@ end
 object :mutation_sw_pass do
 	@desc "Import repositories from a softwarepassport instance."
 	field :import_repos, :string do
-		meta only_admin?: true
+		meta only_admin?: true, authz: "sw_pass.import"
 
 		@desc "The URL where all the repository information is listed."
 		arg :url, non_null(:string)

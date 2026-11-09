@@ -47,7 +47,7 @@ end
 
 describe "create/1" do
 	test "with good params: creates an AgentRelationship", %{params: params} do
-		assert {:ok, %AgentRelationship{} = new} = Domain.create(params)
+		assert {:ok, %AgentRelationship{} = new} = Domain.create(Factory.ctx(), params)
 		assert new.subject_id == params.subject_id
 		assert new.object_id == params.object_id
 		assert new.relationship_id == params.relationship_id
@@ -55,13 +55,13 @@ describe "create/1" do
 	end
 
 	test "with bad params: doesn't create an AgentRelationship" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
+		assert {:error, %Changeset{}} = Domain.create(Factory.ctx(), %{})
 	end
 end
 
 describe "update/2" do
 	test "with good params: updates the AgentRelationship", %{params: params, inserted: old} do
-		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, params)
+		assert {:ok, %AgentRelationship{} = new} = Domain.update(Factory.ctx(), old.id, params)
 		assert new.subject_id == params.subject_id
 		assert new.object_id == params.object_id
 		assert new.relationship_id == params.relationship_id
@@ -69,7 +69,7 @@ describe "update/2" do
 	end
 
 	test "with bad params: doesn't update the AgentRelationship", %{inserted: old} do
-		assert {:ok, %AgentRelationship{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %AgentRelationship{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		assert new.subject_id == old.subject_id
 		assert new.object_id == old.object_id
 		assert new.relationship_id == old.relationship_id
@@ -79,12 +79,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the AgentRelationship", %{inserted: %{id: id}} do
-		assert {:ok, %AgentRelationship{id: ^id}} = Domain.delete(id)
+		assert {:ok, %AgentRelationship{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the AgentRelationship" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 end

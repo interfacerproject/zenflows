@@ -30,7 +30,7 @@ test "previous/2 works" do
 	unit = Factory.insert!(:unit)
 	amount = Factory.decimal()
 
-	evt0 = Domain.create!(%{
+	evt0 = Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: agent.id,
 			receiver_id: agent.id,
@@ -46,7 +46,7 @@ test "previous/2 works" do
 	assert evt0.previous_event_id == nil
 	assert Domain.previous(evt0) == nil
 
-	evt1 = Domain.create!(%{
+	evt1 = Domain.create!(Factory.ctx(), %{
 		action_id: "raise",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -64,7 +64,7 @@ test "previous/2 works" do
 	assert %EconomicResource{id: ^id} = Domain.previous(evt1)
 
 	proc = Factory.insert!(:process)
-	evt2 = Domain.create!(%{
+	evt2 = Domain.create!(Factory.ctx(), %{
 		action_id: "produce",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -82,7 +82,7 @@ test "previous/2 works" do
 	id = proc.id
 	assert %Process{id: ^id} = Domain.previous(evt2)
 
-	evt3 = Domain.create!(%{
+	evt3 = Domain.create!(Factory.ctx(), %{
 		action_id: "lower",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -99,7 +99,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt3)
 
-	evt4 = Domain.create!(%{
+	evt4 = Domain.create!(Factory.ctx(), %{
 		action_id: "consume",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -117,7 +117,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt4)
 
-	evt5 = Domain.create!(%{
+	evt5 = Domain.create!(Factory.ctx(), %{
 		action_id: "use",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -139,7 +139,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt5)
 
-	evt6 = Domain.create!(%{
+	evt6 = Domain.create!(Factory.ctx(), %{
 		action_id: "cite",
 		input_of_id: Factory.insert!(:process).id,
 		provider_id: agent.id,
@@ -158,7 +158,7 @@ test "previous/2 works" do
 	assert %EconomicResource{id: ^id} = Domain.previous(evt6)
 
 	proc = Factory.insert!(:process)
-	evt7 = Domain.create!(%{
+	evt7 = Domain.create!(Factory.ctx(), %{
 		action_id: "pickup",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -176,7 +176,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt7)
 
-	evt8 = Domain.create!(%{
+	evt8 = Domain.create!(Factory.ctx(), %{
 		action_id: "dropoff",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -195,7 +195,7 @@ test "previous/2 works" do
 	assert %Process{id: ^id} = Domain.previous(evt8)
 
 	proc = Factory.insert!(:process)
-	evt9 = Domain.create!(%{
+	evt9 = Domain.create!(Factory.ctx(), %{
 		action_id: "accept",
 		input_of_id: proc.id,
 		provider_id: agent.id,
@@ -213,7 +213,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt9)
 
-	evt10 = Domain.create!(%{
+	evt10 = Domain.create!(Factory.ctx(), %{
 		action_id: "modify",
 		output_of_id: proc.id,
 		provider_id: agent.id,
@@ -231,7 +231,7 @@ test "previous/2 works" do
 	id = proc.id
 	assert %Process{id: ^id} = Domain.previous(evt10)
 
-	evt11 = Domain.create!(%{
+	evt11 = Domain.create!(Factory.ctx(), %{
 		action_id: "transferCustody",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -248,7 +248,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt11)
 
-	evt12 = Domain.create!(%{
+	evt12 = Domain.create!(Factory.ctx(), %{
 		action_id: "transferAllRights",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -265,7 +265,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt12)
 
-	evt13 = Domain.create!(%{
+	evt13 = Domain.create!(Factory.ctx(), %{
 		action_id: "transfer",
 		provider_id: agent.id,
 		receiver_id: agent.id,
@@ -282,7 +282,7 @@ test "previous/2 works" do
 	id = res.id
 	assert %EconomicResource{id: ^id} = Domain.previous(evt13)
 
-	evt14 = Domain.create!(%{
+	evt14 = Domain.create!(Factory.ctx(), %{
 		action_id: "move",
 		provider_id: agent.id,
 		receiver_id: agent.id,

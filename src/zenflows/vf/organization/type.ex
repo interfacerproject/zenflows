@@ -141,12 +141,14 @@ object :mutation_organization do
 	collaboration space.
 	"""
 	field :create_organization, non_null(:organization_response) do
+		meta authz: "organization.create"
 		arg :organization, non_null(:organization_create_params)
 		resolve &Resolv.create_organization/2
 	end
 
 	@desc "Update organization profile details."
 	field :update_organization, non_null(:organization_response) do
+		meta authz: "organization.update"
 		arg :organization, non_null(:organization_update_params)
 		resolve &Resolv.update_organization/2
 	end
@@ -156,6 +158,7 @@ object :mutation_organization do
 	the collaboration space.
 	"""
 	field :delete_organization, non_null(:boolean) do
+		meta authz: "organization.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_organization/2
 	end

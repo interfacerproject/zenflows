@@ -34,7 +34,7 @@ end
 defp insert_resource_at!(location) do
 	agent = Factory.insert!(:agent)
 	%{resource_inventoried_as_id: res_id} =
-		Zenflows.VF.EconomicEvent.Domain.create!(%{
+		Zenflows.VF.EconomicEvent.Domain.create!(Factory.ctx(), %{
 			action_id: "raise",
 			provider_id: agent.id,
 			receiver_id: agent.id,

@@ -58,8 +58,11 @@ object :agent_relationship do
 	field :relationship, non_null(:agent_relationship_role),
 		resolve: &Resolv.relationship/3
 
-	#@desc @in_scope_of
-	#field :in_scope_of, list_of(non_null(:accounting_scope))
+	@desc "The organization a system role is scoped to."
+	field :in_scope_of, :agent, resolve: &Resolv.in_scope_of/3
+
+	@desc "When a system-role relationship was revoked; null while active."
+	field :revoked_at, :datetime
 
 	@desc @note
 	field :note, :string
@@ -137,16 +140,19 @@ end
 
 object :mutation_agent_relationship do
 	field :create_agent_relationship, non_null(:agent_relationship_response) do
+		meta authz: "relationship.create"
 		arg :relationship, non_null(:agent_relationship_create_params)
 		resolve &Resolv.create_agent_relationship/2
 	end
 
 	field :update_agent_relationship, non_null(:agent_relationship_response) do
+		meta authz: "relationship.update"
 		arg :relationship, non_null(:agent_relationship_update_params)
 		resolve &Resolv.update_agent_relationship/2
 	end
 
 	field :delete_agent_relationship, non_null(:boolean) do
+		meta authz: "relationship.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_agent_relationship/2
 	end

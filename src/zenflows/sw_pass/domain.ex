@@ -22,6 +22,8 @@ Domain logic of interacting with softwarepassport instances over
 HTTP.
 """
 
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, ResourceControl}
 alias Zenflows.DB.Repo
 alias Zenflows.VF.{
 	Agent,
@@ -40,8 +42,14 @@ Import repos by a URL to `/repositories` route of a softwarepassport
 instance, and generate necessary things to link Person Agents to
 EconomicResource Procjets.
 """
-@spec import_repos(String.t()) :: {:ok, term()} | {:error, term()}
-def import_repos(url) do
+@spec import_repos(ExecutionContext.t(), String.t()) :: {:ok, term()} | {:error, term()}
+def import_repos(%ExecutionContext{} = ctx, url) do
+	with :ok <- Authz.authorize(ctx, "sw_pass.import", %Facts{}) do
+		do_import_repos(ExecutionContext.service(:import, ctx.request_id), url)
+	end
+end
+
+defp do_import_repos(import_ctx, url) do
 	url = to_charlist(url)
 	hdrs = [
 		{'user-agent', useragent()},
@@ -193,6 +201,9 @@ def import_repos(url) do
 			end)
 			|> Multi.run(:update_produce_evt, fn repo, %{produce: evt, resource: res} ->
 				Ecto.Changeset.change(evt, resource_inventoried_as_id: res.id) |> repo.update()
+			end)
+			|> Multi.run(:resource_control, fn repo, %{resource: res} ->
+				ResourceControl.Domain.ensure_for_import(repo, import_ctx, res)
 			end)
 			|> Repo.transaction()
 			|> case do

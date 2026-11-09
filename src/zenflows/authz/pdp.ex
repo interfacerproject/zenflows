@@ -70,7 +70,11 @@ alias Zenflows.VF.Person
 	"dpp.attachment.add" => :resource_control,
 	"dpp.attachment.delete" => :resource_control,
 	"dpp.file.upload" => :resource_control,
-	"wallet.points.issue" => :resource_control
+	"wallet.points.issue" => :resource_control,
+	"feedback.review.create" => :proven_identity,
+	"feedback.review.delete" => :proven_identity,
+	"feedback.comment.create" => :proven_identity,
+	"feedback.comment.delete" => :proven_identity
 }
 
 @doc "The policy version recorded with every decision."
@@ -80,6 +84,10 @@ def policy_version(), do: @policy_version
 @doc "The cross-service actions this PDP has a rule for."
 @spec actions() :: [String.t()]
 def actions(), do: Map.keys(@actions)
+
+@doc "The capability an action requires, or nil if the action has no rule."
+@spec capability(String.t()) :: atom() | nil
+def capability(action), do: Map.get(@actions, action)
 
 @doc """
 Full decision for a decoded request map: load facts, decide, and tag the
@@ -135,6 +143,12 @@ def decide(request, facts) do
 					if facts["controls_parent"] == true,
 						do: allow(epoch, facts["obligations"] || %{}),
 						else: deny("not_controller", epoch, %{})
+
+				:proven_identity ->
+					case facts["subject"] do
+						nil -> deny("principal_not_resolved", epoch, %{})
+						sub -> allow(epoch, facts["obligations"] || %{}) |> Map.put("subject", sub)
+					end
 			end
 	end
 end
@@ -174,6 +188,28 @@ follow-up.
 def load_facts(request) do
 	proven? = request["principal_proven"] == true
 	pk = get_in(request, ["principal", "pk"])
+
+	if capability(request["action"]) == :proven_identity do
+		# Identity-proof actions (feedback) have no resource parent: resolve the
+		# principal to its Person id and surface it as the subject.  No
+		# ResourceControl lookup — the consuming service owns its own rows.
+		subject =
+			case resolve_principal(pk) do
+				%Person{id: id} -> id
+				_ -> nil
+			end
+
+		%{"principal_proven" => proven?, "subject" => subject}
+	else
+		load_resource_control_facts(request, proven?, pk)
+	end
+rescue
+	e ->
+		Logger.error("pdp load_facts crashed: #{inspect(e)}")
+		%{"error" => "fact_load_failed"}
+end
+
+defp load_resource_control_facts(request, proven?, pk) do
 	parent_id = get_in(request, ["binding", "parent_id"])
 
 	with %Person{id: person_id} <- resolve_principal(pk),

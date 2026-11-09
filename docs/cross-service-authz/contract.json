@@ -162,6 +162,58 @@
         "permission_epoch": 7,
         "obligations": {}
       }
+    },
+    {
+      "name": "contract.allow.feedback_proven_identity_carries_subject",
+      "layer": "contract",
+      "doc": "A proven key that resolves to a Person: a feedback write is allowed and the response carries the proven subject (Person.id). No resource control is consulted.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000F001",
+        "principal": { "pk": "pkAlice" },
+        "action": "feedback.review.create"
+      },
+      "facts": { "principal_proven": true, "subject": "01PERSONALICE" },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": null,
+        "obligations": {},
+        "subject": "01PERSONALICE"
+      }
+    },
+    {
+      "name": "contract.deny.feedback_unproven_subject",
+      "layer": "contract",
+      "doc": "The signature did not verify: a feedback write is denied before any resolution, with the shared unproven_subject reason.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000F002",
+        "principal": { "pk": "pkAlice" },
+        "action": "feedback.comment.create"
+      },
+      "facts": { "principal_proven": false, "subject": null },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "unproven_subject",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.feedback_key_not_resolved",
+      "layer": "contract",
+      "doc": "The signature verified but the key resolves to no registered Person: deny, never a grant without a subject.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000F003",
+        "principal": { "pk": "pkGhost" },
+        "action": "feedback.review.delete"
+      },
+      "facts": { "principal_proven": true, "subject": null },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "principal_not_resolved",
+        "permission_epoch": null,
+        "obligations": {}
+      }
     }
   ]
 }

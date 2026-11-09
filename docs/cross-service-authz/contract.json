@@ -164,6 +164,78 @@
       }
     },
     {
+      "name": "contract.allow.wallet_accept_pays_contributor_and_owner",
+      "layer": "contract",
+      "doc": "A proven subject issues points for a verified, unpaid accept event: the owner is credited idea and the contributor strengths, amounts from the server schedule, not the body.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000W001",
+        "principal": { "pk": "pkOwner" },
+        "action": "wallet.points.issue"
+      },
+      "facts": { "principal_proven": true, "event": { "type": "accept", "paid": false }, "owner": "01OWNER", "contributor": "01CONTRIB" },
+      "expect": {
+        "decision": "allow",
+        "reason_code": "ok",
+        "permission_epoch": null,
+        "obligations": {},
+        "payouts": [
+          { "recipient": "01OWNER", "token": "idea", "amount": 10000 },
+          { "recipient": "01CONTRIB", "token": "strengths", "amount": 10000 }
+        ]
+      }
+    },
+    {
+      "name": "contract.deny.wallet_already_paid",
+      "layer": "contract",
+      "doc": "The event already paid out: deny, mint nothing (idempotency).",
+      "input": {
+        "request_id": "01J0REQ0000000000000000W002",
+        "principal": { "pk": "pkOwner" },
+        "action": "wallet.points.issue"
+      },
+      "facts": { "principal_proven": true, "event": { "type": "accept", "paid": true }, "owner": "01OWNER", "contributor": "01CONTRIB" },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "already_paid",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.wallet_event_not_found",
+      "layer": "contract",
+      "doc": "No verified event backs the issuance: deny, fail closed.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000W003",
+        "principal": { "pk": "pkOwner" },
+        "action": "wallet.points.issue"
+      },
+      "facts": { "principal_proven": true, "event": null },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "event_not_found",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
+      "name": "contract.deny.wallet_unproven_subject",
+      "layer": "contract",
+      "doc": "The signature did not verify: deny before any issuance.",
+      "input": {
+        "request_id": "01J0REQ0000000000000000W004",
+        "principal": { "pk": "pkOwner" },
+        "action": "wallet.points.issue"
+      },
+      "facts": { "principal_proven": false, "event": { "type": "accept", "paid": false }, "owner": "01OWNER", "contributor": "01CONTRIB" },
+      "expect": {
+        "decision": "deny",
+        "reason_code": "unproven_subject",
+        "permission_epoch": null,
+        "obligations": {}
+      }
+    },
+    {
       "name": "contract.allow.feedback_proven_identity_carries_subject",
       "layer": "contract",
       "doc": "A proven key that resolves to a Person: a feedback write is allowed and the response carries the proven subject (Person.id). No resource control is consulted.",

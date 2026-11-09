@@ -258,6 +258,45 @@ def update(%ExecutionContext{} = ctx, id, params) do
 	end
 end
 
+@doc """
+Metadata-only top-level patch. Locks current resource/control and authorizes
+before comparing content or merging; the edit and its administrative audit
+commit together. Legacy replacement and physical-event APIs are unchanged.
+"""
+@spec patch_metadata(ExecutionContext.t(), Schema.id(), map(), Keyword.t())
+	:: {:ok, EconomicResource.t()} | {:error, atom() | String.t() | Changeset.t()}
+def patch_metadata(%ExecutionContext{} = ctx, id, fields, opts \\ []) do
+	alias Zenflows.VF.EconomicResource.Metadata
+	Multi.new()
+	|> Authz.multi_authorize(:metadata_authz, ctx, "resource.update",
+		fn repo, _ -> Facts.for_resource(repo, ctx, id) end)
+	|> Authz.multi_target(:metadata_before, :metadata_authz)
+	|> Multi.run(:metadata_fields, fn _, %{metadata_before: before} ->
+		Metadata.merge(before.metadata, fields, opts)
+	end)
+	|> Multi.run(:metadata_resource, fn repo, %{metadata_before: before, metadata_fields: merged} ->
+		if before.metadata == merged, do: {:ok, before},
+			else: repo.update(EconomicResource.changeset(before, %{metadata: merged}))
+	end)
+	|> Log.multi_insert(:metadata_audit, ctx, fn %{metadata_before: before, metadata_resource: after_res} ->
+		if before.metadata == after_res.metadata do
+			nil
+		else
+			%{
+				action: "resource.metadata.patch", target_type: "economic_resource", target_id: id,
+				before: %{metadata_hash: Metadata.hash(before.metadata)},
+				after: %{metadata_hash: Metadata.hash(after_res.metadata),
+					fields: Metadata.changed_fields(before.metadata, after_res.metadata)},
+			}
+		end
+	end)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{metadata_resource: resource}} -> {:ok, resource}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
 @spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: EconomicResource.t()
 def update!(ctx, id, params) do
 	{:ok, value} = update(ctx, id, params)

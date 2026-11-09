@@ -135,7 +135,7 @@ defp json_parse(%Input.String{value: v}) do
 	case Jason.decode(v) do
 		{:ok, map_or_list} when is_map(map_or_list) or is_list(map_or_list) ->
 			{:ok, map_or_list}
-		{:error, _} ->
+		_ ->
 			:error
 	end
 end

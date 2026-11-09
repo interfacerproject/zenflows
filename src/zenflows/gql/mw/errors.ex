@@ -18,7 +18,7 @@
 
 defmodule Zenflows.GQL.MW.Errors do
 @moduledoc """
-Absinthe middleware for errors (Ecto.Changeset-only, for now).
+Absinthe middleware for changesets and safe structured domain errors.
 """
 
 alias Ecto.Changeset, as: Chgset
@@ -41,6 +41,12 @@ defp handle(:forbidden),
 
 defp handle(:unauthenticated),
 	do: [%{message: "unauthenticated", extensions: %{code: "UNAUTHENTICATED"}}]
+
+defp handle(:conflict),
+	do: [%{message: "metadata changed", extensions: %{code: "CONFLICT"}}]
+
+defp handle(:invalid_metadata_patch),
+	do: [%{message: "invalid metadata patch", extensions: %{code: "BAD_USER_INPUT"}}]
 
 defp handle(error) do
 	[error]

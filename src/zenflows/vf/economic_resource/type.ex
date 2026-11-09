@@ -179,6 +179,9 @@ object :economic_resource do
 	@desc @metadata
 	field :metadata, :json_object
 
+	@desc "Content fingerprint for optional metadata compare-and-set; not a control epoch."
+	field :metadata_hash, non_null(:string), resolve: &Resolv.metadata_hash/3
+
 	@desc "Used to implement the trace algorithm."
 	field :previous, list_of(non_null(:economic_event)),
 		resolve: &Resolv.previous/3
@@ -340,6 +343,20 @@ object :query_economic_resource do
 end
 
 object :mutation_economic_resource do
+	@desc """
+	Atomically replace the supplied top-level metadata fields, preserving other
+	keys. Null is a stored value, not deletion; nested objects and arrays replace
+	whole fields. Optional expectedMetadataHash detects differing current content.
+	Without it, overlapping fields are last-committer-wins. No physical events.
+	"""
+	field :patch_economic_resource_metadata, non_null(:economic_resource_response) do
+		meta authz: "resource.update"
+		arg :resource_id, non_null(:id)
+		arg :fields, non_null(:json_object)
+		arg :expected_metadata_hash, :string
+		resolve &Resolv.patch_economic_resource_metadata/2
+	end
+
 	field :update_economic_resource, non_null(:economic_resource_response) do
 		meta authz: "resource.update"
 		arg :resource, non_null(:economic_resource_update_params)

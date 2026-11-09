@@ -53,6 +53,10 @@ end
 
 @init_opts [schema: Zenflows.GQL.Schema]
 
+post "/authz/decide" do
+	Zenflows.Authz.Pdp.Transport.handle(conn)
+end
+
 forward "/api/file",
 	to: Zenflows.Web.File
 

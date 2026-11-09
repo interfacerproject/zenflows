@@ -44,4 +44,25 @@ end
 test "test env defaults allow unchecked anonymous calls" do
 	assert Config.opts() == [enforce: true, allow_unchecked: true]
 end
+
+test "claimable_agents defaults to empty" do
+	assert Config.claimable_agents() == []
+end
+
+test "validate_claimable! accepts ULIDs and the empty list" do
+	assert :ok = Config.validate_claimable!([])
+	assert :ok = Config.validate_claimable!([Zenflows.DB.ID.gen(), Zenflows.DB.ID.gen()])
+end
+
+test "validate_claimable! refuses invalid ids" do
+	assert_raise RuntimeError, ~r/AUTHZ_CLAIMABLE_AGENTS.*not-an-id/, fn ->
+		Config.validate_claimable!([Zenflows.DB.ID.gen(), "not-an-id"])
+	end
+end
+
+test "validate_claimable! refuses raw UUID (16-byte) format" do
+	assert_raise RuntimeError, ~r/AUTHZ_CLAIMABLE_AGENTS.*1234567890123456/, fn ->
+		Config.validate_claimable!(["1234567890123456"])
+	end
+end
 end

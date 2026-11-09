@@ -21,7 +21,7 @@ use ZenflowsTest.Help.EctoCase, async: true
 
 alias Ecto.{Changeset, Multi}
 alias Zenflows.Authz
-alias Zenflows.Authz.{Facts, Log, PermissionLog}
+alias Zenflows.Authz.{EventFacts, ExecutionContext, Facts, Log, PermissionLog, Policy}
 
 setup do
 	alice = Factory.insert!(:person)
@@ -106,6 +106,41 @@ end
 test "Log.multi_insert skips nil entries" do
 	assert {:ok, %{log: nil}} =
 		Multi.new() |> Log.multi_insert(:log, Factory.ctx(), fn _ -> nil end) |> Repo.transaction()
+end
+
+test "event decisions go through Authz.authorize with a rule in telemetry", %{alice: alice} do
+	ref = make_ref()
+	pid = self()
+	:telemetry.attach("authz-evt-#{inspect(ref)}", [:zenflows, :authz, :deny],
+		fn _, _, meta, _ -> send(pid, {:deny, meta}) end, nil)
+	on_exit(fn -> :telemetry.detach("authz-evt-#{inspect(ref)}") end)
+
+	other = Factory.id()
+	f = %Zenflows.Authz.EventFacts{action: "work", provider_id: other, receiver_id: other}
+	assert {:error, :forbidden} = Authz.authorize(Factory.ctx(alice), "event.create", f)
+	assert_received {:deny, %{action: "event.create", rule: :agent, reason: :forbidden}}
+	assert :ok = Authz.authorize(Factory.ctx(), "event.create", f)
+end
+
+test "Policy.authorize dispatch matrix: Facts vs EventFacts, person vs service vs anonymous",
+		%{alice: alice} do
+	opts = [enforce: true, allow_unchecked: false]
+	facts = %Facts{}
+	ev = %EventFacts{}
+
+	# A person's EventFacts-only actions reject plain Facts, and vice versa.
+	assert {:error, :forbidden} = Policy.authorize(Factory.ctx(alice), "event.create", facts, opts)
+	assert {:error, :forbidden} = Policy.authorize(Factory.ctx(alice), "event.update", facts, opts)
+	assert {:error, :forbidden} = Policy.authorize(Factory.ctx(alice), "resource.create", ev, opts)
+
+	# Services are allowlisted per action, independent of the facts shape.
+	assert :ok = Policy.authorize(ExecutionContext.service(:import, nil), "event.create", ev, opts)
+	assert :ok = Policy.authorize(ExecutionContext.service(:migration, nil), "event.create", ev, opts)
+	assert {:error, :forbidden} =
+		Policy.authorize(ExecutionContext.service(:import, nil), "event.update", ev, opts)
+
+	# Anonymous is denied (not merely forbidden) when allow_unchecked is off.
+	assert {:error, :unauthenticated} = Policy.authorize(Factory.ctx(), "event.create", ev, opts)
 end
 
 test "MW.Errors maps authz errors to coded GraphQL errors" do

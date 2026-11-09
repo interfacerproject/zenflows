@@ -23,6 +23,7 @@ use Application
 @impl true
 def start(_type, _args) do
 	:ok = Zenflows.Authz.Config.validate!()
+	:ok = Zenflows.Authz.Config.validate_claimable!(Zenflows.Authz.Config.claimable_agents())
 
 	print_header()
 

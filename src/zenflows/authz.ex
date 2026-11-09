@@ -26,23 +26,21 @@ Authorization checks inside domain transactions.  Domain functions call
 require Logger
 
 alias Ecto.Multi
-alias Zenflows.Authz.{Config, ExecutionContext, Facts, Policy}
+alias Zenflows.Authz.{Config, EventFacts, ExecutionContext, Facts, Policy}
 
-@spec authorize(ExecutionContext.t(), String.t(), Facts.t(), Config.opts())
+@spec authorize(ExecutionContext.t(), String.t(), Facts.t() | EventFacts.t(), Config.opts())
 	:: :ok | {:error, :forbidden | :unauthenticated}
 def authorize(ctx, action, facts, opts \\ Config.opts()) do
 	case Policy.authorize(ctx, action, facts, opts) do
 		:ok -> :ok
-		{:error, reason} = err ->
-			enforced? = Keyword.get(opts, :enforce, true)
-			report_deny(ctx, action, facts, reason, enforced?)
-			if enforced?, do: err, else: :ok
+		{:error, reason} -> deny(ctx, action, facts, reason, nil, opts)
+		{:error, reason, rule} -> deny(ctx, action, facts, reason, rule, opts)
 	end
 end
 
 @doc "Load facts with `facts_fun`, decide, and abort the multi on deny."
 @spec multi_authorize(Multi.t(), term(), ExecutionContext.t(), String.t(),
-		(Ecto.Repo.t(), map() -> Facts.t())) :: Multi.t()
+		(Ecto.Repo.t(), map() -> Facts.t() | EventFacts.t())) :: Multi.t()
 def multi_authorize(m, key, ctx, action, facts_fun) do
 	Multi.run(m, key, fn repo, changes ->
 		facts = facts_fun.(repo, changes)
@@ -61,13 +59,20 @@ def multi_target(m, key, authz_key) do
 	end)
 end
 
-defp report_deny(ctx, action, facts, reason, enforced?) do
+defp deny(ctx, action, facts, reason, rule, opts) do
+	enforced? = Keyword.get(opts, :enforce, true)
+	report_deny(ctx, action, facts, reason, rule, enforced?)
+	if enforced?, do: {:error, reason}, else: :ok
+end
+
+defp report_deny(ctx, action, facts, reason, rule, enforced?) do
 	meta = %{
 		actor_id: ExecutionContext.actor_id(ctx),
 		action: action,
 		target_id: target_id(facts),
 		request_id: ctx.request_id,
 		reason: reason,
+		rule: rule,
 		enforced: enforced?,
 	}
 	:telemetry.execute([:zenflows, :authz, :deny], %{count: 1}, meta)
@@ -75,5 +80,7 @@ defp report_deny(ctx, action, facts, reason, enforced?) do
 end
 
 defp target_id(%Facts{target: %{id: id}}), do: id
+defp target_id(%EventFacts{event: %{id: id}}), do: id
+defp target_id(%EventFacts{source_id: id}), do: id
 defp target_id(_), do: nil
 end

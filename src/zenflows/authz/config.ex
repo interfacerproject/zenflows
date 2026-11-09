@@ -44,4 +44,20 @@ def validate!(:prod, opts) do
 	end
 end
 def validate!(_env, _opts), do: :ok
+
+@doc "Agents whose resources anyone may claim (e.g. the LOSH import agent)."
+@spec claimable_agents() :: [String.t()]
+def claimable_agents() do
+	Application.get_env(:zenflows, Zenflows.Authz, [])
+	|> Keyword.get(:claimable_agents, [])
+end
+
+@doc "Raise unless every claimable agent id is a valid ULID."
+@spec validate_claimable!([String.t()]) :: :ok
+def validate_claimable!(ids) do
+	case Enum.reject(ids, &(byte_size(&1) == 26 and match?({:ok, _}, Zenflows.DB.ID.cast(&1)))) do
+		[] -> :ok
+		bad -> raise "AUTHZ_CLAIMABLE_AGENTS contains invalid agent ids: #{Enum.join(bad, ", ")}"
+	end
+end
 end

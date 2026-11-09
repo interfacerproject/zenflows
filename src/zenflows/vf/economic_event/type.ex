@@ -327,12 +327,14 @@ end
 
 object :mutation_economic_event do
 	field :create_economic_event, non_null(:economic_event_response) do
+		meta authz: "event.create"
 		arg :event, non_null(:economic_event_create_params)
 		arg :new_inventoried_resource, :economic_resource_create_params
 		resolve &Resolv.create_economic_event/2
 	end
 
 	field :update_economic_event, non_null(:economic_event_response) do
+		meta authz: "event.update"
 		arg :event, non_null(:economic_event_update_params)
 		resolve &Resolv.update_economic_event/2
 	end

@@ -61,12 +61,15 @@ test "self-receiver: creator controls, one log row", c do
 	assert actor == c.alice.id and subject == c.alice.id
 end
 
-test "foreign receiver: verified creator controls; declared receiver recorded", c do
-	evt = raise!(Factory.ctx(c.bob), c.alice.id, c)
-	assert control(evt).controller_id == c.bob.id
-	assert [%PermissionLog{after: %{"declared_receiver_id" => declared}}] =
-		logs(evt.resource_inventoried_as_id)
-	assert declared == c.alice.id
+test "foreign receiver: raising in another agent's name is forbidden", c do
+	assert {:error, :forbidden} = EconomicEvent.Domain.create(Factory.ctx(c.bob), %{
+		action_id: "raise",
+		provider_id: c.alice.id,
+		receiver_id: c.alice.id,
+		resource_conforms_to_id: c.spec.id,
+		resource_quantity: %{has_numerical_value: "1", has_unit_id: c.unit.id},
+		has_point_in_time: Factory.now(),
+	}, %{name: "x"})
 end
 
 test "org receiver: org controls when the creator is its admin", c do
@@ -75,12 +78,18 @@ test "org receiver: org controls when the creator is its admin", c do
 	assert control(evt).controller_id == c.org.id
 end
 
-test "org receiver: creator controls when not an admin", c do
-	evt = raise!(Factory.ctx(c.bob), c.org.id, c)
-	assert control(evt).controller_id == c.bob.id
+test "org receiver: non-admin cannot raise for the org", c do
+	assert {:error, :forbidden} = EconomicEvent.Domain.create(Factory.ctx(c.bob), %{
+		action_id: "raise",
+		provider_id: c.org.id,
+		receiver_id: c.org.id,
+		resource_conforms_to_id: c.spec.id,
+		resource_quantity: %{has_numerical_value: "1", has_unit_id: c.unit.id},
+		has_point_in_time: Factory.now(),
+	}, %{name: "x"})
 end
 
-test "transfer to another agent: new resource controlled by the creator", c do
+test "transfer to another agent: new resource controlled by the receiver", c do
 	evt = raise!(Factory.ctx(c.bob), c.bob.id, c)
 	transfer = EconomicEvent.Domain.create!(Factory.ctx(c.bob), %{
 		action_id: "transfer",
@@ -92,7 +101,7 @@ test "transfer to another agent: new resource controlled by the creator", c do
 	})
 	assert %ResourceControl{controller_id: id} =
 		Repo.get_by!(ResourceControl, resource_id: transfer.to_resource_inventoried_as_id)
-	assert id == c.bob.id
+	assert id == c.carol.id
 end
 
 test "migration context creates no control row", c do

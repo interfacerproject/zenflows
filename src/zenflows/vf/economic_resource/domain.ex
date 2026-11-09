@@ -309,12 +309,12 @@ def multi_one(m, key \\ multi_key(), id) do
 	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
 end
 
-@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, ctx, key \\ multi_key(), params) do
+@spec multi_insert(Multi.t(), ExecutionContext.t(), term(), Schema.params(), Keyword.t()) :: Multi.t()
+def multi_insert(m, ctx, key, params, opts \\ []) do
 	m
 	|> Multi.insert(key, EconomicResource.changeset(params))
 	|> File.Domain.multi_insert(key, :images, :economic_resource_id)
-	|> ResourceControl.Domain.multi_on_create(ctx, key)
+	|> ResourceControl.Domain.multi_on_create(ctx, key, opts)
 end
 
 @spec multi_update(Multi.t(), ExecutionContext.t(), term(), Schema.id(), Schema.params()) :: Multi.t()

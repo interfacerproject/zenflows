@@ -83,7 +83,7 @@ end
 describe "create/1" do
 	test "with good params (with only :provider): creates an Intent", %{params: params} do
 		params = Map.put(params, :receiver_id, nil)
-		assert {:ok, %Intent{} = int} = Domain.create(params)
+		assert {:ok, %Intent{} = int} = Domain.create(Factory.ctx(), params)
 
 		keys = ~w[
 			action_id
@@ -105,7 +105,7 @@ describe "create/1" do
 
 	test "with good params (with only :receiver): creates an Intent", %{params: params} do
 		params = Map.put(params, :provider_id, nil)
-		assert {:ok, %Intent{} = int} = Domain.create(params)
+		assert {:ok, %Intent{} = int} = Domain.create(Factory.ctx(), params)
 
 		keys = ~w[
 			action_id
@@ -126,13 +126,13 @@ describe "create/1" do
 	end
 
 	test "with bad params (with both :provider and :receiver): doesn't create an Intent", %{params: params} do
-		assert {:error, %Changeset{errors: errs}} = Domain.create(params)
+		assert {:error, %Changeset{errors: errs}} = Domain.create(Factory.ctx(), params)
 		assert {:ok, _} = Keyword.fetch(errs, :provider_id)
 		assert {:ok, _} = Keyword.fetch(errs, :receiver_id)
 	end
 
 	test "with bad params: doesn't create an Intent" do
-		assert {:error, %Changeset{}} = Domain.create(%{})
+		assert {:error, %Changeset{}} = Domain.create(Factory.ctx(), %{})
 	end
 end
 
@@ -140,7 +140,7 @@ describe "update/2" do
 	test "with good params (with only :provider): updates the Intent", %{params: params} do
 		params = Map.put(params, :receiver_id, nil)
 		old = Factory.insert!(:intent, %{receiver: nil, provider: Factory.build(:agent)})
-		assert {:ok, %Intent{} = new} = Domain.update(old.id, params)
+		assert {:ok, %Intent{} = new} = Domain.update(Factory.ctx(), old.id, params)
 
 		keys = ~w[
 			action_id
@@ -163,7 +163,7 @@ describe "update/2" do
 	test "with good params (with only :receiver): updates the Intent", %{params: params} do
 		params = Map.put(params, :provider_id, nil)
 		old = Factory.insert!(:intent, %{provider: nil, receiver: Factory.build(:agent)})
-		assert {:ok, %Intent{} = new} = Domain.update(old.id, params)
+		assert {:ok, %Intent{} = new} = Domain.update(Factory.ctx(), old.id, params)
 
 		keys = ~w[
 			action_id
@@ -185,7 +185,7 @@ describe "update/2" do
 
 	test "with bad params (with both :provider and :receiver): updates the Intent", %{params: params} do
 		int = Factory.insert!(:intent, %{provider: Factory.build(:agent), receiver: nil})
-		assert {:error, %Changeset{errors: errs}} = Domain.update(int.id, params)
+		assert {:error, %Changeset{errors: errs}} = Domain.update(Factory.ctx(), int.id, params)
 
 		assert {:ok, _} = Keyword.fetch(errs, :provider_id)
 		assert {:ok, _} = Keyword.fetch(errs, :receiver_id)
@@ -193,14 +193,14 @@ describe "update/2" do
 
 	test "with bad params (with both :receiver and :provider): updates the Intent", %{params: params} do
 		int = Factory.insert!(:intent, %{provider: nil, receiver: Factory.build(:agent)})
-		assert {:error, %Changeset{errors: errs}} = Domain.update(int.id, params)
+		assert {:error, %Changeset{errors: errs}} = Domain.update(Factory.ctx(), int.id, params)
 
 		assert {:ok, _} = Keyword.fetch(errs, :provider_id)
 		assert {:ok, _} = Keyword.fetch(errs, :receiver_id)
 	end
 
 	test "with bad params: doesn't update the Intent", %{inserted: old} do
-		assert {:ok, %Intent{} = new} = Domain.update(old.id, %{})
+		assert {:ok, %Intent{} = new} = Domain.update(Factory.ctx(), old.id, %{})
 		keys = ~w[
 			action_id
 			provider_id receiver_id
@@ -218,12 +218,12 @@ end
 
 describe "delete/1" do
 	test "with good id: deletes the Intent", %{inserted: %{id: id}} do
-		assert {:ok, %Intent{id: ^id}} = Domain.delete(id)
+		assert {:ok, %Intent{id: ^id}} = Domain.delete(Factory.ctx(), id)
 		assert {:error, "not found"} = Domain.one(id)
 	end
 
 	test "with bad id: doesn't delete the Intent" do
-		assert {:error, "not found"} = Domain.delete(Factory.id())
+		assert {:error, "not found"} = Domain.delete(Factory.ctx(), Factory.id())
 	end
 end
 

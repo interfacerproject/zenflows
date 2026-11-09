@@ -23,7 +23,9 @@ import Ecto.Query
 
 require Logger
 
-alias Ecto.Changeset
+alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts, ObjectControl}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{
 	EconomicEvent,
@@ -100,71 +102,78 @@ def trace_dpp_before(proc, depth, visited, children) do
 	result
 end
 
-@spec create(Schema.params()) :: {:ok, Process.t()} | {:error, Changeset.t()}
-def create(params) do
-	Repo.multi(fn ->
-		case Process.changeset(params) do
-			%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
-				if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
-					Changeset.add_error(cset, :grouped_in_id,
-						"this ProcessGroup must not group other ProcessGroups")
-				else
-					cset
-				end
-			cset ->
-				cset
-		end
-		|> Repo.insert()
+@spec create(ExecutionContext.t(), Schema.params()) :: {:ok, Process.t()} | {:error, term()}
+def create(%ExecutionContext{} = ctx, params) do
+	Multi.new()
+	|> Multi.run(:authz, fn _, _ ->
+		with :ok <- Authz.authorize(ctx, "process.create", %Facts{}), do: {:ok, nil}
 	end)
+	|> Multi.insert(:process, fn _ -> check_group(Process.changeset(params)) end)
+	|> ObjectControl.Domain.multi_on_create(ctx, "process", :process)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{process: proc}} -> {:ok, proc}
+		{:error, _, reason, _} -> {:error, reason}
+	end
 end
 
-@spec create!(Schema.params()) :: Process.t()
-def create!(params) do
-	{:ok, value} = create(params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: Process.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
-	Repo.multi(fn ->
-		with {:ok, proc} <- one(id) do
-			case Process.changeset(proc, params) do
-				%{valid?: true, changes: %{grouped_in_id: gid}} = cset ->
-					if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
-						Changeset.add_error(cset, :grouped_in_id,
-							"this ProcessGroup must not group other ProcessGroups")
-					else
-						cset
-					end
-				cset ->
-					cset
-			end
-			|> Repo.update()
-		end
-	end)
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params()) :: {:ok, Process.t()} | {:error, term()}
+def update(%ExecutionContext{} = ctx, id, params) do
+	Multi.new()
+	|> Authz.multi_authorize(:authz, ctx, "process.update",
+		fn repo, _ -> Facts.for_object(repo, ctx, "process", id) end)
+	|> Authz.multi_target(:one, :authz)
+	|> Multi.update(:process, fn %{one: proc} -> check_group(Process.changeset(proc, params)) end)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{process: proc}} -> {:ok, proc}
+		{:error, _, reason, _} -> {:error, reason}
+	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Process.t()
-def update!(id, params) do
-	{:ok, value} = __MODULE__.update(id, params)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: Process.t()
+def update!(ctx, id, params) do
+	{:ok, value} = __MODULE__.update(ctx, id, params)
 	value
 end
 
-@spec delete(Schema.id()) :: {:ok, Process.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
-	Repo.multi(fn ->
-		with {:ok, proc} <- one(id) do
-			Repo.delete(proc)
-		end
-	end)
+@spec delete(ExecutionContext.t(), Schema.id()) :: {:ok, Process.t()} | {:error, term()}
+def delete(%ExecutionContext{} = ctx, id) do
+	Multi.new()
+	|> Authz.multi_authorize(:authz, ctx, "process.delete",
+		fn repo, _ -> Facts.for_object(repo, ctx, "process", id) end)
+	|> Authz.multi_target(:one, :authz)
+	|> Multi.delete(:process, fn %{one: proc} -> proc end)
+	|> ObjectControl.Domain.multi_remove(ctx, "process", id)
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{process: proc}} -> {:ok, proc}
+		{:error, _, reason, _} -> {:error, reason}
+	end
 end
 
-@spec delete!(Schema.id()) :: Process.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec delete!(ExecutionContext.t(), Schema.id()) :: Process.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
+
+# A ProcessGroup that groups other ProcessGroups cannot group processes.
+defp check_group(%{valid?: true, changes: %{grouped_in_id: gid}} = cset) do
+	if where(ProcessGroup, grouped_in_id: ^gid) |> Repo.exists?() do
+		Changeset.add_error(cset, :grouped_in_id,
+			"this ProcessGroup must not group other ProcessGroups")
+	else
+		cset
+	end
+end
+defp check_group(cset), do: cset
 
 @spec preload(Process.t(), :based_on | :planned_within | :nested_in | :grouped_in)
 	:: Process.t()

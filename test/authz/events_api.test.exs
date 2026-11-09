@@ -42,7 +42,7 @@ end
 test "acceptProposal-shaped document succeeds for the owner", c do
 	origin = raise!(c, c.alice).resource_inventoried_as_id
 	fork = raise!(c, c.bob).resource_inventoried_as_id
-	process = Factory.insert!(:process).id
+	process = Factory.insert_process!(c.alice).id
 	assert %{data: %{"cite" => %{"economicEvent" => %{"id" => _}},
 			"accept" => %{"economicEvent" => %{"id" => _}},
 			"modify" => %{"economicEvent" => %{"id" => _}}}} =

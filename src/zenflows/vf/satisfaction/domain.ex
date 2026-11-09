@@ -20,6 +20,8 @@ defmodule Zenflows.VF.Satisfaction.Domain do
 @moduledoc "Domain logic of Satisfactions."
 
 alias Ecto.{Changeset, Multi}
+alias Zenflows.Authz
+alias Zenflows.Authz.{ExecutionContext, Facts}
 alias Zenflows.DB.{Page, Repo, Schema}
 alias Zenflows.VF.{Measure, Satisfaction}
 
@@ -51,30 +53,20 @@ def all!(page \\ Page.new()) do
 	value
 end
 
-@spec create(Schema.params()) :: {:ok, Satisfaction.t()} | {:error, Changeset.t()}
-def create(params) do
+@spec create(ExecutionContext.t(), Schema.params()) :: {:ok, Satisfaction.t()} | {:error, term()}
+def create(%ExecutionContext{} = ctx, params) do
 	key = multi_key()
+	cset = Satisfaction.changeset(params)
 	Multi.new()
-	|> multi_insert(params)
-	|> Repo.transaction()
-	|> case do
-		{:ok, %{^key => value}} -> {:ok, value}
-		{:error, _, cset, _} -> {:error, cset}
-	end
-end
-
-@spec create!(Schema.params()) :: Satisfaction.t()
-def create!(params) do
-	{:ok, value} = create(params)
-	value
-end
-
-@spec update(Schema.id(), Schema.params())
-	:: {:ok, Satisfaction.t()} | {:error, String.t() | Changeset.t()}
-def update(id, params) do
-	key = multi_key()
-	Multi.new()
-	|> multi_update(id, params)
+	|> Multi.run("#{key}.authz", fn repo, _ ->
+		if cset.valid? do
+			facts = Facts.for_satisfaction_create(repo, ctx, cset.changes)
+			with :ok <- Authz.authorize(ctx, "satisfaction.create", facts), do: {:ok, facts}
+		else
+			{:ok, nil}
+		end
+	end)
+	|> Multi.insert(key, cset)
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -82,17 +74,21 @@ def update(id, params) do
 	end
 end
 
-@spec update!(Schema.id(), Schema.params()) :: Satisfaction.t()
-def update!(id, params) do
-	{:ok, value} = update(id, params)
+@spec create!(ExecutionContext.t(), Schema.params()) :: Satisfaction.t()
+def create!(ctx, params) do
+	{:ok, value} = create(ctx, params)
 	value
 end
 
-@spec delete(Schema.id()) :: {:ok, Satisfaction.t()} | {:error, String.t() | Changeset.t()}
-def delete(id) do
+@spec update(ExecutionContext.t(), Schema.id(), Schema.params())
+	:: {:ok, Satisfaction.t()} | {:error, term()}
+def update(%ExecutionContext{} = ctx, id, params) do
 	key = multi_key()
 	Multi.new()
-	|> multi_delete(id)
+	|> Authz.multi_authorize("#{key}.authz", ctx, "satisfaction.update",
+		fn repo, _ -> Facts.for_satisfaction(repo, ctx, id, params) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.update(key, &Satisfaction.changeset(Map.fetch!(&1, "#{key}.one"), params))
 	|> Repo.transaction()
 	|> case do
 		{:ok, %{^key => value}} -> {:ok, value}
@@ -100,9 +96,30 @@ def delete(id) do
 	end
 end
 
-@spec delete!(Schema.id) :: Satisfaction.t()
-def delete!(id) do
-	{:ok, value} = delete(id)
+@spec update!(ExecutionContext.t(), Schema.id(), Schema.params()) :: Satisfaction.t()
+def update!(ctx, id, params) do
+	{:ok, value} = update(ctx, id, params)
+	value
+end
+
+@spec delete(ExecutionContext.t(), Schema.id()) :: {:ok, Satisfaction.t()} | {:error, term()}
+def delete(%ExecutionContext{} = ctx, id) do
+	key = multi_key()
+	Multi.new()
+	|> Authz.multi_authorize("#{key}.authz", ctx, "satisfaction.delete",
+		fn repo, _ -> Facts.for_satisfaction(repo, ctx, id) end)
+	|> Authz.multi_target("#{key}.one", "#{key}.authz")
+	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
+	|> Repo.transaction()
+	|> case do
+		{:ok, %{^key => value}} -> {:ok, value}
+		{:error, _, reason, _} -> {:error, reason}
+	end
+end
+
+@spec delete!(ExecutionContext.t(), Schema.id()) :: Satisfaction.t()
+def delete!(ctx, id) do
+	{:ok, value} = delete(ctx, id)
 	value
 end
 
@@ -118,29 +135,4 @@ def preload(satis, x) when x in ~w[effort_quantity resource_quantity]a,
 
 @spec multi_key() :: atom()
 def multi_key(), do: :satisfaction
-
-@spec multi_one(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_one(m, key \\ multi_key(), id) do
-	Multi.run(m, key, fn repo, _ -> one(repo, id) end)
-end
-
-@spec multi_insert(Multi.t(), term(), Schema.params()) :: Multi.t()
-def multi_insert(m, key \\ multi_key(), params) do
-	Multi.insert(m, key, Satisfaction.changeset(params))
-end
-
-@spec multi_update(Multi.t(), term(), Schema.id(), Schema.params()) :: Multi.t()
-def multi_update(m, key \\ multi_key(), id, params) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.update(key,
-		&Satisfaction.changeset(Map.fetch!(&1, "#{key}.one"), params))
-end
-
-@spec multi_delete(Multi.t(), term(), Schema.id()) :: Multi.t()
-def multi_delete(m, key \\ multi_key(), id) do
-	m
-	|> multi_one("#{key}.one", id)
-	|> Multi.delete(key, &Map.fetch!(&1, "#{key}.one"))
-end
 end

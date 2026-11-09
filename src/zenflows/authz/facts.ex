@@ -24,16 +24,38 @@ Everything a policy decision may look at.  Domain functions load it
 
 import Ecto.Query
 
-alias Zenflows.Authz.{ExecutionContext, ResourceControl, Roles}
-alias Zenflows.VF.{AgentRelationship, EconomicResource, Organization, Person}
+alias Zenflows.Authz.{ExecutionContext, ObjectControl, ResourceControl, Roles}
+alias Zenflows.VF.{
+	AgentRelationship,
+	EconomicEvent,
+	EconomicResource,
+	Intent,
+	Organization,
+	Person,
+	Process,
+	Proposal,
+	ProposedIntent,
+	Satisfaction,
+}
 
 @type t() :: %__MODULE__{
 	target: nil | struct() | map(),
-	control: nil | ResourceControl.t(),
+	control: nil | ResourceControl.t() | ObjectControl.t(),
 	admin_of: MapSet.t(String.t()),
 	role_key: nil | String.t(),
 	new_subject_id: nil | String.t(),
 	active_admin_count: nil | non_neg_integer(),
+	process_controls: %{String.t() => ObjectControl.t()},
+	intent: nil | Intent.t(),
+	intent_control: nil | ObjectControl.t(),
+	event: nil | EconomicEvent.t(),
+	sibling_parties: MapSet.t(String.t()),
+	finished_only: boolean(),
+	new_target: nil | map(),
+	new_event: nil | EconomicEvent.t(),
+	new_intent: nil | Intent.t(),
+	repoint?: boolean(),
+	retarget?: boolean(),
 }
 
 defstruct target: nil,
@@ -41,7 +63,18 @@ defstruct target: nil,
 	admin_of: MapSet.new(),
 	role_key: nil,
 	new_subject_id: nil,
-	active_admin_count: nil
+	active_admin_count: nil,
+	process_controls: %{},
+	intent: nil,
+	intent_control: nil,
+	event: nil,
+	sibling_parties: MapSet.new(),
+	finished_only: false,
+	new_target: nil,
+	new_event: nil,
+	new_intent: nil,
+	repoint?: false,
+	retarget?: false
 
 @doc """
 The subset of `agent_ids` (nil entries ignored) where the acting Person
@@ -97,5 +130,221 @@ def for_person(repo, id) do
 	%__MODULE__{
 		target: repo.one(from p in Person, where: p.id == ^id and p.type == :per, lock: "FOR UPDATE"),
 	}
+end
+
+@schemas %{"process" => Process, "proposal" => Proposal, "intent" => Intent}
+
+@spec for_object(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
+def for_object(repo, ctx, type, id) do
+	schema = Map.fetch!(@schemas, type)
+	# FOR NO KEY UPDATE: a plain FOR UPDATE would deadlock against the
+	# FOR KEY SHARE lock that a concurrent child insert's foreign-key
+	# check takes on this same row.
+	target = repo.one(from t in schema, where: t.id == ^id, lock: "FOR NO KEY UPDATE")
+	control = lock_object_control(repo, type, id, "FOR UPDATE")
+	%__MODULE__{target: target, control: control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
+end
+
+@spec for_intent_create(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
+def for_intent_create(repo, ctx, changes) do
+	ids = Enum.reject([Map.get(changes, :input_of_id), Map.get(changes, :output_of_id)], &is_nil/1)
+	controls = lock_object_controls(repo, "process", ids)
+	%__MODULE__{target: changes, process_controls: controls,
+		admin_of: admin_of(repo, ctx,
+			[Map.get(changes, :provider_id), Map.get(changes, :receiver_id)
+				| Enum.map(Map.values(controls), & &1.controller_id)])}
+end
+
+@spec for_intent_update(Ecto.Repo.t(), ExecutionContext.t(), String.t(), map()) :: t()
+def for_intent_update(repo, ctx, id, params) do
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from i in Intent, where: i.id == ^id, lock: "FOR NO KEY UPDATE")
+	control = lock_object_control(repo, "intent", id, "FOR UPDATE")
+	siblings = sibling_parties(repo, id)
+	new_target = intent_new_target(target, params)
+	new_process_ids = case new_target do
+		nil -> []
+		nt -> Enum.reject([nt.input_of_id, nt.output_of_id], &is_nil/1)
+	end
+	# Whichever of input_of/output_of is actually moving away from a
+	# process (new value differs from the current one, nil included)
+	# needs that *old* process's control too: the policy must not let a
+	# named party silently detach an intent from a process they don't
+	# control.  Both old and new ids share one `process_controls` map,
+	# keyed by process id, so the policy can look either up.
+	old_process_ids = case new_target do
+		nil -> []
+		nt ->
+			~w[input_of_id output_of_id]a
+			|> Enum.filter(&(Map.get(nt, &1) != Map.get(target, &1)))
+			|> Enum.map(&Map.get(target, &1))
+			|> Enum.reject(&is_nil/1)
+	end
+	process_controls = lock_object_controls(repo, "process", Enum.uniq(old_process_ids ++ new_process_ids))
+	new_ids = case new_target do
+		nil -> []
+		nt -> [nt.provider_id, nt.receiver_id]
+	end ++ Enum.map(Map.values(process_controls), & &1.controller_id)
+	ids = [control && control.controller_id,
+		target && target.provider_id, target && target.receiver_id | MapSet.to_list(siblings)]
+	%__MODULE__{target: target, control: control, sibling_parties: siblings,
+		new_target: new_target, process_controls: process_controls,
+		finished_only: Map.drop(params, [:id, "id"]) in [%{finished: true}, %{"finished" => true}],
+		admin_of: admin_of(repo, ctx, ids ++ new_ids)}
+end
+
+@spec for_proposed_intent_create(Ecto.Repo.t(), ExecutionContext.t(), String.t(), String.t()) :: t()
+def for_proposed_intent_create(repo, ctx, proposal_id, intent_id) do
+	control = lock_object_control(repo, "proposal", proposal_id, "FOR SHARE")
+	intent = lock_intent_share(repo, intent_id)
+	intent_control = lock_object_control(repo, "intent", intent_id, "FOR SHARE")
+	%__MODULE__{control: control, intent: intent, intent_control: intent_control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id,
+			intent_control && intent_control.controller_id,
+			intent && intent.provider_id, intent && intent.receiver_id])}
+end
+
+@spec for_proposed_intent(Ecto.Repo.t(), ExecutionContext.t(), String.t()) :: t()
+def for_proposed_intent(repo, ctx, id) do
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from p in ProposedIntent, where: p.id == ^id, lock: "FOR NO KEY UPDATE")
+	control = target && lock_object_control(repo, "proposal", target.published_in_id, "FOR SHARE")
+	%__MODULE__{target: target, control: control,
+		admin_of: admin_of(repo, ctx, [control && control.controller_id])}
+end
+
+@spec for_satisfaction_create(Ecto.Repo.t(), ExecutionContext.t(), map()) :: t()
+def for_satisfaction_create(repo, ctx, changes) do
+	event = case Map.get(changes, :satisfied_by_event_id) do
+		nil -> nil
+		eid -> repo.get(EconomicEvent, eid)
+	end
+	intent = lock_intent_share(repo, Map.get(changes, :satisfies_id))
+	%__MODULE__{target: changes, event: event, intent: intent,
+		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id])}
+end
+
+@spec for_satisfaction(Ecto.Repo.t(), ExecutionContext.t(), String.t(), map()) :: t()
+def for_satisfaction(repo, ctx, id, params \\ %{}) do
+	# FOR NO KEY UPDATE: see for_object/4.
+	target = repo.one(from s in Satisfaction, where: s.id == ^id, lock: "FOR NO KEY UPDATE")
+	event = target && target.satisfied_by_event_id && repo.get(EconomicEvent, target.satisfied_by_event_id)
+	intent = target && lock_intent_share(repo, target.satisfies_id)
+
+	# A satisfaction is re-pointed when `params` actually changes either
+	# of the two things it may be satisfied *by* (an event or a
+	# commitment) -- including switching to/from a commitment, which
+	# clears the event side without naming a new event.  `new_event` is
+	# then the resulting event (nil if the result has none), never the
+	# stale old `event`.
+	repoint? = target != nil and
+		(changed?(params, :satisfied_by_event_id, target.satisfied_by_event_id)
+			or changed?(params, :satisfied_by_commitment_id, target.satisfied_by_commitment_id))
+	new_event = if repoint? do
+		case resulting_value(params, :satisfied_by_event_id, target && target.satisfied_by_event_id) do
+			nil -> nil
+			eid -> repo.get(EconomicEvent, eid)
+		end
+	end
+	# A changed `satisfies_id` is judged against the intent it names; if
+	# that intent does not exist, `new_intent` stays nil and
+	# `retarget?` tells the policy to deny (no fallback to the old one).
+	retarget? = target != nil and changed?(params, :satisfies_id, target.satisfies_id)
+	new_intent = if retarget?,
+		do: lock_intent_share(repo, resulting_value(params, :satisfies_id, nil))
+
+	%__MODULE__{target: target, event: event, intent: intent,
+		new_event: new_event, new_intent: new_intent, repoint?: repoint?, retarget?: retarget?,
+		admin_of: admin_of(repo, ctx, [event && event.provider_id, event && event.receiver_id,
+			new_event && new_event.provider_id, new_event && new_event.receiver_id])}
+end
+
+defp lock_object_control(repo, type, id, "FOR UPDATE"),
+	do: lock_object_control_update(repo, type, id)
+defp lock_object_control(repo, type, id, "FOR SHARE"),
+	do: lock_object_control_share(repo, type, id)
+
+defp lock_object_control_update(repo, type, id) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id == ^id, lock: "FOR UPDATE")
+	|> repo.one()
+end
+
+defp lock_object_control_share(repo, type, id) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id == ^id, lock: "FOR SHARE")
+	|> repo.one()
+end
+
+defp lock_object_controls(_repo, _type, []), do: %{}
+defp lock_object_controls(repo, type, ids) do
+	from(c in ObjectControl, where: c.target_type == ^type and c.target_id in ^ids,
+		order_by: c.target_id, lock: "FOR SHARE")
+	|> repo.all()
+	|> Map.new(&{&1.target_id, &1})
+end
+
+@intent_struct_fields ~w[provider_id receiver_id input_of_id output_of_id]a
+
+# `nil` unless `params` actually *changes* at least one of the four
+# fields that determine who an intent is for (either of its parties,
+# or either process it is attached to) -- a field present in `params`
+# with its current value is not a change (atom or string keys either
+# way).  When it does change, returns the intent's would-be values for
+# all four, current values overridden by `params`.
+defp intent_new_target(nil, _params), do: nil
+defp intent_new_target(target, params) do
+	if Enum.any?(@intent_struct_fields, &changed?(params, &1, Map.get(target, &1))) do
+		Map.new(@intent_struct_fields, fn field ->
+			{field, resulting_value(params, field, Map.get(target, field))}
+		end)
+	end
+end
+
+# True when `params` names `key` (atom or string) and its value there
+# differs from `current`.
+defp changed?(params, key, current) do
+	case fetch_param(params, key) do
+		{:ok, v} -> v != current
+		:error -> false
+	end
+end
+
+# `params`'s value for `key` if named (atom or string), else `current`.
+defp resulting_value(params, key, current) do
+	case fetch_param(params, key) do
+		{:ok, v} -> v
+		:error -> current
+	end
+end
+
+defp fetch_param(params, key) do
+	case Map.fetch(params, key) do
+		{:ok, _} = found -> found
+		:error -> Map.fetch(params, Atom.to_string(key))
+	end
+end
+
+# The intent row `FOR SHARE`: it conflicts with the `FOR NO KEY UPDATE`
+# an `updateIntent` takes, so a decision that reads an intent's parties
+# serializes with a concurrent change of them.  Same order as the update
+# path: intent row, then (if needed) its control row.
+defp lock_intent_share(repo, id) when is_binary(id) do
+	case Zenflows.DB.ID.cast(id) do
+		{:ok, id} -> repo.one(from i in Intent, where: i.id == ^id, lock: "FOR SHARE")
+		:error -> nil
+	end
+end
+defp lock_intent_share(_repo, _id), do: nil
+
+defp sibling_parties(repo, intent_id) do
+	from(pi in ProposedIntent,
+		join: sib in ProposedIntent, on: sib.published_in_id == pi.published_in_id,
+		join: i in Intent, on: i.id == sib.publishes_id,
+		where: pi.publishes_id == ^intent_id,
+		select: [i.provider_id, i.receiver_id])
+	|> repo.all()
+	|> List.flatten()
+	|> Enum.reject(&is_nil/1)
+	|> MapSet.new()
 end
 end

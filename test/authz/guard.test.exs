@@ -17,9 +17,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 defmodule ZenflowsTest.Authz.Guard do
-use ExUnit.Case, async: true
+use ZenflowsTest.Help.EctoCase, async: true
 
-alias Zenflows.Authz.Policy
+alias Zenflows.Authz.{ObjectControl, Policy}
+alias Zenflows.VF.{Intent, Process, Proposal}
 
 # Mutations not covered by this slice: any valid signer, exactly as
 # before.  Later slices shrink this list; adding to it needs review.
@@ -37,15 +38,10 @@ alias Zenflows.Authz.Policy
 	create_spatial_thing update_spatial_thing delete_spatial_thing
 	create_agreement update_agreement delete_agreement
 	create_process_group update_process_group delete_process_group
-	create_satisfaction update_satisfaction delete_satisfaction
 	create_scenario update_scenario delete_scenario
-	create_proposal update_proposal delete_proposal
 	create_resource_specification update_resource_specification delete_resource_specification
-	create_intent update_intent delete_intent
 	create_agent_relationship_role
 	create_recipe_resource update_recipe_resource delete_recipe_resource
-	propose_intent delete_proposed_intent
-	create_process update_process delete_process
 	create_scenario_definition update_scenario_definition delete_scenario_definition
 	keypairoom_server
 ]a
@@ -129,5 +125,25 @@ test "resources are only inserted where control is recorded" do
 		"src/zenflows/vf/economic_resource/domain.ex",
 		"src/zenflows/sw_pass/domain.ex",
 	]) == []
+end
+
+test "deleting a process, a proposal, and an intent leaves no zf_object_control row behind", _c do
+	per = Factory.insert!(:person)
+
+	process = Process.Domain.create!(Factory.ctx(per), %{name: Factory.str("process")})
+	proposal = Proposal.Domain.create!(Factory.ctx(per), %{name: Factory.str("proposal")})
+	intent = Intent.Domain.create!(Factory.ctx(per), %{action_id: "transfer", provider_id: per.id})
+
+	assert {:ok, _} = Process.Domain.delete(Factory.ctx(per), process.id)
+	assert {:ok, _} = Proposal.Domain.delete(Factory.ctx(per), proposal.id)
+	assert {:ok, _} = Intent.Domain.delete(Factory.ctx(per), intent.id)
+
+	for {type, schema} <- [{"process", Process}, {"proposal", Proposal}, {"intent", Intent}] do
+		orphans =
+			from(c in ObjectControl, where: c.target_type == ^type, select: c.target_id)
+			|> Repo.all()
+			|> Enum.reject(&Repo.get(schema, &1))
+		assert orphans == [], "orphan #{type} zf_object_control rows: #{inspect(orphans)}"
+	end
 end
 end

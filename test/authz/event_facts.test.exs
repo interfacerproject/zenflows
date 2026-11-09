@@ -87,4 +87,26 @@ test "load/3 admin_of excludes organizations unrelated to the event's agents", c
 
 	refute MapSet.member?(f.admin_of, org.id)
 end
+test "load/3 collects the parties of the referenced processes' unfinished intents", c do
+	bob = Factory.insert!(:person)
+	carol = Factory.insert!(:person)
+	org = Factory.insert!(:organization)
+	Factory.insert_admin!(c.alice, org)
+	p = Factory.insert_process!(bob)
+	other = Factory.insert_process!(bob)
+	intent! = fn attrs -> Repo.insert!(struct(Zenflows.VF.Intent, Map.put(attrs, :action_id, "accept"))) end
+	intent!.(%{input_of_id: p.id, receiver_id: c.alice.id})
+	intent!.(%{output_of_id: p.id, provider_id: org.id})
+	intent!.(%{input_of_id: p.id, receiver_id: carol.id, finished: true})
+	intent!.(%{input_of_id: other.id, receiver_id: carol.id})
+
+	f = EventFacts.load(Repo, Factory.ctx(c.alice), %{
+		action_id: "work", provider_id: c.alice.id, receiver_id: c.alice.id,
+		input_of_id: p.id,
+	})
+
+	assert f.process_ids == [p.id]
+	assert f.process_invites == %{p.id => MapSet.new([c.alice.id, org.id])}
+	assert MapSet.member?(f.admin_of, org.id)
+end
 end

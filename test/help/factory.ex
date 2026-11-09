@@ -375,6 +375,13 @@ def build(:process) do
 	}
 end
 
+def build(:process_group) do
+	%VF.ProcessGroup{
+		name: str("some name"),
+		note: str("some note"),
+	}
+end
+
 def build(:product_batch) do
 	%VF.ProductBatch{
 		batch_number: str("some batch number"),
@@ -574,6 +581,18 @@ end
 def insert_economic_resource!() do
 	%{resource_inventoried_as_id: id} = insert_economic_event!()
 	Zenflows.VF.EconomicResource.Domain.one!(id)
+end
+
+@doc "Inserts a Process controlled by `per`."
+@spec insert_process!(VF.Person.t()) :: VF.Process.t()
+def insert_process!(per) do
+	Zenflows.VF.Process.Domain.create!(ctx(per), %{name: str("process")})
+end
+
+@doc "Inserts a Proposal controlled by `per`."
+@spec insert_proposal!(VF.Person.t()) :: VF.Proposal.t()
+def insert_proposal!(per) do
+	Zenflows.VF.Proposal.Domain.create!(ctx(per), %{name: str("proposal")})
 end
 
 @doc "Anonymous context; allowed everything in tests (allow_unchecked)."

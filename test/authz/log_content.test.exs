@@ -24,7 +24,7 @@ import Ecto.Query
 alias Zenflows.Authz.{ExecutionContext, PermissionLog, Roles}
 alias Zenflows.VF.{AgentRelationship, EconomicEvent, EconomicResource, Person}
 
-@allowed_keys ~w[object_id revoked_at controller_id source epoch declared_receiver_id event_id resource_id]
+@allowed_keys ~w[object_id revoked_at controller_id source epoch declared_receiver_id event_id resource_id target_type]
 
 defp admin_ctx(),
 	do: ExecutionContext.admin_key(%{context: %{authenticate_calls?: true, gql_admin: "k"}})

@@ -21,6 +21,7 @@ defmodule Zenflows.VF.Process.Resolv do
 
 use Absinthe.Schema.Notation
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Process.Domain
 
@@ -35,20 +36,20 @@ def processes(params, _) do
 	end
 end
 
-def create_process(%{process: params}, _) do
-	with {:ok, process} <- Domain.create(params) do
+def create_process(%{process: params}, res) do
+	with {:ok, process} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{process: process}}
 	end
 end
 
-def update_process(%{process: %{id: id} = params}, _) do
-	with {:ok, proc} <- Domain.update(id, params) do
+def update_process(%{process: %{id: id} = params}, res) do
+	with {:ok, proc} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{process: proc}}
 	end
 end
 
-def delete_process(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_process(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

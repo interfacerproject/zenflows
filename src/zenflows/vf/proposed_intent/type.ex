@@ -55,6 +55,7 @@ object :mutation_proposed_intent do
 	@param publishes the (`Intent`) to include as part of the proposal
 	"""
 	field :propose_intent, non_null(:proposed_intent_response) do
+		meta authz: "proposed_intent.create"
 		arg :published_in_id, non_null(:id), name: "published_in"
 		arg :publishes_id, non_null(:id), name: "publishes"
 		arg :reciprocal, :boolean
@@ -62,6 +63,7 @@ object :mutation_proposed_intent do
 	end
 
 	field :delete_proposed_intent, non_null(:boolean) do
+		meta authz: "proposed_intent.delete"
 		arg :id, non_null(:id)
 		resolve &Resolv.delete_proposed_intent/2
 	end

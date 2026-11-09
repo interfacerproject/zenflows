@@ -19,6 +19,7 @@
 defmodule Zenflows.VF.Satisfaction.Resolv do
 @moduledoc false
 
+alias Zenflows.Authz.ExecutionContext
 alias Zenflows.GQL.Connection
 alias Zenflows.VF.Satisfaction.Domain
 
@@ -33,20 +34,20 @@ def satisfactions(params, _) do
 	end
 end
 
-def create_satisfaction(%{satisfaction: params}, _) do
-	with {:ok, satis} <- Domain.create(params) do
+def create_satisfaction(%{satisfaction: params}, res) do
+	with {:ok, satis} <- Domain.create(ExecutionContext.from_resolution(res), params) do
 		{:ok, %{satisfaction: satis}}
 	end
 end
 
-def update_satisfaction(%{satisfaction: %{id: id} = params}, _) do
-	with {:ok, satis} <- Domain.update(id, params) do
+def update_satisfaction(%{satisfaction: %{id: id} = params}, res) do
+	with {:ok, satis} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{satisfaction: satis}}
 	end
 end
 
-def delete_satisfaction(%{id: id}, _) do
-	with {:ok, _} <- Domain.delete(id) do
+def delete_satisfaction(%{id: id}, res) do
+	with {:ok, _} <- Domain.delete(ExecutionContext.from_resolution(res), id) do
 		{:ok, true}
 	end
 end

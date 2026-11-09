@@ -45,6 +45,9 @@ defp handle(:unauthenticated),
 defp handle(:conflict),
 	do: [%{message: "metadata changed", extensions: %{code: "CONFLICT"}}]
 
+defp handle({:bad_user_input, message}) when is_binary(message),
+	do: [%{message: message, extensions: %{code: "BAD_USER_INPUT"}}]
+
 defp handle(:proposal_not_pending),
 	do: [%{message: "proposal is not pending", extensions: %{code: "CONFLICT"}}]
 

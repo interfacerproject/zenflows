@@ -34,6 +34,7 @@
 !/.iex.exs
 !/.credo.exs
 !/.editorconfig
+!/.mise.toml
 
 # the man*n*ager
 !/mann

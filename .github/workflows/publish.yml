@@ -29,7 +29,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: ['master']
+    branches: ['master', 'staging']
 
 jobs:
   publish_docker_image:

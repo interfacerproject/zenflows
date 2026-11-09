@@ -45,6 +45,12 @@ defp handle(:unauthenticated),
 defp handle(:conflict),
 	do: [%{message: "metadata changed", extensions: %{code: "CONFLICT"}}]
 
+defp handle(:proposal_not_pending),
+	do: [%{message: "proposal is not pending", extensions: %{code: "CONFLICT"}}]
+
+defp handle(:not_contribution_proposal),
+	do: [%{message: "not a contribution proposal", extensions: %{code: "BAD_USER_INPUT"}}]
+
 defp handle(:invalid_metadata_patch),
 	do: [%{message: "invalid metadata patch", extensions: %{code: "BAD_USER_INPUT"}}]
 

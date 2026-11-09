@@ -131,6 +131,13 @@ object :proposal_response do
 	field :proposal, non_null(:proposal)
 end
 
+object :accept_contribution_response do
+	field :proposal, non_null(:proposal)
+	field :cite_event, non_null(:economic_event)
+	field :accept_event, non_null(:economic_event)
+	field :modify_event, non_null(:economic_event)
+end
+
 object :proposal_edge do
 	field :cursor, non_null(:id)
 	field :node, non_null(:proposal)
@@ -195,6 +202,20 @@ object :query_proposal do
 end
 
 object :mutation_proposal do
+	@desc """
+	Accept a contribution proposal (as `proposeContribution` shapes it) in
+	one transaction: the owner's cite/accept/modify events in the proposer's
+	process, the three satisfactions, and the fork appended to the origin's
+	current `relations`. Accepting an accepted proposal returns its events
+	and writes nothing; a rejected or half-accepted one is a CONFLICT.
+	Enforces `event.create` and `satisfaction.create` for every write.
+	"""
+	field :accept_contribution, non_null(:accept_contribution_response) do
+		meta authz: "event.create"
+		arg :proposal_id, non_null(:id)
+		resolve &Resolv.accept_contribution/2
+	end
+
 	field :create_proposal, non_null(:proposal_response) do
 		meta authz: "proposal.create"
 		arg :proposal, non_null(:proposal_create_params)

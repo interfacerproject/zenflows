@@ -60,6 +60,10 @@ def create_proposal(%{proposal: params}, res) do
 	end
 end
 
+def accept_contribution(%{proposal_id: id}, res) do
+	Zenflows.VF.Proposal.Contribution.accept(ExecutionContext.from_resolution(res), id)
+end
+
 def update_proposal(%{proposal: %{id: id} = params}, res) do
 	with {:ok, prop} <- Domain.update(ExecutionContext.from_resolution(res), id, params) do
 		{:ok, %{proposal: prop}}

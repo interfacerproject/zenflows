@@ -155,10 +155,22 @@ Designed, written and maintained by [srfsh](https://github.com/srfsh) with the h
 
 Reviews and suggestions contributed by [Lynn](https://github.com/fosterlynn), [Bob](https://github.com/bhaugen), and members of the Valueflows community.
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/8/84/European_Commission.svg"
-     width="190" alt="Project funded by the European Commission">
+### Funding
 
-This project is receiving funding from the European Regional Development Fund (ERDF).
+#### October 2021 – March 2023
+
+This project was funded by the European Regional Development Fund (ERDF) as part of the INTERFACER project.
+
+<img src="docs/assets/funding/logo_erdf2014.png" alt="EU ERDF Programme Logo" width="480">
+
+#### January 2025 – December 2026
+
+The further development of this project was supported as part of the "Fab City – Decentralized Digital Production for Urban Value Creation" project, funded by dtec.bw and supported by the European Union – NextGenerationEU.
+
+<p>
+  <img src="docs/assets/funding/dtec.bw_Logo_RGB_komplett.jpg" alt="dtec.bw logo" width="240">
+  <img src="docs/assets/funding/nextgeneu_en.jpg" alt="Supported by the European Union – NextGenerationEU" width="360">
+</p>
 
 **[🔝 back to top](#toc)**
 
